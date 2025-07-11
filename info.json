@@ -1,0 +1,9 @@
+{
+	"name": "ai_combinator",
+	"version": "0.0.1",
+	"factorio_version": "2.0",
+	"dependencies": ["base >= 2.0", "? SchallCircuitGroup"],
+	"title": "AI Combinator",
+	"author": "galgtonod, OwnlyMe, IWTDU, mk-fg, smartguy1196, Chilla55",
+	"description": "Adds an AI combinator. Needs additional programm running to run successfully. Based on Moon Logic 2"
+}
