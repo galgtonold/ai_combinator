@@ -270,56 +270,6 @@ function create_titlebar(gui, caption, close_button_name, extra_buttons)
   return titlebar
 end
 
-local function create_player_input_panel(parent)
-  local frame = parent.add{
-    type = "frame",
-    name = "mlc-player-input-frame",
-    direction = "horizontal",
-    style = "subheader_frame_with_text_on_the_right"
-  }
-  frame.style.top_margin = -8
-  frame.style.left_margin = -12
-  frame.style.right_margin = -12
-  frame.style.horizontally_stretchable = true
-  frame.style.horizontally_squashable = true
-
-  local input_panel = frame.add{
-    type = "flow",
-    name = "mlc-player-input-panel",
-    direction = "horizontal",
-    style = "player_input_horizontal_flow"
-  }
-
-  frame.add{
-    type = "label",
-    caption = "Input:",
-    style = "subheader_caption_label"
-  }
-  frame.add{
-    type = "label",
-    caption = "Not connected",
-    style = "label"
-  }
-
-  local spacer = frame.add{
-    type = "empty-widget",
-  }
-  spacer.style.horizontally_stretchable = true
-
-  frame.add{
-    type = "label",
-    caption = "Output:",
-    style = "subheader_caption_label"
-  }
-
-  frame.add{
-    type = "label",
-    caption = "Not connected",
-    style = "label"
-  }
-
-  return frame
-end
 
 function format_number(num)
   if num < 0 then
@@ -436,6 +386,78 @@ local function update_signals()
   end
 end
 
+local function build_header_circuit_connections(parent, red_network, green_network)
+  local has_network = red_network ~= nil or green_network ~= nil
+
+  if not has_network then
+    parent.add{
+      type = "label",
+      caption = "Not connected",
+      style = "label"
+    }
+    return
+  end
+  
+  parent.add{
+    type = "label",
+    caption = "Connected to: ",
+    style = "label"
+  }
+  
+  if red_network then
+    parent.add{
+      type = "label",
+      caption = "[color=red]" .. red_network.network_id .. "[/color] [img=info]",
+      style = "label"
+    }
+  end
+
+  if green_network then
+    parent.add{
+      type = "label",
+      caption = "[color=green]" .. green_network.network_id .. "[/color] [img=info]",
+      style = "label"
+    }
+  end
+end
+
+local function update_header()
+  for uid, gui_t in pairs(storage.guis) do
+		mlc = storage.combinators[uid]
+    frame = gui_t.mlc_connections_flow
+    frame.clear()
+    frame.add{
+      type = "label",
+      caption = "Input:",
+      style = "subheader_caption_label"
+    }
+    red_network = mlc.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_red)
+    green_network = mlc.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_green)
+    build_header_circuit_connections(frame, red_network, green_network)
+
+    local spacer = frame.add{
+      type = "empty-widget",
+    }
+    spacer.style.horizontally_stretchable = true
+
+    frame.add{
+      type = "label",
+      caption = "Output:",
+      style = "subheader_caption_label"
+    }
+
+    red_network = mlc.out_red.get_control_behavior().get_circuit_network(defines.wire_connector_id.circuit_red)
+    green_network = mlc.out_green.get_control_behavior().get_circuit_network(defines.wire_connector_id.circuit_green)
+    if red_network and red_network.connected_circuit_count < 3 then
+      red_network = nil
+    end
+    if green_network and green_network.connected_circuit_count < 3 then
+      green_network = nil
+    end
+    build_header_circuit_connections(frame, red_network, green_network)
+  end
+end
+
 local function create_gui(player, entity)
 	local uid = entity.unit_number
 	local mlc = storage.combinators[uid]
@@ -463,9 +485,13 @@ local function create_gui(player, entity)
 
   create_titlebar(gui, "AI combinator", "dialog_close_button_")
 
-  local entity_frame = elc(gui, {type='frame', name='mlc-entity-ame', style='entity_frame', direction='vertical'})
+  local entity_frame = elc(gui, {type='frame', name='mlc-entity-frame', style='entity_frame', direction='vertical'})
 
-  create_player_input_panel(entity_frame)
+  local connections_frame = elc(entity_frame,
+    { type = 'frame', name = 'mlc-connections-frame', style = 'subheader_frame_with_text_on_the_right', direction ='horizontal' },
+    { top_margin = -8, left_margin = -12, right_margin = -12, horizontally_stretchable = true, horizontally_squashable = true })
+
+  elc(connections_frame, {type='flow', name='mlc-connections-flow', direction='horizontal', style = "player_input_horizontal_flow"})
 
   -- Status light and text
 
@@ -791,6 +817,7 @@ local function update_gui(event)
   end
 
   update_signals()
+  update_header()
 end
 
 event_handler.add_handler(defines.events.on_tick, update_gui)
