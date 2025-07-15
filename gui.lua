@@ -297,10 +297,6 @@ function format_number(num)
   end
 end
 
-local function get_signal_type(signal_name)
-
-end
-
 local function draw_signal_element(parent, style, signal_with_count, count)
   local flow = parent.add{type="flow"}
 
@@ -344,6 +340,10 @@ local function draw_signals(button_frame, signals, red_signals, green_signals)
   row_count = row_count + draw_signal_section(button_frame, signals, "slot")
   row_count = row_count + draw_signal_section(button_frame, red_signals, "red_slot")
   row_count = row_count + draw_signal_section(button_frame, green_signals, "green_slot")
+  
+  if row_count == 0 then
+    row_count = 1
+  end
   
   button_frame.style.height = 40 * row_count
   button_frame.style.vertically_stretchable = false
@@ -458,6 +458,51 @@ local function update_header()
   end
 end
 
+local function update_status()
+  for uid, gui_t in pairs(storage.guis) do
+    local mlc = storage.combinators[uid]
+    local status_flow = gui_t.mlc_status_flow
+    
+    -- Clear previous status elements
+    status_flow.clear()
+    
+    -- Get entity status code
+    local status_code = mlc.e.status
+    local status_text = "Unknown"
+    local sprite = "utility/status_working"
+    
+    -- Only check statuses relevant to combinators
+    if status_code == defines.entity_status.working or 
+       status_code == defines.entity_status.normal then
+      status_text = "Working"
+      sprite = "utility/status_working"
+    elseif status_code == defines.entity_status.no_power then
+      status_text = "No power"
+      sprite = "utility/status_not_working"
+    elseif status_code == defines.entity_status.low_power then
+      status_text = "Low power"
+      sprite = "utility/status_yellow"
+    elseif status_code == defines.entity_status.disabled then
+      status_text = "Disabled"
+      sprite = "utility/status_disabled"
+    elseif status_code == defines.entity_status.disabled_by_control_behavior then
+      status_text = "Disabled by circuit network"
+      sprite = "utility/status_disabled"
+    elseif status_code == defines.entity_status.disabled_by_script then
+      status_text = "Disabled by script"
+      sprite = "utility/status_disabled"
+    elseif status_code == defines.entity_status.marked_for_deconstruction then
+      status_text = "Marked for deconstruction"
+      sprite = "utility/status_yellow"
+    end
+    
+    -- Add status elements
+    local status_sprite = status_flow.add{type = 'sprite', style = 'status_image', sprite = sprite}
+    status_sprite.style.stretch_image_to_widget_size = true
+    status_flow.add{type = 'label', name='mlc-status-text', caption=status_text}
+  end
+end
+
 local function create_gui(player, entity)
 	local uid = entity.unit_number
 	local mlc = storage.combinators[uid]
@@ -495,11 +540,7 @@ local function create_gui(player, entity)
 
   -- Status light and text
 
-  local status_flow = elc(entity_frame, {type='flow', name='mlc-status-flow', direction='horizontal'})
-  status_flow.style.vertical_align = 'center'
-  local status_light = elc(status_flow, {type='sprite', name='mlc-status-light', style='status_image', sprite='utility/status_working'})
-  elc(status_flow, {type='label', name='mlc-status-text', caption='Working'})
-
+  local status_flow = elc(entity_frame, {type='flow', name='mlc-status-flow', direction='horizontal'}, {vertical_align='center'})
   
   -- Entity preview
   local entity_frame_border = elc(entity_frame, {type='frame', name='mlc-entity-frame-border', style='deep_frame_in_shallow_frame'})
@@ -512,6 +553,8 @@ local function create_gui(player, entity)
   elc(entity_frame, {type='label', name='mlc-task-title-label', caption='Task', style="semibold_label"})
 
   local task_label = elc(entity_frame, {type='label', name='mlc-task-label', caption='Do this great task\n\nhahasdhf asdf '}, {horizontally_squashable=true, single_line=false})
+
+  elc(entity_frame, {type="button", style="green_button", name='mlc-set-task', caption='Set Task'}, {horizontally_stretchable=true})
 
   elc(entity_frame, {type='line', direction='horizontal'}, {horizontally_stretchable=true})
 
@@ -533,8 +576,6 @@ local function create_gui(player, entity)
   elc(entity_frame, {type='line', direction='horizontal'}, {horizontally_stretchable=true})
 
   local desc_btn_flow = elc(entity_frame, {type='button', name='mlc-desc-btn-flow', direction='horizontal', caption='Add Description'})
-
-
 
 
 	-- Main table
@@ -674,6 +715,24 @@ function guis.history_restore(gui_t, mlc, offset)
 	set_history_btns_state(gui_t, mlc)
 end
 
+function guis.set_task(player_index, uid)
+  local player = game.players[player_index]
+	local gui_t = storage.guis[uid]
+
+  local combinator_frame = gui_t.mlc_gui
+  local popup_location = {
+    x = combinator_frame.location.x,
+    y = combinator_frame.location.y + 100
+  }
+  local popup_frame = player.gui.screen.add{
+    type = "frame",
+    caption = "Set Task",
+    direction = "vertical",
+    style = "dialog_frame",
+    location = popup_location
+  }
+end
+
 function guis.save_code(uid, code)
 	local gui_t, mlc = storage.guis[uid], storage.combinators[uid]
 	if not mlc then return end
@@ -734,7 +793,7 @@ function guis.on_gui_click(ev)
 			if clean_code ~= gui_t.mlc_code.text then gui_t.mlc_code.text = clean_code end
 		end
 		gui_t.code_focused = true -- disables hotkeys and repeating cleanup above
-
+  elseif el_id == 'mlc-set-task' then guis.set_task(ev.player_index, uid)
 	elseif el_id == 'mlc-save' then guis.save_code(uid)
 	elseif el_id == 'mlc-commit' then guis.save_code(uid); guis.close(uid)
 	elseif el_id == 'mlc-clear' then
@@ -818,8 +877,11 @@ local function update_gui(event)
 
   update_signals()
   update_header()
+  update_status()
 end
 
 event_handler.add_handler(defines.events.on_tick, update_gui)
+event_handler.add_handler(defines.events.on_gui_click, guis.on_gui_click)
+event_handler.add_handler(defines.events.on_gui_closed, guis.on_gui_close)
 
 return guis
