@@ -97,7 +97,8 @@ local function ensure_event_registered(event_name_or_id)
             end
 
             for _, handler_func in pairs(handler_list) do
-                local success, err = xpcall(handler_func, error_handler, event)
+                --local success, err = xpcall(handler_func, error_handler, event)
+                handler_func(event) -- Call the handler directly
             end
          end)
          -- log(string.format("DEBUG [EventHandler]: Registered script.on_event multiplexer for ID %d", event_key))

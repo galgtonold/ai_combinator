@@ -351,19 +351,19 @@ local function get_signal_type(signal_name)
 
 end
 
-local function draw_signal_element(parent, style, signal, count)
+local function draw_signal_element(parent, style, signal_with_count, count)
   local flow = parent.add{type="flow"}
 
   local button = flow.add{
       type="choose-elem-button",
       elem_type="signal",
-      signal = signal,
+      signal = signal_with_count.signal,
       style=style
   }
 
   local count_label = flow.add{
     type="label", 
-    caption=tostring(format_number(count)),
+    caption=tostring(format_number(signal_with_count.count)),
     style="count_label",
     ignored_by_interaction=true
   }
@@ -376,36 +376,70 @@ local function draw_signal_element(parent, style, signal, count)
   button.locked = true
 end
 
-local function draw_elements(parent)
-  elements = {"iron-ore", "copper-ore"}
-  local button_frame = parent.add{type="frame", direction="vertical", style="ugg_deep_frame"}
-  button_frame.style.height = 40 * math.ceil(#elements / 10) * 2
-  button_frame.style.vertically_stretchable = false
-  local button_table = button_frame.add{type="table", column_count=10, style="filter_slot_table"}
-  button_table.style.height = 40 * math.ceil(#elements / 10)
+local function draw_signal_section(parent, signals_with_count, style)
+  local button_table = parent.add{type="table", column_count=10, style="filter_slot_table"}
+  local row_count = math.ceil(#signals_with_count / 10)
+  button_table.style.height = 40 * row_count
 
-  for _, element in pairs(elements) do
-    draw_signal_element(button_table, "red_slot",
-    {
-      type = "item",
-      name = element,
-    }, 15320)
+  for _, signal in pairs(signals_with_count) do
+    draw_signal_element(button_table, style, signal)
   end
-  local button_table = button_frame.add{type="table", column_count=10, style="filter_slot_table"}
-  button_table.style.height = 40 * math.ceil(#elements / 10)
-  for _, element in pairs(elements) do
-    draw_signal_element(button_table, "green_slot",
-    {
-      type = "item",
-      name = element,
-    }, 15320)
+  return row_count
+end
+
+local function draw_signals(button_frame, signals, red_signals, green_signals)
+  button_frame.clear()
+
+  local row_count = 0
+  row_count = row_count + draw_signal_section(button_frame, signals, "slot")
+  row_count = row_count + draw_signal_section(button_frame, red_signals, "red_slot")
+  row_count = row_count + draw_signal_section(button_frame, green_signals, "green_slot")
+  
+  button_frame.style.height = 40 * row_count
+  button_frame.style.vertically_stretchable = false
+end
+
+local function update_signals()
+  for uid, gui_t in pairs(storage.guis) do
+		mlc = storage.combinators[uid]
+
+    if gui_t.input_signal_frame == nil then
+      goto continue
+    end
+
+    red_network = mlc.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_red)
+    green_network = mlc.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_green)
+    draw_signals(
+      gui_t.input_signal_frame,
+      {},
+      red_network and red_network.signals or {},
+      green_network and green_network.signals or {}
+    )
+
+    local signals = {}
+    for _, sig in pairs(mlc.out_red.get_control_behavior().sections[1].filters or {}) do
+      local new_sig = {signal=sig.value, count=sig.min}
+      new_sig.signal.comparator = nil
+      if new_sig.count ~= 0 then
+        table.insert(signals, new_sig)
+      end
+    end
+
+    draw_signals(
+      gui_t.output_signal_frame,
+      signals,
+      {},
+      {}
+    )
+
+    ::continue::
   end
 end
 
 local function create_gui(player, entity)
 	local uid = entity.unit_number
 	local mlc = storage.combinators[uid]
-	local mlc_err = mlc.err_parse or mlc.err_run
+	local mlc_err = mlc.err_parse or mlc.errun
 	local dw, dh, dsf = player.display_resolution.width,
 		player.display_resolution.height, 1 / player.display_scale
 	local max_height = (dh - 350) * dsf
@@ -417,7 +451,9 @@ local function create_gui(player, entity)
 	local function elc(parent, props, style_tweaks)
 		el = parent.add(props)
 		for k,v in pairs(style_tweaks or {}) do el.style[k] = v end
-		gui_t[props.name:gsub('%-', '_')], el_map[el.index] = el, el
+    if props.name then
+      gui_t[props.name:gsub('%-', '_')], el_map[el.index] = el, el
+    end
 		return el
 	end
 
@@ -451,7 +487,7 @@ local function create_gui(player, entity)
 
   local task_label = elc(entity_frame, {type='label', name='mlc-task-label', caption='Do this great task\n\nhahasdhf asdf '}, {horizontally_squashable=true, single_line=false})
 
-
+  elc(entity_frame, {type='line', direction='horizontal'}, {horizontally_stretchable=true})
 
   -- input and output signals
   local input_output_flow = elc(entity_frame, {type='flow', name='mlc-input-output-flow', direction='horizontal', style="inset_frame_container_horizontal_flow"})
@@ -461,12 +497,14 @@ local function create_gui(player, entity)
   elc(input_flow, {type='label', name='mlc-input-label', caption='Input Signals', style="semibold_label"})
   elc(output_flow, {type='label', name='mlc-output-label', caption='Output Signals', style="semibold_label"})
 
-  draw_elements(input_flow)
-  draw_elements(output_flow)
+  elc(input_flow, {type="frame", direction="vertical", style="ugg_deep_frame", name='input-signal-frame'})
+  elc(output_flow, {type="frame", direction="vertical", style="ugg_deep_frame", name='output-signal-frame'})
+
+  update_signals()
 
   -- Horizontal line and add description button
 
-  elc(entity_frame, {type='line', name='mlc-separator-line', direction='horizontal'}, {horizontally_stretchable=true})
+  elc(entity_frame, {type='line', direction='horizontal'}, {horizontally_stretchable=true})
 
   local desc_btn_flow = elc(entity_frame, {type='button', name='mlc-desc-btn-flow', direction='horizontal', caption='Add Description'})
 
@@ -481,7 +519,7 @@ local function create_gui(player, entity)
 
 	-- MT column-1: action button bar at the top
 	local top_btns = elc( mt_left,
-		{type='flow', name='mt-top-btns', direction='horizontal'}, {width=799} )
+		{type='flow', name='mt-top-btns', direction='horizontal'}, {width=400} )
 
 	local function top_btns_add(name, tooltip)
 		local sz, pad = 20, 0
@@ -513,13 +551,13 @@ local function create_gui(player, entity)
 	elc(top_btns, {type='flow', name='mt-top-spacer-b', direction='horizontal'}, {width=10})
 
 	-- MT column-1: preset buttons at the top
-	for n=0, 19 do set_preset_btn_state(
+	for n=0, 10 do set_preset_btn_state(
 		elc(top_btns, {type='button', name='mlc-preset-'..n, caption=n, direction='horizontal'}),
 		storage.presets[n] ) end
 
 	-- MT column-1: code textbox
 	elc( mt_left, {type='text-box', name='mlc-code', text=mlc.code or ''},
-		{maximal_height=max_height, width=800, minimal_height=300} )
+		{maximal_height=max_height, width=400, minimal_height=300} )
 	el.text = code_error_highlight(el.text, mlc_err)
 
 	-- MT column-1: error bar at the bottom
@@ -740,10 +778,21 @@ end
 
 function guis.vars_window_toggle(pn, toggle_on)
 	local gui = game.players[pn].gui.screen['mlc-gui']
-	local uid, gui_t = find_gui{element=gui}
+	local uid, gui_t = find_gui{element=g}
 	if not uid then uid = storage.guis_player['vars.'..pn] end
 	if not uid then return end
 	vars_window_switch_or_toggle(pn, uid, nil, toggle_on)
 end
+
+
+local function update_gui(event)
+  if not (next(storage.guis) and game.tick % conf.gui_signals_update_interval == 0) then
+    return
+  end
+
+  update_signals()
+end
+
+event_handler.add_handler(defines.events.on_tick, update_gui)
 
 return guis
