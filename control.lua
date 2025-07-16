@@ -509,7 +509,9 @@ end
 
 -- ----- Misc events -----
 
-local mlc_filter = {{filter='name', name='mlc'}}
+local mlc_filter = { { filter = 'name', name = 'mlc' },
+-- { filter = "ghost", ghost_name = "mlc" } 
+}
 
 local function blueprint_match_positions(bp_es, map_es)
 	-- Hack to work around invalidated ev.mapping - match entities by x/y position
@@ -568,8 +570,10 @@ local function on_setup_blueprint(ev)
 	if not bp_mlc_uids then return console_warn( p, 'BUG: Failed to match blueprint'..
 		' entities to ones on the map, combinator settings WILL NOT be stored in this blueprint!' ) end
 
-	for bp_idx, uid in pairs(bp_mlc_uids)
-		do bp.set_blueprint_entity_tag(bp_idx, 'mlc_code', storage.combinators[uid].code) end
+	for bp_idx, uid in pairs(bp_mlc_uids) do
+		bp.set_blueprint_entity_tag(bp_idx, 'mlc_code', storage.combinators[uid].code)
+    bp.set_blueprint_entity_tag(bp_idx, 'task', storage.combinators[uid].task)
+  end
 end
 
 script.on_event(defines.events.on_player_setup_blueprint, on_setup_blueprint)
@@ -582,7 +586,9 @@ local function on_built(ev)
 
 	-- Blueprints - try to restore settings from tags stored there on setup,
 	--  or fallback to old method with uid stored in a constant for simple copy-paste if tags fail
-	if ev.tags and ev.tags.mlc_code then mlc.code = ev.tags.mlc_code
+	if ev.tags and ev.tags.mlc_code then
+    mlc.code = ev.tags.mlc_code
+    mlc.task = ev.tags.task
 	else
 		local ecc_params = e.get_or_create_control_behavior().parameters
 		local uid_src = ecc_params.first_constant or 0
@@ -1096,7 +1102,7 @@ script.on_configuration_changed(function(data) -- migration
 
 	local update = data.mod_changes and data.mod_changes[script.mod_name]
 	if update and update.old_version then
-    
+
 	end
 
 	update_recipes()

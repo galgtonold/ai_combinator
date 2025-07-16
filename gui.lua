@@ -506,13 +506,33 @@ local function update_status()
       sprite = "utility/status_yellow"
     end
     
+    if mlc.task_request_time then
+      status_text = "Evaluating task"
+      sprite = "utility/status_yellow"
+    end
+
     -- Add status elements
     local status_sprite = status_flow.add{type = 'sprite', style = 'status_image', sprite = sprite}
     status_sprite.style.stretch_image_to_widget_size = true
     status_flow.add{type = 'label', name='mlc-status-text', caption=status_text}
+
+
+    -- Update task request progress_bar
+    local progress_bar = gui_t.mlc_progressbar
+    if mlc.task_request_time then
+      local elapsed_seconds = (game.tick - mlc.task_request_time) / 60
+      local half_life_seconds = 5
+      progress_bar.value = 1 - 0.5 ^ (elapsed_seconds / half_life_seconds)
+      progress_bar.visible = true
+    else
+      progress_bar.visible = false
+    end
+
     ::continue::
   end
 end
+
+local NO_TASK_SET_DESCRIPTION = 'No task set. Click to set a task.'
 
 local function create_gui(player, entity)
 	local uid = entity.unit_number
@@ -564,7 +584,10 @@ local function create_gui(player, entity)
   elc(entity_frame, {type='label', name='mlc-task-title-label', caption='Task', style="semibold_label"})
 
   local task_label = elc(entity_frame, {type='label', name='mlc-task-label'}, {horizontally_squashable=true, single_line=false})
-  task_label.caption = mlc.task or 'No task set'
+  task_label.caption = mlc.task or NO_TASK_SET_DESCRIPTION
+  task_label.style.maximal_width = 828
+
+  elc(entity_frame, {type='progressbar', name='mlc-progressbar', value=0, style='production_progressbar'}, {horizontally_stretchable=true})
 
   elc(entity_frame, {type="button", style="green_button", name='mlc-set-task', caption='Set Task'}, {horizontally_stretchable=true})
 
@@ -589,6 +612,16 @@ local function create_gui(player, entity)
 
   local desc_btn_flow = elc(entity_frame, {type='button', name='mlc-desc-btn-flow', direction='horizontal', caption='Add Description'})
 
+
+  elc( entity_frame, {type='text-box', name='mlc-code', text=mlc.code or ''},
+  {maximal_height=max_height, width=400, minimal_height=300} )
+  el.text = code_error_highlight(el.text, mlc_err)
+
+  elc(entity_frame, {type='label', name='mlc-errors', direction='horizontal'}, {horizontally_stretchable=true})
+
+  if 1 ==1 then
+    return gui_t
+  end
 
 	-- Main table
 	local mt = elc(entity_frame, {type='table', column_count=2, name='mt', direction='vertical'})
@@ -716,7 +749,6 @@ function guis.history_insert(mlc, code, gui_t)
 		end
 		mlc.history_state = n
 	end
-	if gui_t then set_history_btns_state(gui_t, mlc) end
 end
 
 function guis.history_restore(gui_t, mlc, offset)
@@ -724,7 +756,6 @@ function guis.history_restore(gui_t, mlc, offset)
 	local n = math.min(#mlc.history, math.max(1, mlc.history_state + offset))
 	mlc.history_state = n
 	gui_t.mlc_code.text = mlc.history[n]
-	set_history_btns_state(gui_t, mlc)
 end
 
 local current_dialog = {}
@@ -753,10 +784,15 @@ function guis.open_set_task_dialog(player_index, uid)
     tags = {uid = uid, dialog = true},
   }
 
+  local task_text = gui_t.mlc_task_label.caption
+  if task_text == NO_TASK_SET_DESCRIPTION then
+    task_text = ""
+  end
+
   local task_textbox = content_flow.add{
     type = "text-box",
     name = "mlc-task-input",
-    text = gui_t.mlc_task_label.caption,
+    text = task_text,
     style = "edit_blueprint_description_textbox",
     tags = {uid = uid, dialog = true},
   }
@@ -799,6 +835,7 @@ function guis.save_code(uid, code)
 	end
 	guis.history_insert(mlc, code, gui_t)
 	load_code_from_gui(code, uid)
+  mlc.task_request_time = nil -- reset task request time on code change
 end
 
 function guis.update_error_highlight(uid, mlc, err)
@@ -828,6 +865,7 @@ function guis.set_task(uid, task)
   local mlc = storage.combinators[uid]
 	local gui_t = storage.guis[uid]
   mlc.task = task
+  mlc.task_request_time = game.tick
   gui_t.mlc_task_label.caption = task
 end
 
@@ -841,7 +879,6 @@ function guis.handle_task_dialog_click(event)
 
   if event.element.tags.set_task_button then
     local task_input = gui.task_textbox
-    game.print("Setting task: " .. task_input.text)
     guis.set_task(uid, task_input.text)
     bridge.send_task_request(uid, task_input.text)
     guis.close_dialog(event.player_index)
