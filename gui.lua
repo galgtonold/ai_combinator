@@ -1,6 +1,7 @@
 local conf = require('config')
 local cgui = require('cgui')
 local event_handler = require("event_handler")
+local bridge = require("bridge")
 
 local function help_window_toggle(pn, toggle_on)
 	local player = game.players[pn]
@@ -795,7 +796,6 @@ function guis.save_code(uid, code)
 		code = code_error_highlight(code or gui_t.mlc_code.text)
 		gui_t.mlc_code.text = code
 	end
-  helpers.send_udp(8889, code)
 	guis.history_insert(mlc, code, gui_t)
 	load_code_from_gui(code, uid)
 end
@@ -828,11 +828,13 @@ function guis.handle_task_dialog_click(event)
   if not event.element.tags then
     return
   end
-  gui = storage.guis[event.element.tags.uid]
+  local uid = event.element.tags.uid
+  gui = storage.guis[uid]
 
   if event.element.tags.set_task_button then
     local task_input = gui.task_textbox
     game.print("Setting task: " .. task_input.text)
+    bridge.send_task_request(uid, task_input.text)
     guis.close_dialog(event.player_index)
     return true
   elseif event.element.tags.task_dialog_close then

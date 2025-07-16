@@ -886,12 +886,13 @@ end
 
 event_handler.add_handler(defines.events.on_tick, on_tick)
 
-script.on_event(defines.events.on_udp_packet_received, function (event)
-  game.print(event.payload)
-end)
-
 event_handler.add_handler(constants.events.on_task_request_completed, function(event)
-  game.print("EVENT")
+  -- check if response starts with error
+  --if event.response:sub(1, 5) == "ERROR" then
+--    game.print("Error in task response: " .. event.response)
+    --return
+  --end
+  guis.save_code(event.uid, event.response)
 end)
 
 
