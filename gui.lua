@@ -232,14 +232,17 @@ local function set_history_btns_state(gui_t, mlc)
 	end
 end
 
-function create_titlebar(gui, caption, close_button_name, extra_buttons)
-  local titlebar = gui.add{type = "flow", style = "frame_header_flow"}
+function create_titlebar(gui, caption, close_button_tags, extra_tags)
+  extra_tags = extra_tags or {}
+
+  local titlebar = gui.add{type = "flow", style = "frame_header_flow", tags = extra_tags}
   titlebar.drag_target = gui
   local title_label = titlebar.add{
     type = "label",
     style = "frame_title",
     caption = caption,
     ignored_by_interaction = true,
+    tags = extra_tags,
   }
   title_label.style.bottom_padding = 3
   title_label.style.top_margin = -3
@@ -247,25 +250,25 @@ function create_titlebar(gui, caption, close_button_name, extra_buttons)
     type = "empty-widget",
     style = "draggable_space",
     ignored_by_interaction = true,
+    tags = extra_tags,
   }
   filler.style.height = 24
   filler.style.horizontally_stretchable = true
   filler.style.right_margin = 5
-
-  if extra_buttons then
-    for _, button in ipairs(extra_buttons) do
-      titlebar.add(button)
-    end
-  end
   
+  local close_button_tags = close_button_tags or {}
+  for k, v in pairs(extra_tags) do
+    close_button_tags[k] = v
+  end
+
   titlebar.add{
     type = "sprite-button",
-    name = close_button_name,
     style = "frame_action_button",
     sprite = "utility/close",
     hovered_sprite = "utility/close_black",
     clicked_sprite = "utility/close_black",
     tooltip = {"gui.close-instruction"},
+    tags = close_button_tags,
   }
   return titlebar
 end
@@ -425,6 +428,9 @@ local function update_header()
   for uid, gui_t in pairs(storage.guis) do
 		mlc = storage.combinators[uid]
     frame = gui_t.mlc_connections_flow
+    if not frame then
+      goto continue
+    end
     frame.clear()
     frame.add{
       type = "label",
@@ -455,6 +461,7 @@ local function update_header()
       green_network = nil
     end
     build_header_circuit_connections(frame, red_network, green_network)
+    ::continue::
   end
 end
 
@@ -462,7 +469,9 @@ local function update_status()
   for uid, gui_t in pairs(storage.guis) do
     local mlc = storage.combinators[uid]
     local status_flow = gui_t.mlc_status_flow
-    
+    if not status_flow then
+      goto continue
+    end
     -- Clear previous status elements
     status_flow.clear()
     
@@ -500,6 +509,7 @@ local function update_status()
     local status_sprite = status_flow.add{type = 'sprite', style = 'status_image', sprite = sprite}
     status_sprite.style.stretch_image_to_widget_size = true
     status_flow.add{type = 'label', name='mlc-status-text', caption=status_text}
+    ::continue::
   end
 end
 
@@ -528,7 +538,7 @@ local function create_gui(player, entity)
 		{ type='frame', name='mlc-gui', direction='vertical'})
 	gui.location = {20 * dsf, 150 * dsf} -- doesn't work from initial props
 
-  create_titlebar(gui, "AI combinator", "dialog_close_button_")
+  create_titlebar(gui, "AI combinator", {uid = uid, close_combinator_ui = true})
 
   local entity_frame = elc(gui, {type='frame', name='mlc-entity-frame', style='entity_frame', direction='vertical'})
 
@@ -715,22 +725,67 @@ function guis.history_restore(gui_t, mlc, offset)
 	set_history_btns_state(gui_t, mlc)
 end
 
+local current_dialog = {}
+
 function guis.set_task(player_index, uid)
   local player = game.players[player_index]
 	local gui_t = storage.guis[uid]
 
   local combinator_frame = gui_t.mlc_gui
   local popup_location = {
-    x = combinator_frame.location.x,
-    y = combinator_frame.location.y + 100
+    x = combinator_frame.location.x + 28,
+    y = combinator_frame.location.y + 500
   }
   local popup_frame = player.gui.screen.add{
     type = "frame",
-    caption = "Set Task",
     direction = "vertical",
-    style = "dialog_frame",
-    location = popup_location
+    tags = {uid = uid, dialog = true},
   }
+  gui_t.task_dialog = popup_frame
+  current_dialog[player_index] = popup_frame
+  popup_frame.location = popup_location
+  create_titlebar(popup_frame, "Set Task", {task_dialog_close = true}, {uid = uid, dialog = true})
+  local content_flow = popup_frame.add{
+    type = "flow",
+    direction = "vertical",
+    tags = {uid = uid, dialog = true},
+  }
+
+  local task_textbox = content_flow.add{
+    type = "text-box",
+    name = "mlc-task-input",
+    text = gui_t.mlc_task_label.caption,
+    style = "edit_blueprint_description_textbox",
+    tags = {uid = uid, dialog = true},
+  }
+  task_textbox.word_wrap = true
+  task_textbox.style.width = 400
+  task_textbox.style.bottom_margin = 8
+  gui_t.task_textbox = task_textbox
+
+  local confirm_flow = content_flow.add{
+    type = "flow",
+    direction = "horizontal",
+    tags = {uid = uid, dialog = true},
+  }
+  task_textbox.focus()
+
+  local filler = confirm_flow.add{
+    type = "empty-widget",
+    style = "draggable_space",
+    ignored_by_interaction = true,
+    tags = {uid = uid, dialog = true},
+  }
+  filler.style.horizontally_stretchable = true
+  filler.style.vertically_stretchable = true
+
+  local confirm_button = confirm_flow.add{
+    type = "button",
+    caption = "Set Task",
+    style = "confirm_button",
+    tags = {uid = uid, set_task_button = true, dialog = true},
+  }
+  confirm_button.style.left_margin = 8
 end
 
 function guis.save_code(uid, code)
@@ -761,14 +816,48 @@ function guis.on_gui_text_changed(ev)
 	guis.history_insert(mlc, ev.element.text, gui_t)
 end
 
+function guis.close_dialog(player_index)
+  if current_dialog[player_index] and current_dialog[player_index].valid then
+    current_dialog[player_index].destroy()
+    current_dialog[player_index] = nil
+  end
+end
+
+function guis.handle_task_dialog_click(event)
+  local gui
+  if not event.element.tags then
+    return
+  end
+  gui = storage.guis[event.element.tags.uid]
+
+  if event.element.tags.set_task_button then
+    local task_input = gui.task_textbox
+    game.print("Setting task: " .. task_input.text)
+    guis.close_dialog(event.player_index)
+    return true
+  elseif event.element.tags.task_dialog_close then
+    -- Don't do anything as close is default option for other clicks not in dialog
+  elseif event.element.tags.dialog then
+    return true -- Any clicks inside dialog should not close it
+  end
+end
+
 function guis.on_gui_click(ev)
+  if guis.handle_task_dialog_click(ev) then
+    return
+  end
+
+  guis.close_dialog(ev.player_index)
+  
 	local el = ev.element
 
-	-- Separate "help" and "vars" windows, not tracked in globals (storage), unlike main MLC guis
+  if not el.valid then return end
+
+	-- Separate "help" and "vars" windows, not tracked in globals (storage), unlike main MLC gui
 	if el.name == 'mlc-copy-close' then return cgui.close()
 	elseif el.name == 'mlc-help-close' then return el.parent.destroy()
 	elseif el.name == 'mlc-vars-close' then
-		return (el.parent.parent or el.parent).destroy()
+		return (el.parent.paent or el.parent).destroy()
 	elseif el.name == 'mlc-vars-pause' then
 		return vars_window_switch_or_toggle( ev.player_index,
 			vars_window_uid(el), el.style.name ~= 'green_button', true )
@@ -780,6 +869,7 @@ function guis.on_gui_click(ev)
 
 	local uid, gui_t = find_gui(ev)
 	if not uid then return end
+
 	local mlc = storage.combinators[uid]
 	if not mlc then return guis.close(uid) end
 	local el_id = el.name

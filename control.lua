@@ -2,6 +2,7 @@ local conf = require('config')
 conf.update_from_settings()
 
 local event_handler = require("event_handler")
+local constants = require("constants")
 
 
 local guis = require('gui')
@@ -887,6 +888,10 @@ event_handler.add_handler(defines.events.on_tick, on_tick)
 
 script.on_event(defines.events.on_udp_packet_received, function (event)
   game.print(event.payload)
+end)
+
+event_handler.add_handler(constants.events.on_task_request_completed, function(event)
+  game.print("EVENT")
 end)
 
 
