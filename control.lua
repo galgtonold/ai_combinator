@@ -1096,24 +1096,7 @@ script.on_configuration_changed(function(data) -- migration
 
 	local update = data.mod_changes and data.mod_changes[script.mod_name]
 	if update and update.old_version then
-		local function version_to_num(ver, padding)
-			local ver_nums = {}
-			ver:gsub('(%d+)', function(v) ver_nums[#ver_nums+1] = tonumber(v) end)
-			ver = 0
-			for n,v in pairs(ver_nums)
-				do ver = ver + v * math.pow(10, ((#ver_nums-n)*(padding or 3))) end
-			return ver
-		end
-		local v_old_int = version_to_num(update.old_version)
-		local function version_less_than(ver)
-			if v_old_int < version_to_num(ver)
-				then log('- Applying mod update from pre-'..ver); return true end
-		end
-
-		if version_less_than('0.0.27') then
-			error( 'Update from Moon Logic versions <=0.0.27 were removed in 0.0.61+'..
-				' - please download/install 0.0.60 manually, then update normally from there.' )
-		end
+    
 	end
 
 	update_recipes()

@@ -563,7 +563,8 @@ local function create_gui(player, entity)
   
   elc(entity_frame, {type='label', name='mlc-task-title-label', caption='Task', style="semibold_label"})
 
-  local task_label = elc(entity_frame, {type='label', name='mlc-task-label', caption='Do this great task\n\nhahasdhf asdf '}, {horizontally_squashable=true, single_line=false})
+  local task_label = elc(entity_frame, {type='label', name='mlc-task-label'}, {horizontally_squashable=true, single_line=false})
+  task_label.caption = mlc.task or 'No task set'
 
   elc(entity_frame, {type="button", style="green_button", name='mlc-set-task', caption='Set Task'}, {horizontally_stretchable=true})
 
@@ -728,7 +729,7 @@ end
 
 local current_dialog = {}
 
-function guis.set_task(player_index, uid)
+function guis.open_set_task_dialog(player_index, uid)
   local player = game.players[player_index]
 	local gui_t = storage.guis[uid]
 
@@ -823,6 +824,13 @@ function guis.close_dialog(player_index)
   end
 end
 
+function guis.set_task(uid, task)
+  local mlc = storage.combinators[uid]
+	local gui_t = storage.guis[uid]
+  mlc.task = task
+  gui_t.mlc_task_label.caption = task
+end
+
 function guis.handle_task_dialog_click(event)
   local gui
   if not event.element.tags then
@@ -834,11 +842,12 @@ function guis.handle_task_dialog_click(event)
   if event.element.tags.set_task_button then
     local task_input = gui.task_textbox
     game.print("Setting task: " .. task_input.text)
+    guis.set_task(uid, task_input.text)
     bridge.send_task_request(uid, task_input.text)
     guis.close_dialog(event.player_index)
     return true
   elseif event.element.tags.task_dialog_close then
-    -- Don't do anything as close is default option for other clicks not in dialog
+    -- Don't do anthing as close is default option for other clicks not in dialog
   elseif event.element.tags.dialog then
     return true -- Any clicks inside dialog should not close it
   end
@@ -869,6 +878,11 @@ function guis.on_gui_click(ev)
 		end
 	end
 
+  if el.tags and el.tags.close_combinator_ui then
+    guis.close(el.tags.uid)
+    return
+  end
+
 	local uid, gui_t = find_gui(ev)
 	if not uid then return end
 
@@ -885,7 +899,7 @@ function guis.on_gui_click(ev)
 			if clean_code ~= gui_t.mlc_code.text then gui_t.mlc_code.text = clean_code end
 		end
 		gui_t.code_focused = true -- disables hotkeys and repeating cleanup above
-  elseif el_id == 'mlc-set-task' then guis.set_task(ev.player_index, uid)
+  elseif el_id == 'mlc-set-task' then guis.open_set_task_dialog(ev.player_index, uid)
 	elseif el_id == 'mlc-save' then guis.save_code(uid)
 	elseif el_id == 'mlc-commit' then guis.save_code(uid); guis.close(uid)
 	elseif el_id == 'mlc-clear' then
