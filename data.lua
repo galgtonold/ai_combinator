@@ -1,5 +1,17 @@
 local function png(name) return ('__ai_combinator__/graphics/%s.png'):format(name) end
 
+local styles = data.raw["gui-style"].default
+
+styles["ugg_deep_frame"] = {
+  type = "frame_style",
+  parent = "slot_button_deep_frame",
+  vertically_stretchable = "on",
+  horizontally_stretchable = "on",
+  top_margin = 8,
+  --left_margin = 8,
+  right_margin = 8,
+  bottom_margin = 4
+}
 
 -- ----- Main combinator entity
 

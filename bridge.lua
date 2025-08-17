@@ -19,7 +19,6 @@ function bridge.send_task_request(uid, task_text)
 end
 
 local function handle_message(event)
-  game.print(event.payload)
   local payload = helpers.json_to_table(event.payload)
   if not payload or not payload.type then
     game.print("Received invalid message: " .. event.payload)
@@ -31,6 +30,7 @@ local function handle_message(event)
 end
 
 event_handler.add_handler(defines.events.on_udp_packet_received, handle_message)
+
 
 
 return bridge

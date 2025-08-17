@@ -795,6 +795,10 @@ local function run_moon_logic_tick(mlc, mlc_env, tick)
 	mlc_env._out['mlc-error'] = nil -- for internal use
 
 	do
+    -- Clear out output table before running code
+    for k, _ in pairs(mlc_env._out) do
+      mlc_env._out[k] = nil
+    end
 		local st, err = pcall(mlc_env._func)
 		if not st then mlc.err_run = err or '[unspecified lua error]'
 		else
@@ -1089,14 +1093,14 @@ local function update_recipes()
 end
 
 script.on_init(function()
-	strict_mode_enable()
+	--strict_mode_enable()
 	update_signal_quality_table()
 	update_signal_types_table()
 	for k, _ in pairs(tt('combinators presets guis guis_player')) do storage[k] = {} end
 end)
 
 script.on_configuration_changed(function(data) -- migration
-	strict_mode_enable()
+	--strict_mode_enable()
 	update_signal_quality_table()
 	update_signal_types_table()
 

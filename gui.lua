@@ -521,7 +521,7 @@ local function update_status()
     local progress_bar = gui_t.mlc_progressbar
     if mlc.task_request_time then
       local elapsed_seconds = (game.tick - mlc.task_request_time) / 60
-      local half_life_seconds = 5
+      local half_life_seconds = 7
       progress_bar.value = 1 - 0.5 ^ (elapsed_seconds / half_life_seconds)
       progress_bar.visible = true
     else
@@ -613,11 +613,13 @@ local function create_gui(player, entity)
   local desc_btn_flow = elc(entity_frame, {type='button', name='mlc-desc-btn-flow', direction='horizontal', caption='Add Description'})
 
 
-  elc( entity_frame, {type='text-box', name='mlc-code', text=mlc.code or ''},
+  local code_text = elc( entity_frame, {type='text-box', name='mlc-code', text=mlc.code or ''},
   {maximal_height=max_height, width=400, minimal_height=300} )
   el.text = code_error_highlight(el.text, mlc_err)
+  code_text.visible = false
 
-  elc(entity_frame, {type='label', name='mlc-errors', direction='horizontal'}, {horizontally_stretchable=true})
+  local error_label = elc(entity_frame, {type='label', name='mlc-errors', direction='horizontal'}, {horizontally_stretchable=true})
+  error_label.visible = false
 
   if 1 ==1 then
     return gui_t
