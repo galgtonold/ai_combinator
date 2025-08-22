@@ -1,0 +1,104 @@
+/**
+ * Factorio 9-Slice Input Field Implementation
+ * 
+ * This file creates a proper 9-slice implementation for Factorio input fields
+ * using CSS border-image with the dedicated textbox.png files.
+ * 
+ * textbox.png, textbox_active.png, and textbox_disabled.png are pre-made 9-slice 
+ * compatible images that are sliced according to the border-image-slice property.
+ * 
+ * In Factorio:
+ * - Corner size: 8x8 pixels
+ * - Sides: 1px long and 8px wide
+ */
+
+:root {
+  /* Font colors */
+  --factorio-input-default-font: black;
+  --factorio-input-focus-font: black;
+  --factorio-input-disabled-font: rgba(0, 0, 0, 0.6);
+  
+}
+
+/* 
+ * This is a proper implementation of 9-slice for input fields
+ * using border-image for scaling
+ */
+.factorio-input-9slice {
+  position: relative;
+  background-color: transparent;
+  
+  /* Border setup for 9-slice */
+  border: 4px solid transparent;
+  
+  /* Border image for 9-slice */
+  border-image-source: url('/graphics/textbox.png');
+  border-image-slice: 8 8 8 8 fill; /* 8px from each edge, fill the center */
+  border-image-width: 5px;
+  border-image-repeat: stretch;
+  border-image-outset: 0;
+  
+  /* Invisible base input styling */
+  padding: 4px 8px;
+  min-width: 180px;
+  min-height: 28px;
+  
+  /* Text styling */
+  color: var(--factorio-input-default-font);
+  font-family: 'Titillium Web', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  
+  /* Proper box model */
+  box-sizing: border-box;
+  
+  /* Remove default input styling */
+  outline: none;
+  
+  /* Ensure the input isn't black by default */
+  filter: none;
+}
+
+/* Focus state */
+.factorio-input-9slice:focus:not(:disabled) {
+  color: var(--factorio-input-focus-font);
+  border-image-source: url('/graphics/textbox_active.png');
+  border-image-slice: 8 8 8 8 fill;
+  transition: all 0.1s ease-in-out;
+}
+
+/* Disabled state */
+.factorio-input-9slice:disabled {
+  cursor: not-allowed;
+  color: var(--factorio-input-disabled-font);
+  border-image-source: url('/graphics/textbox_disabled.png');
+  border-image-slice: 8 8 8 8 fill;
+  opacity: 0.9;
+}
+
+/* Placeholder styling */
+.factorio-input-9slice::placeholder {
+  color: rgba(0, 0, 0, 0.5);
+  font-style: italic;
+}
+
+/* 
+ * Textarea variant
+ */
+.factorio-textarea-9slice {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* 
+ * Number input variant - hide spinners
+ */
+.factorio-input-9slice[type="number"]::-webkit-inner-spin-button,
+.factorio-input-9slice[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.factorio-input-9slice[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}

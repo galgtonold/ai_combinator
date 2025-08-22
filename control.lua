@@ -3,7 +3,7 @@ conf.update_from_settings()
 
 local event_handler = require("event_handler")
 local constants = require("constants")
-
+local bridge = require('bridge')
 
 local guis = require('gui')
 
@@ -1099,6 +1099,11 @@ script.on_init(function()
 	for k, _ in pairs(tt('combinators presets guis guis_player')) do storage[k] = {} end
 end)
 
+script.on_load(function()
+	-- Check if AI bridge is available when mod is loaded
+	bridge.check_bridge_availability()
+end)
+
 script.on_configuration_changed(function(data) -- migration
 	--strict_mode_enable()
 	update_signal_quality_table()
@@ -1110,10 +1115,44 @@ script.on_configuration_changed(function(data) -- migration
 	end
 
 	update_recipes()
+	
+	-- Check if AI bridge is available after configuration changes
+	bridge.check_bridge_availability()
 end)
 
---script.on_load(function() strict_mode_enable() end)
+script.on_load(function()
+	-- Check if AI bridge is available when mod is loaded
+	bridge.check_bridge_availability()
+end)
 
+-- Add console command to test AI bridge ping
+commands.add_command("ai-ping", "Send a ping request to the AI bridge", function(command)
+  local uid = tonumber(command.parameter) or 0
+  bridge.send_ping_request(uid)
+  game.print("Ping request sent to AI bridge (uid: " .. uid .. ")")
+end)
+
+-- Add event handler for ping responses
+event_handler.add_handler(constants.events.on_ping_response, function(payload)
+  game.print("Received ping response (uid: " .. (payload.uid or 0) .. ", status: " .. (payload.status or "unknown") .. ")")
+end)
+
+-- Add event handler for bridge availability check
+event_handler.add_handler(constants.events.on_bridge_check_completed, function(payload)
+  if not payload.available then
+    -- Show warning window to all players
+    for _, player in pairs(game.players) do
+      if player.valid then
+        guis.ai_bridge_warning_window_toggle(player.index, true)
+      end
+    end
+  end
+end)
+
+-- Check bridge availability when players join
+event_handler.add_handler(defines.events.on_player_joined_game, function(event)
+  bridge.check_bridge_availability()
+end)
 
 -- Activate Global (Storage) Variable Viewer (gvv) mod, if installed/enabled - https://mods.factorio.com/mod/gvv
 if script.active_mods['gvv'] then require('__gvv__.gvv')() end

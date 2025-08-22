@@ -1,0 +1,66 @@
+@import './styles/fonts.css';
+@import 'bulma/css/bulma.min.css';
+@import './styles/factorio.css';
+@import './styles/factorio-buttons.css';
+@import './styles/titlebar.css';
+@import './styles/factorio-select.css';
+@import './styles/panel.css';
+
+:root {
+  font-family: 'Lato', 'Titillium Web', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow: hidden;
+  background-color: #242424; /* Ensure body has a suitable background */
+}
+
+#app {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Ensure no scrollbars appear anywhere in the application */
+html, body {
+  overflow: hidden !important;
+}
+
+/* Hide scrollbars across all browsers */
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+* {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+}
+
+/* Ensure all container elements don't show scrollbars */
+.container, .section, .column, .columns, .content, .content-container {
+  overflow: hidden !important;
+}
+
+/* Add specific rule for the content-container in App.svelte */
+.content-container {
+  max-height: calc(100vh - 54px); /* Subtract title bar height */
+  position: relative;
+  overflow-y: hidden !important;
+}

@@ -1,0 +1,95 @@
+/* Factorio-style Dropdown (button-based) */
+.factorio-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+
+.factorio-dropdown-btn {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  width: 100%;
+}
+
+.factorio-dropdown-btn .factorio-btn-base {
+  font-weight: bold;
+  color: black !important;
+}
+
+.factorio-dropdown-btn .factorio-btn-normal {
+  font-weight: bold;
+  color: black !important;
+}
+
+.factorio-dropdown-btn span {
+  font-weight: bold;
+  color: black !important;
+  font-size: 16px;
+}
+
+.factorio-dropdown-btn .factorio-button-9slice {
+  margin-right: 0;
+}
+
+.factorio-dropdown-arrow {
+  width: 20px;
+  height: 20px;
+  margin-left: 2px;
+  pointer-events: none;
+}
+
+.factorio-dropdown-list {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 10;
+  background: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  box-sizing: border-box;
+}
+
+.factorio-dropdown-item {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.factorio-dropdown-item .factorio-listbox-item {
+  width: 100%;
+  margin: 0;
+  padding: 0 8px;
+  min-width: 0;
+  justify-content: flex-start;
+}
+
+/* Disable hover animation for selected items in dropdown */
+.factorio-dropdown-item .factorio-listbox-item.clicked:hover {
+  /* Keep the same appearance as the non-hovered selected state */
+  border-image-source: url('/graphics/listbox_item_clicked.png');
+  color: black;
+  filter: none;
+  transition: none;
+  /* Prevent any visual changes on hover */
+  transform: none;
+  box-shadow: none;
+}
+
+.factorio-dropdown-item .factorio-listbox-item.selected:hover {
+  /* Keep the same appearance as the non-hovered selected state */
+  border-image-source: url('/graphics/listbox_item_clicked.png');
+  color: black;
+  filter: none;
+  transition: none;
+  /* Prevent any visual changes on hover */
+  transform: none;
+  box-shadow: none;
+}

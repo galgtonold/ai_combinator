@@ -1,0 +1,108 @@
+/* Factorio-inspired UI */
+:root {
+  --factorio-dark: #1e1e1e;
+  --factorio-darker: #141414;
+  --factorio-light: #e8b222;
+  --factorio-orange: #ff9d00;
+  --factorio-green: #4caf50;
+  --factorio-red: #f44336;
+  --factorio-yellow: #ffeb3b;
+  --factorio-gray: #3d3d3d;
+  --factorio-light-gray: #6e6e6e;
+  --factorio-border: #606060;
+  --factorio-caption: rgb(255, 230, 192);
+}
+
+body {
+  background-color: var(--factorio-dark);
+  color: #ffffff;
+  font-family: 'Titillium Web', sans-serif;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  overflow: hidden;
+  height: 100vh;
+}
+
+html {
+  height: 100%;
+}
+
+.factorio-combinator {
+  background-color: var(--factorio-darker);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  margin: 0;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.factorio-title {
+  background-color: var(--factorio-gray);
+  border-bottom: 2px solid var(--factorio-border);
+  color: var(--factorio-light);
+  font-size: 24px;
+  font-weight: bold;
+  margin: -20px -20px 20px -20px;
+  padding: 10px 20px;
+}
+
+.factorio-section {
+  margin-bottom: 20px;
+}
+
+.factorio-label {
+  color: var(--factorio-light);
+  display: block;
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.factorio-input {
+  background-color: var(--factorio-gray);
+  border: 2px solid var(--factorio-border);
+  border-radius: 2px;
+  color: white;
+  font-family: 'Titillium Web', sans-serif;
+  font-size: 14px;
+  padding: 8px 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.factorio-input:focus {
+  border-color: var(--factorio-light);
+  outline: none;
+}
+
+
+.factorio-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+/* For password/key masking */
+.key-field {
+  position: relative;
+}
+
+.key-toggle {
+  background: none;
+  border: none;
+  color: var(--factorio-light);
+  cursor: pointer;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.factorio-label-small {
+  color: var(--factorio-light);
+  font-size: 14px;
+  font-weight: bold;
+  margin-right: 10px;
+  align-self: center;
+}

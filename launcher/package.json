@@ -1,0 +1,75 @@
+{
+  "name": "ai-combinator-launcher",
+  "version": "0.1.0",
+  "description": "Launcher for Factorio AI Combinator mod",
+  "main": "dist/electron/app.js",
+  "scripts": {
+    "dev": "concurrently --kill-others \"npm run dev:renderer\" \"wait-on http://localhost:5173 && npm run dev:electron\" \"cd electron && tsc -w\"",
+    "package": "npm run build:renderer && npm run build:electron && electron-builder",
+    "build:electron": "cd electron && tsc",
+    "build:renderer": "cd renderer && npm run build",
+    "dev:renderer": "cd renderer && npm run dev",
+    "dev:electron": "npm run build:electron && electron .",
+    "format": "prettier --write ."
+  },
+  "build": {
+    "appId": "com.factorio.aicombinator",
+    "productName": "AI Combinator Launcher",
+    "directories": {
+      "output": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "../graphics/mlc-item.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "../graphics/mlc-item.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/galgtonold/ai_combinator.git"
+  },
+  "keywords": [
+    "factorio",
+    "ai",
+    "combinator",
+    "launcher"
+  ],
+  "author": "galgtonold",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/galgtonold/ai_combinator/issues"
+  },
+  "homepage": "https://github.com/galgtonold/ai_combinator#readme",
+  "devDependencies": {
+    "@tsconfig/svelte": "^5.0.4",
+    "concurrently": "^8.2.2",
+    "electron": "^28.2.3",
+    "electron-builder": "^24.9.1",
+    "prettier": "^3.2.5",
+    "prettier-plugin-svelte": "^3.2.1",
+    "wait-on": "^8.0.4"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.5",
+    "@ai-sdk/deepseek": "^1.0.10",
+    "@ai-sdk/google": "^2.0.7",
+    "@ai-sdk/openai": "^2.0.15",
+    "@ai-sdk/xai": "^2.0.10",
+    "@sveltejs/vite-plugin-svelte": "^6.1.2",
+    "ai": "^5.0.15",
+    "dgram": "^1.0.1",
+    "electron-reload": "^2.0.0-alpha.1",
+    "vite": "^7.1.2"
+  }
+}
