@@ -19,3 +19,6 @@ export { default as HorizontalLine } from './layout/HorizontalLine.svelte';
 export { default as Row } from './layout/Row.svelte';
 export { default as Section } from './layout/Section.svelte';
 export { default as TitleBar } from './layout/TitleBar.svelte';
+
+// Section components
+export { FactorioPathSection, AIConfigSection, LaunchSection } from './sections/index';

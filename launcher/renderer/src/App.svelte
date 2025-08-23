@@ -1,9 +1,6 @@
 <script lang="ts">
-  import ipc, { type Config, type FactorioStatus } from "./utils/ipc";
+  import ipc from "./utils/ipc";
   import {
-    aiProviderOptions,
-    modelsByProvider,
-    getModelOptionsForProvider,
     isModelAvailableForProvider,
     getDefaultModelForProvider,
   } from "./config/ai-config";
@@ -12,451 +9,99 @@
   // Components
   import {
     TitleBar,
-    Button,
-    InputField,
-    NumberInputField,
-    Dropdown,
     StatusIndicator,
-    Section,
-    KeyToggleInput,
-    Row,
-    Label,
-    HorizontalLine,
     StatusPreviewDisplay,
-    GreenButton,
+    HorizontalLine,
+    FactorioPathSection,
+    AIConfigSection,
+    LaunchSection,
   } from "./components";
 
-  // Config state
-  let config: Config = $state({
-    factorioPath: "",
-    openAIKey: "", // Deprecated - kept for migration
-    aiBridgeEnabled: false,
-    aiProvider: "openai",
-    aiModel: "gpt-4",
-    udpPort: 9001,
-    providerApiKeys: {},
-  });
+  // Stores and Services
+  import { configStore, statusStore, aiBridgeService } from "./stores";
+  import { useAppEffects } from "./composables";
 
-  // UI state
-  let factorioStatus: FactorioStatus = $state("not_found");
-  let factorioStatusText: string = $state("Not found");
-  let factorioStatusClass: "error" | "warning" | "success" = $state("error");
-  let isLaunching: boolean = $state(false);
-  let statusMessage: string = $state("");
-  let unsubscribeStatusUpdate: (() => void) | null = null;
-  let wasRunning: boolean = $state(false); // Track if Factorio was previously running
+  // Initialize effects handler
+  const appEffects = useAppEffects();
 
-  // Load config on component initialization
+  // Local state for API key input (to handle real-time editing)
+  let currentApiKeyInput = $state("");
+
+  // Initialize app on component mount
   $effect(() => {
-    loadConfig();
-    setupStatusListener();
+    appEffects.initialize();
 
     // Cleanup on component destruction
     return () => {
-      if (unsubscribeStatusUpdate) {
-        unsubscribeStatusUpdate();
-      }
+      appEffects.cleanup();
     };
   });
 
-  function setupStatusListener() {
-    // Subscribe to status updates from the main process
-    unsubscribeStatusUpdate = ipc.onFactorioStatusUpdate((data) => {
-      if (data.status === "running") {
-        factorioStatus = "running";
-        wasRunning = true; // Mark that Factorio is running
-        updateFactorioStatusDisplay();
-      } else if (data.status === "stopped") {
-        factorioStatus = "stopped";
-        updateFactorioStatusDisplay();
+  // Watch for provider changes to update the input field and handle provider logic
+  $effect(() => {
+    currentApiKeyInput = configStore.getCurrentProviderApiKey();
+    appEffects.handleProviderChange();
+  });
 
-        // Only show closure message if Factorio was previously running
-        if (wasRunning) {
-          if (data.error) {
-            setStatus("Factorio terminated with an error", "error");
-          } else {
-            setStatus("Factorio was closed", "success");
-          }
-          wasRunning = false; // Reset the running state
-        }
-      }
-    });
-  }
+  // Handle model changes
+  $effect(() => {
+    appEffects.handleModelChange();
+  });
 
-  async function loadConfig() {
-    try {
-      const loadedConfig = await ipc.getConfig();
-      console.log("Received config from backend:", loadedConfig);
+  // Handle API key changes
+  $effect(() => {
+    appEffects.handleApiKeyChange();
+  });
 
-      // Ensure all properties are present with defaults
-      config = {
-        factorioPath: loadedConfig.factorioPath || "",
-        openAIKey: loadedConfig.openAIKey || "", // Deprecated
-        aiBridgeEnabled: false, // Will be set below based on provider API key
-        aiProvider: (loadedConfig as any).aiProvider || "openai",
-        aiModel: loadedConfig.aiModel || "gpt-4",
-        udpPort: loadedConfig.udpPort || 9001,
-        providerApiKeys: (loadedConfig as any).providerApiKeys || {},
-      };
-
-      console.log("Frontend config after loading:", config);
-
-      // Migration: Move old openAIKey to provider-specific key if needed
-      if (loadedConfig.openAIKey && !config.providerApiKeys.openai) {
-        config.providerApiKeys.openai = loadedConfig.openAIKey;
-        console.log("Migrated old OpenAI key to providerApiKeys");
-      }
-
-      // Update AI bridge enabled status based on current provider's API key
-      config.aiBridgeEnabled = !!getCurrentProviderApiKey();
-
-      // Initialize previous API key tracking
-      previousApiKey = getCurrentProviderApiKey();
-      currentApiKeyInput = getCurrentProviderApiKey();
-
-      // Check if Factorio is currently running
-      const isRunning = await ipc.isFactorioRunning();
-      if (isRunning) {
-        factorioStatus = "running";
-        wasRunning = true; // Set wasRunning to true if Factorio is already running
-      } else if (loadedConfig.factorioPath) {
-        factorioStatus = "found";
-      } else {
-        factorioStatus = "not_found";
-      }
-
-      updateFactorioStatusDisplay();
-    } catch (error) {
-      console.error("Failed to load config:", error);
-    }
-  }
-
-  async function saveConfig() {
-    console.log("Saving config:", config);
-    try {
-      // Auto-enable AI bridge if current provider has API key
-      config.aiBridgeEnabled = !!getCurrentProviderApiKey();
-
-      // Ensure providerApiKeys is properly initialized
-      if (!config.providerApiKeys) {
-        config.providerApiKeys = {};
-      }
-
-      // Create a plain object with all the properties we need to save
-      const configToSave = {
-        factorioPath: config.factorioPath,
-        openAIKey: config.openAIKey, // Keep for backward compatibility
-        aiBridgeEnabled: config.aiBridgeEnabled,
-        aiProvider: config.aiProvider,
-        aiModel: config.aiModel,
-        udpPort: config.udpPort,
-        providerApiKeys: { ...config.providerApiKeys }, // Ensure it's a proper object copy
-      };
-
-      console.log("Sending config to backend:", configToSave);
-      console.log("providerApiKeys being sent:", configToSave.providerApiKeys);
-      await ipc.saveConfig(configToSave);
-
-      // Update Factorio status based on path
-      if (config.factorioPath) {
-        if (factorioStatus !== "running") {
-          factorioStatus = "found";
-        }
-      } else {
-        factorioStatus = "not_found";
-      }
-
-      updateFactorioStatusDisplay();
-    } catch (error) {
-      console.error("Failed to save config:", error);
-    }
-  }
-
-  function updateFactorioStatusDisplay() {
-    // If there's an active status message, don't update the factorioStatusText
-    if (statusMessage) return;
-
-    switch (factorioStatus) {
-      case "not_found":
-        factorioStatusText = "Not found";
-        factorioStatusClass = "error";
-        break;
-      case "found":
-        factorioStatusText = "Found";
-        factorioStatusClass = "success";
-        break;
-      case "running":
-        factorioStatusText = "Running";
-        factorioStatusClass = "success";
-        break;
-      case "stopped":
-        factorioStatusText = "Stopped";
-        factorioStatusClass = "warning";
-        break;
-    }
-  }
-
-  async function manageAIBridge() {
-    const currentApiKey = getCurrentProviderApiKey();
-    const shouldBeRunning = currentApiKey && config.aiBridgeEnabled;
-    const isCurrentlyRunning = await ipc.isAIBridgeRunning();
-
-    if (shouldBeRunning && !isCurrentlyRunning) {
-      await startAIBridge();
-    } else if (!shouldBeRunning && isCurrentlyRunning) {
-      await stopAIBridge();
-    }
-  }
-
-  async function startAIBridge() {
-    const currentApiKey = getCurrentProviderApiKey();
-    if (!currentApiKey) {
-      setStatus("API key is required", "error");
-      return;
-    }
-
-    try {
-      const result = await ipc.startAIBridge();
-      if (result.success) {
-        setStatus("AI Bridge started automatically", "success");
-      } else {
-        setStatus(result.message, "error");
-      }
-    } catch (error) {
-      setStatus(`Error starting AI Bridge: ${error}`, "error");
-    }
-  }
-
-  async function stopAIBridge() {
-    try {
-      const result = await ipc.stopAIBridge();
-      if (result.success) {
-        setStatus("AI Bridge stopped", "success");
-      } else {
-        setStatus(result.message, "error");
-      }
-    } catch (error) {
-      setStatus(`Error stopping AI Bridge: ${error}`, "error");
-    }
-  }
-
-  async function restartAIBridge() {
-    await stopAIBridge();
-    // Small delay to ensure clean shutdown
-    setTimeout(async () => {
-      await startAIBridge();
-    }, 500);
-  }
-
-  async function updateAIModel() {
-    try {
-      await ipc.updateAIModel(config.aiModel);
-      setStatus("AI model updated successfully", "success");
-    } catch (error) {
-      setStatus(`Error updating AI model: ${error}`, "error");
-    }
-  }
-
-  async function browseFactorioPath() {
-    const path = await ipc.browseFactorioPath();
-    if (path) {
-      config = { ...config, factorioPath: path };
-      await saveConfig();
-      setStatus("Factorio executable selected successfully", "success");
-    }
-  }
-
-  async function autoDetectFactorio() {
-    const path = await ipc.autoDetectFactorio();
-    if (path) {
-      config = { ...config, factorioPath: path };
-      await saveConfig();
-      setStatus("Factorio executable detected automatically", "success");
-    } else {
-      setStatus("Failed to detect Factorio executable", "error");
-    }
-  }
-
-  async function launchFactorio() {
-    // Prevent launching if already running
-    if (factorioStatus === "running") {
-      setStatus("Factorio is already running", "error");
-      return;
-    }
-
-    if (!config.factorioPath) {
-      setStatus("Factorio executable not found", "error");
-      return;
-    }
-
-    isLaunching = true;
-    setStatus("Launching Factorio...", "success");
-
-    // Record the start time to ensure minimum 5 second duration
-    const launchStartTime = Date.now();
-    const minLaunchDuration = 5000; // 5 seconds in milliseconds
-
-    try {
-      const result = await ipc.launchFactorio();
-      if (result.success) {
-        setStatus(result.message, "success");
-        wasRunning = true; // Set wasRunning to true when we successfully launch Factorio
-      } else {
-        setStatus(result.message, "error");
-      }
-    } catch (error) {
-      setStatus(`Error launching Factorio: ${error}`, "error");
-    } finally {
-      // Ensure the launching state is shown for at least 5 seconds
-      const elapsedTime = Date.now() - launchStartTime;
-      const remainingTime = Math.max(0, minLaunchDuration - elapsedTime);
-      
-      if (remainingTime > 0) {
-        setTimeout(() => {
-          isLaunching = false;
-        }, remainingTime);
-      } else {
-        isLaunching = false;
-      }
-    }
-  }
-
-  function setStatus(message: string, type: "success" | "error") {
-    statusMessage = message;
-    // Temporarily override the status class to show the message type
-    factorioStatusClass = type;
-
-    // After 5 seconds, clear the status message and restore the original factorio status display
-    setTimeout(() => {
-      statusMessage = "";
-      updateFactorioStatusDisplay();
-    }, 5000);
-  }
-
-  // Window control functions
-  function handleMinimize() {
-    ipc.minimizeWindow();
-  }
-
-  function handleClose() {
-    ipc.closeWindow();
-  }
-
-  // Get current model options based on selected provider
-  const currentModelOptions = $derived(getModelOptionsForProvider(config.aiProvider));
-
-  // Helper functions for provider-specific API keys
-  function getCurrentProviderApiKey(): string {
-    if (!config.providerApiKeys) {
-      config.providerApiKeys = {};
-    }
-    return config.providerApiKeys[config.aiProvider] || "";
-  }
-
-  function setCurrentProviderApiKey(apiKey: string) {
-    console.log(
-      `Setting API key for provider ${config.aiProvider}:`,
-      apiKey ? "[REDACTED]" : "empty",
-    );
-    if (!config.providerApiKeys) {
-      config.providerApiKeys = {};
-      console.log("Initialized empty providerApiKeys object");
-    }
-    config.providerApiKeys[config.aiProvider] = apiKey;
-    console.log("Updated providerApiKeys:", Object.keys(config.providerApiKeys));
-
-    // Update the input field as well to keep them in sync
-    currentApiKeyInput = apiKey;
-  }
-
-  // Handle API key input changes
-  async function handleApiKeyChange() {
+  // Event handlers
+  async function handleApiKeyChange(): Promise<void> {
     console.log(
       `handleApiKeyChange called. currentApiKeyInput: ${currentApiKeyInput ? "[REDACTED]" : "empty"}`,
     );
-    console.log(`Current provider: ${config.aiProvider}`);
-    console.log(`Config providerApiKeys before update:`, Object.keys(config.providerApiKeys || {}));
+    console.log(`Current provider: ${configStore.config.aiProvider}`);
+    console.log(`Config providerApiKeys before update:`, Object.keys(configStore.config.providerApiKeys || {}));
 
     // Update the provider-specific key with the current input value
-    setCurrentProviderApiKey(currentApiKeyInput);
+    configStore.setCurrentProviderApiKey(currentApiKeyInput);
 
-    console.log(`Config providerApiKeys after update:`, Object.keys(config.providerApiKeys || {}));
+    console.log(`Config providerApiKeys after update:`, Object.keys(configStore.config.providerApiKeys || {}));
     console.log(
-      `Value for current provider after update: ${config.providerApiKeys[config.aiProvider] ? "[REDACTED]" : "empty"}`,
+      `Value for current provider after update: ${configStore.config.providerApiKeys[configStore.config.aiProvider] ? "[REDACTED]" : "empty"}`,
     );
 
-    await saveConfig();
+    await configStore.saveConfig();
   }
 
-  // Reactive variable to track current provider's API key for the input
-  let currentApiKeyInput = $state("");
-
-  // Watch for provider changes to update the input field
-  $effect(() => {
-    currentApiKeyInput = getCurrentProviderApiKey();
-  });
-
-  // Track previous values for change detection and API key monitoring
-  let previousProvider: string | null = null;
-  let previousModel: string | null = null;
-  let previousApiKey: string = "";
-
-  // Handle provider changes (requires restart)
-  $effect(() => {
-    // Only update if provider actually changed
-    if (previousProvider !== null && config.aiProvider !== previousProvider) {
-      console.log(`Provider changed from ${previousProvider} to ${config.aiProvider}`);
-
-      if (!isModelAvailableForProvider(config.aiProvider, config.aiModel)) {
-        const defaultModel = getDefaultModelForProvider(config.aiProvider);
-        console.log(
-          `Model ${config.aiModel} not available for ${config.aiProvider}, switching to ${defaultModel}`,
-        );
-        config.aiModel = defaultModel;
-        // Save the updated config
-        saveConfig();
-      }
-
-      // Update the input field with the new provider's API key
-      currentApiKeyInput = getCurrentProviderApiKey();
-
-      // Provider change always requires restart (new AI SDK client)
-      // Use the restart function which handles checking if running
-      restartAIBridge();
+  async function handleProviderChange(provider: string): Promise<void> {
+    configStore.updateConfig({ aiProvider: provider as any });
+    
+    // Check if model is available for new provider
+    if (!isModelAvailableForProvider(configStore.config.aiProvider, configStore.config.aiModel)) {
+      const defaultModel = getDefaultModelForProvider(configStore.config.aiProvider);
+      configStore.updateConfig({ aiModel: defaultModel });
     }
-    previousProvider = config.aiProvider;
-  });
+    
+    await configStore.saveConfig();
+    await aiBridgeService.updateAIModel();
+  }
 
-  // Monitor API key changes for the current provider
-  $effect(() => {
-    const currentApiKey = getCurrentProviderApiKey();
-    if (previousApiKey !== currentApiKey) {
-      console.log(`API key changed for provider ${config.aiProvider}`);
-      previousApiKey = currentApiKey;
+  async function handleModelChange(model: string): Promise<void> {
+    configStore.updateConfig({ aiModel: model });
+    await configStore.saveConfig();
+  }
 
-      // Update AI bridge enabled status
-      config.aiBridgeEnabled = !!currentApiKey;
+  async function handleFactorioPathChange(): Promise<void> {
+    await configStore.saveConfig();
+  }
 
-      // Manage bridge based on new key status
-      manageAIBridge();
-    }
-  });
+  // Window control functions
+  function handleMinimize(): void {
+    ipc.minimizeWindow();
+  }
 
-  // Handle model changes (can use efficient update if provider hasn't changed)
-  $effect(() => {
-    if (previousModel !== null && config.aiModel !== previousModel) {
-      console.log(`Model changed from ${previousModel} to ${config.aiModel}`);
-      console.log(`Provider is: ${config.aiProvider}, previous provider: ${previousProvider}`);
-      // Only do model update if provider didn't change (provider change handles restart)
-      if (config.aiProvider === previousProvider) {
-        console.log("Provider unchanged, using updateAIModel()");
-        updateAIModel();
-      } else {
-        console.log("Provider also changed, restart will be handled by provider effect");
-      }
-    }
-    previousModel = config.aiModel;
-  });
+  function handleClose(): void {
+    ipc.closeWindow();
+  }
 </script>
 
 <main>
@@ -467,86 +112,37 @@
 
       <div class="content-container">
         <StatusIndicator
-          status={factorioStatusClass}
-          text={statusMessage || `Factorio: ${factorioStatusText}`}
+          status={statusStore.factorioStatusClass}
+          text={statusStore.statusMessage || `Factorio: ${statusStore.factorioStatusText}`}
         />
 
         <!-- Status Preview Display Section -->
-        <StatusPreviewDisplay aiProvider={config.aiProvider} status={factorioStatusClass} />
+        <StatusPreviewDisplay 
+          aiProvider={configStore.config.aiProvider} 
+          status={statusStore.factorioStatusClass} 
+        />
 
         <div style="margin-left: 5px; margin-right: 5px;">
-          <Section title="Factorio Executable">
-            <Row>
-              <InputField
-                value={config.factorioPath}
-                placeholder="Path to factorio.exe"
-                onChange={saveConfig}
-              />
-              <Button onClick={browseFactorioPath}>Browse</Button>
-              <Button onClick={autoDetectFactorio}>Auto</Button>
-            </Row>
-          </Section>
+          <FactorioPathSection
+            factorioPath={configStore.config.factorioPath}
+            onPathChange={handleFactorioPathChange}
+          />
 
           <HorizontalLine />
 
-          <Section title="AI Configuration">
-            <Row justify="space-between">
-              <Label size="small">Provider</Label>
-              <Dropdown
-                value={config.aiProvider}
-                options={aiProviderOptions}
-                width="300px"
-                onChange={(value: string) => {
-                  config = { ...config, aiProvider: value as Config['aiProvider'] };
-                  saveConfig();
-                  updateAIModel();
-                }}
-              />
-            </Row>
-            <Row justify="space-between">
-              <Label size="small">Model:</Label>
-              {#key config.aiProvider}
-                <Dropdown
-                  value={config.aiModel}
-                  options={currentModelOptions}
-                  width="300px"
-                  onChange={(value) => {
-                    config = { ...config, aiModel: value };
-                    saveConfig();
-                  }}
-                />
-              {/key}
-            </Row>
-            <Row justify="space-between" marginBottom="30px">
-              <Label size="small">API Key:</Label>
-              <KeyToggleInput
-                bind:value={currentApiKeyInput}
-                placeholder={`Enter your ${aiProviderOptions.find((p) => p.value === config.aiProvider)?.label || "API"} key...`}
-                onChange={handleApiKeyChange}
-                width="400px"
-              />
-            </Row>
+          <AIConfigSection
+            config={configStore.config}
+            {currentApiKeyInput}
+            onProviderChange={handleProviderChange}
+            onModelChange={handleModelChange}
+            onApiKeyChange={handleApiKeyChange}
+          />
 
-            <!--
-          <Row>
-            <Label size="small">UDP Port:</Label>
-            <NumberInputField value={config.udpPort} min={1024} max={65535} onChange={saveConfig} />
-          </Row>
-          -->
-          </Section>
-
-          <GreenButton
-            onClick={launchFactorio}
-            disabled={!config.factorioPath || isLaunching || factorioStatus === "running"}
-            fullWidth
-            primary
-          >
-            {isLaunching
-              ? "Launching..."
-              : factorioStatus === "running"
-                ? "Factorio is Running"
-                : "Launch Factorio"}
-          </GreenButton>
+          <LaunchSection
+            factorioPath={configStore.config.factorioPath}
+            isLaunching={statusStore.isLaunching}
+            factorioStatus={statusStore.factorioStatus}
+          />
         </div>
       </div>
     </div>
