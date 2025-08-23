@@ -1,12 +1,12 @@
 <script lang="ts">
-  import ipc, { type Config, type FactorioStatus } from "./ipc";
+  import ipc, { type Config, type FactorioStatus } from "./utils/ipc";
   import {
     aiProviderOptions,
     modelsByProvider,
     getModelOptionsForProvider,
     isModelAvailableForProvider,
     getDefaultModelForProvider,
-  } from "./ai-config";
+  } from "./config/ai-config";
   import "./app.css";
 
   // Components
@@ -18,7 +18,6 @@
     Dropdown,
     StatusIndicator,
     Section,
-    LaunchButton,
     KeyToggleInput,
     Row,
     Label,
@@ -293,6 +292,10 @@
     isLaunching = true;
     setStatus("Launching Factorio...", "success");
 
+    // Record the start time to ensure minimum 5 second duration
+    const launchStartTime = Date.now();
+    const minLaunchDuration = 5000; // 5 seconds in milliseconds
+
     try {
       const result = await ipc.launchFactorio();
       if (result.success) {
@@ -304,7 +307,17 @@
     } catch (error) {
       setStatus(`Error launching Factorio: ${error}`, "error");
     } finally {
-      isLaunching = false;
+      // Ensure the launching state is shown for at least 5 seconds
+      const elapsedTime = Date.now() - launchStartTime;
+      const remainingTime = Math.max(0, minLaunchDuration - elapsedTime);
+      
+      if (remainingTime > 0) {
+        setTimeout(() => {
+          isLaunching = false;
+        }, remainingTime);
+      } else {
+        isLaunching = false;
+      }
     }
   }
 
@@ -459,7 +472,7 @@
         />
 
         <!-- Status Preview Display Section -->
-        <StatusPreviewDisplay aiProvider={config.aiProvider} />
+        <StatusPreviewDisplay aiProvider={config.aiProvider} status={factorioStatusClass} />
 
         <div style="margin-left: 5px; margin-right: 5px;">
           <Section title="Factorio Executable">
@@ -470,7 +483,7 @@
                 onChange={saveConfig}
               />
               <Button onClick={browseFactorioPath}>Browse</Button>
-              <Button onClick={autoDetectFactorio}>Auto-Detect</Button>
+              <Button onClick={autoDetectFactorio}>Auto</Button>
             </Row>
           </Section>
 
@@ -483,8 +496,8 @@
                 value={config.aiProvider}
                 options={aiProviderOptions}
                 width="300px"
-                onChange={(value) => {
-                  config = { ...config, aiProvider: value };
+                onChange={(value: string) => {
+                  config = { ...config, aiProvider: value as Config['aiProvider'] };
                   saveConfig();
                   updateAIModel();
                 }}
@@ -522,15 +535,18 @@
           -->
           </Section>
 
-          <LaunchButton
+          <GreenButton
             onClick={launchFactorio}
             disabled={!config.factorioPath || isLaunching || factorioStatus === "running"}
-            text={isLaunching
+            fullWidth
+            primary
+          >
+            {isLaunching
               ? "Launching..."
               : factorioStatus === "running"
                 ? "Factorio is Running"
                 : "Launch Factorio"}
-          />
+          </GreenButton>
         </div>
       </div>
     </div>

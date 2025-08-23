@@ -70,6 +70,7 @@
     "ai": "^5.0.15",
     "dgram": "^1.0.1",
     "electron-reload": "^2.0.0-alpha.1",
+    "update-electron-app": "^3.1.1",
     "vite": "^7.1.2"
   }
 }

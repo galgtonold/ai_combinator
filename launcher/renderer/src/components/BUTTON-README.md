@@ -13,9 +13,6 @@ Standard button using the regular Factorio button styling.
 ### GreenButton.svelte
 Green button using the green Factorio button styling for success actions or confirmations.
 
-### LaunchButton.svelte
-Launch button that uses GreenButton with appropriate sizing for the main launch action.
-
 ### FrameButton.svelte
 Frame-style button using the frame_button styling.
 
@@ -26,7 +23,7 @@ Legacy component that uses NormalButton internally for backward compatibility.
 
 ```svelte
 <script>
-  import { NormalButton, GreenButton, LaunchButton } from './components';
+  import { NormalButton, GreenButton } from './components';
   
   function handleClick() {
     console.log('Button clicked!');
@@ -43,8 +40,10 @@ Legacy component that uses NormalButton internally for backward compatibility.
   Confirm Action
 </GreenButton>
 
-<!-- Launch Button -->
-<LaunchButton onClick={handleClick} text="Launch Game" />
+<!-- Green Button with full width for main actions -->
+<GreenButton onClick={handleClick} size="large" fullWidth primary>
+  Launch Game
+</GreenButton>
 ```
 
 ## Smart Variant System
@@ -67,8 +66,6 @@ All button components accept the following props:
 | fullWidth | boolean | false | Makes the button take up full width of container |
 | loading | boolean | false | Shows a loading spinner instead of content |
 | selected | boolean | false | Renders the button in a selected state |
-| size | 'small' \| 'medium' \| 'large' | 'medium' | Controls the button size |
-| use9Slice | boolean | true | Uses 9-slice scaling for better quality |
 
 ## Image Requirements
 

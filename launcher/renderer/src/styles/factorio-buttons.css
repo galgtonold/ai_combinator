@@ -3,8 +3,6 @@
   --button-hover-color: black;
   --button-disabled-color: black;
   --button-shadow: rgba(15, 7, 3, 0.5);
-  --button-glow: rgba(225, 177, 106, 0.6);
-  --green-button-glow: rgba(76, 175, 80, 0.6);
 }
 
 /* Base button styling for all button types */
@@ -25,7 +23,6 @@
   box-sizing: border-box;
   line-height: 28px;
   border-image: url('/graphics/button.png') 8 fill / 5px stretch;
-  filter: none;
 }
 
 /* Normal button variant */
@@ -35,14 +32,9 @@
 
 .factorio-btn-normal:hover:not(:disabled):not(:active):not(.clicked) {
   border-image-source: url('/graphics/button_hovered.png');
-  filter: brightness(1.3) saturate(1.2);
+  filter: drop-shadow(0 0 2px #f9b44b);
+  box-shadow: inset 0px 0px 4px 2px #f9b44b;
   transition: all 0.1s ease-in-out;
-}
-
-.factorio-btn-normal.clicked:hover {
-  border-image-source: url('/graphics/button_clicked.png');
-  filter: none;
-  transition: none;
 }
 
 .factorio-btn-normal:active:not(:disabled) {
@@ -54,22 +46,24 @@
 }
 
 .factorio-btn-normal.clicked:hover {
-  border-image-source: url('/graphics/button_clicked.png');
   filter: none;
 }
 
 /* Green button variant */
 .factorio-btn-green {
   border-image-source: url('/graphics/green_button.png');
-  color: black;
-  box-shadow: 2px 2px 5px var(--button-shadow);
   font-size: 30px;
+
+  font-weight: 800;
+  min-width: 120px;
+  min-height: 64px;
+  line-height: 36px;
+  border-width: 5px;
 }
 
 .factorio-btn-green:hover:not(:disabled):not(:active):not(.clicked) {
   border-image-source: url('/graphics/green_button_hovered.png');
-  filter: brightness(1.3) saturate(1.2);
-  box-shadow: 2px 2px 5px var(--button-shadow), 0 0 6px var(--green-button-glow);
+  filter: drop-shadow(0 0 5px #34be3c);
   transition: all 0.1s ease-in-out;
 }
 
@@ -82,7 +76,6 @@
 }
 
 .factorio-btn-green.clicked:hover {
-  border-image-source: url('/graphics/green_button_clicked.png');
   filter: none;
 }
 
@@ -91,28 +84,8 @@
 }
 
 /* Frame button styling - preserving original implementation */
-.factorio-frame-button {
-  position: relative;
-  font-family: 'Titillium Web', sans-serif;
-  font-weight: 800;
-  font-size: 16px;
-  color: var(--button-font-color);
-  cursor: pointer;
-  text-align: center;
-  min-width: 108px;
-  min-height: 28px;
-  padding: 0 8px;
-  border: 5px solid transparent;
-  background: transparent;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-image: url('/graphics/frame_button.png') 8 fill / 5px stretch;
-  box-shadow: 2px 2px 5px var(--button-shadow);
-}
 
-.factorio-frame-button-9slice {
+.factorio-frame-button {
   position: relative;
   background-color: transparent;
   border: 5px solid transparent;
@@ -140,34 +113,22 @@
   box-shadow: 2px 2px 5px rgba(15, 7, 3, 0.5);
   filter: none;
   z-index: 1;
+  width: 30px;
+  height: 30px;  
+  min-width: 30px;
+  min-height: 30px;  
 }
 
 .factorio-frame-button:hover:not(:disabled):not(:active) {
-  border-image-source: url('/graphics/frame_button_hovered.png');
-  filter: brightness(1.3) saturate(1.2);
-  box-shadow: 2px 2px 5px var(--button-shadow), 0 0 6px var(--button-glow);
-  transition: all 0.1s ease-in-out;
-}
-
-.factorio-frame-button-9slice:hover:not(:disabled):not(:active) {
-  color: var(--button-font-color);
-  border-image-source: url('/graphics/frame_button_hovered.png');
-  border-image-slice: 8 8 8 8 fill;
-  filter: brightness(1.3) saturate(1.2);
+  border-image-source: url('/graphics/button_hovered.png');
   box-shadow: 2px 2px 5px rgba(15, 7, 3, 1), 0 0 6px rgba(225, 177, 106, 0.6);
-  transition: all 0.1s ease-in-out;
+  transition: all 0.1s ease-in-out;  
 }
 
 .factorio-frame-button:active:not(:disabled) {
   border-image-source: url('/graphics/frame_button_clicked.png');
 }
 
-.factorio-frame-button-9slice:active:not(:disabled) {
-  color: var(--button-font-color);
-  border-image-source: url('/graphics/frame_button_clicked.png');
-  border-image-slice: 8 8 8 8 fill;
-  box-shadow: 2px 2px 5px rgba(15, 7, 3, 0.5);
-}
 
 /* Listbox item button styling */
 .factorio-listbox-item {
@@ -208,8 +169,6 @@
 .factorio-listbox-item.selected {
   border-image-source: url('/graphics/listbox_item_clicked.png');
   color: black;
-  margin: 0;
-  padding: 0 8px;
 }
 
 .factorio-listbox-item.selected:hover {
@@ -221,13 +180,9 @@
 .factorio-listbox-item.clicked {
   border-image-source: url('/graphics/listbox_item_clicked.png');
   color: black;
-  margin: 0;
-  padding: 0 8px;
 }
 
 .factorio-listbox-item.clicked:hover {
-  border-image-source: url('/graphics/listbox_item_clicked.png');
-  color: black;
   filter: none;
 }
 
@@ -241,7 +196,7 @@
 }
 
 /* Frame button shadow overlay */
-.frame-button-shadow-9slice {
+.frame-button-shadow {
   position: absolute;
   pointer-events: none;
   z-index: 0;
@@ -260,8 +215,7 @@
 }
 
 /* Disabled states */
-.button-base:disabled, .factorio-btn-base:disabled,
-.factorio-frame-button:disabled, .factorio-frame-button-9slice:disabled {
+.button-base:disabled, .factorio-btn-base:disabled,.factorio-frame-button:disabled {
   cursor: not-allowed;
   opacity: 0.7;
 }
@@ -275,88 +229,15 @@
   border-image-source: url('/graphics/green_button_hovered.png');
 }
 
-.factorio-frame-button-9slice.selected {
-  color: var(--button-font-color);
-  border-image-source: url('/graphics/frame_button_hovered.png');
-  border-image-slice: 8 8 8 8 fill;
-  box-shadow: 2px 2px 5px rgba(15, 7, 3, 0.5);
-}
-
-.button-base.selected:active:not(:disabled), .factorio-btn-base.selected:active:not(:disabled) {
-  box-shadow: 2px 2px 5px var(--button-shadow);
-}
-
 /* Clicked states */
 .button-base.clicked, .factorio-btn-base.clicked {
   border-image-source: url('/graphics/button_clicked.png');
 }
 
 .button-base.clicked:hover, .factorio-btn-base.clicked:hover {
-  border-image-source: url('/graphics/button_clicked.png');
   filter: none;
-}
-
-/* Size variants */
-.button-base.small, .factorio-btn-base.small {
-  font-size: 12px;
-  min-width: 80px;
-  min-height: 24px;
-  line-height: 24px;
-  border-width: 5px;
-}
-
-.factorio-frame-button.small, .factorio-frame-button-9slice.small {
-  font-size: 12px;
-  min-width: 30px;
-  min-height: 30px;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border-width: 5px;
-}
-
-.button-base.large, .factorio-btn-base.large {
-  font-size: 22px;
-  font-weight: 800;
-  min-width: 120px;
-  min-height: 64px;
-  line-height: 36px;
-  border-width: 5px;
-}
-
-.factorio-frame-button.large, .factorio-frame-button-9slice.large {
-  font-size: 16px;
-  min-width: 120px;
-  min-height: 36px;
-  height: 36px;
-  padding: 0 12px;
-  border-width: 5px;
-}
-
-.factorio-frame-button-9slice.medium {
-  font-size: 14px;
-  min-width: 108px;
-  min-height: 28px;
-  height: 28px;
-  padding: 0 8px;
 }
 
 .button-base.full-width, .factorio-btn-base.full-width {
   width: 100%;
-}
-
-/* Loading spinner */
-.loading-spinner {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: #fff;
-  animation: spin 1s linear infinite;
-  vertical-align: middle;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }

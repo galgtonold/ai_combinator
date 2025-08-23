@@ -1,16 +1,20 @@
 import { app, BrowserWindow } from "electron";
 import electronReload from "electron-reload";
 import { join } from "path";
-import { ConfigManager } from "./config-manager";
-import { FactorioManager } from "./factorio-manager";
-import { AIBridgeManager } from "./ai-bridge-manager";
-import { IPCHandlers } from "./ipc-handlers";
+import { ConfigManager } from "./managers/config-manager";
+import { FactorioManager } from "./managers/factorio-manager";
+import { AIBridgeManager } from "./managers/ai-bridge-manager";
+import { IPCHandlers } from "./services/ipc-handlers";
+
+const { updateElectronApp } = require('update-electron-app')
 
 let mainWindow: BrowserWindow;
 let configManager: ConfigManager;
 let factorioManager: FactorioManager;
 let aiBridgeManager: AIBridgeManager;
 let ipcHandlers: IPCHandlers;
+
+updateElectronApp()
 
 app.once("ready", main);
 
