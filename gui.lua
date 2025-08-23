@@ -1071,6 +1071,23 @@ function guis.on_gui_close(ev)
 	--  - click on code -  sets "code_focused = true", and game suppresses hotkeys except for esc
 	--  - esc - with code_focused set, it is cleared, unfocus(), player.opened re-set to this gui again
 	--  - esc again - as gui_t.code_focused is unset now, gui is simply closed here
+	
+	-- Check if there's a set task dialog open and close it first
+	if current_dialog[ev.player_index] and current_dialog[ev.player_index].valid then
+		-- Get the uid from the dialog tags to find the main combinator window
+		local dialog_uid = current_dialog[ev.player_index].tags and current_dialog[ev.player_index].tags.uid
+		guis.close_dialog(ev.player_index)
+		-- Refocus the main combinator window so next escape will close it
+		if dialog_uid then
+			local gui_t = storage.guis[dialog_uid]
+			if gui_t and gui_t.mlc_gui and gui_t.mlc_gui.valid then
+				local p = game.players[ev.player_index]
+				p.opened = gui_t.mlc_gui
+			end
+		end
+		return
+	end
+	
 	local uid, gui_t = find_gui(ev)
 	if not uid then return end
 	local p = game.players[ev.player_index]
