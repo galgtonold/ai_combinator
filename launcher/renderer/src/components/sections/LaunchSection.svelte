@@ -11,13 +11,13 @@
 
   let { factorioPath, isLaunching, factorioStatus }: Props = $props();
 
-  $: launchText = isLaunching
+  const launchText = $derived(isLaunching
     ? "Launching..."
     : factorioStatus === "running"
       ? "Factorio is Running"
-      : "Launch Factorio";
+      : "Launch Factorio");
 
-  $: isDisabled = !factorioPath || isLaunching || factorioStatus === "running";
+  const isDisabled = $derived(!factorioPath || isLaunching || factorioStatus === "running");
 
   async function handleLaunch(): Promise<void> {
     await factorioService.launchFactorio();

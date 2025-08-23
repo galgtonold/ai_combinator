@@ -1,24 +1,24 @@
+import { writable } from 'svelte/store';
 import type { Config } from "../utils/ipc";
 import ipc from "../utils/ipc";
 
+// Create reactive config store
+const initialConfig: Config = {
+  factorioPath: "",
+  openAIKey: "", // Deprecated - kept for migration
+  aiBridgeEnabled: false,
+  aiProvider: "openai",
+  aiModel: "gpt-4",
+  udpPort: 9001,
+  providerApiKeys: {},
+};
+
+export const config = writable<Config>(initialConfig);
+
 /**
- * Configuration store for managing app settings
+ * Configuration service for managing app settings
  */
-export class ConfigStore {
-  private _config: Config = $state({
-    factorioPath: "",
-    openAIKey: "", // Deprecated - kept for migration
-    aiBridgeEnabled: false,
-    aiProvider: "openai",
-    aiModel: "gpt-4",
-    udpPort: 9001,
-    providerApiKeys: {},
-  });
-
-  get config(): Config {
-    return this._config;
-  }
-
+export class ConfigService {
   /**
    * Load configuration from the backend
    */
@@ -28,7 +28,7 @@ export class ConfigStore {
       console.log("Received config from backend:", loadedConfig);
 
       // Ensure all properties are present with defaults
-      this._config = {
+      const newConfig: Config = {
         factorioPath: loadedConfig.factorioPath || "",
         openAIKey: loadedConfig.openAIKey || "", // Deprecated
         aiBridgeEnabled: false, // Will be set below based on provider API key
@@ -38,16 +38,18 @@ export class ConfigStore {
         providerApiKeys: (loadedConfig as any).providerApiKeys || {},
       };
 
-      console.log("Frontend config after loading:", this._config);
+      console.log("Frontend config after loading:", newConfig);
 
       // Migration: Move old openAIKey to provider-specific key if needed
-      if (loadedConfig.openAIKey && !this._config.providerApiKeys.openai) {
-        this._config.providerApiKeys.openai = loadedConfig.openAIKey;
+      if (loadedConfig.openAIKey && !newConfig.providerApiKeys.openai) {
+        newConfig.providerApiKeys.openai = loadedConfig.openAIKey;
         console.log("Migrated old OpenAI key to providerApiKeys");
       }
 
       // Update AI bridge enabled status based on current provider's API key
-      this._config.aiBridgeEnabled = !!this.getCurrentProviderApiKey();
+      newConfig.aiBridgeEnabled = !!this.getCurrentProviderApiKey(newConfig);
+
+      config.set(newConfig);
     } catch (error) {
       console.error("Failed to load config:", error);
       throw error;
@@ -57,31 +59,34 @@ export class ConfigStore {
   /**
    * Save configuration to the backend
    */
-  async saveConfig(): Promise<void> {
-    console.log("Saving config:", this._config);
+  async saveConfig(configValue: Config): Promise<void> {
+    console.log("Saving config:", configValue);
     try {
       // Auto-enable AI bridge if current provider has API key
-      this._config.aiBridgeEnabled = !!this.getCurrentProviderApiKey();
+      configValue.aiBridgeEnabled = !!this.getCurrentProviderApiKey(configValue);
 
       // Ensure providerApiKeys is properly initialized
-      if (!this._config.providerApiKeys) {
-        this._config.providerApiKeys = {};
+      if (!configValue.providerApiKeys) {
+        configValue.providerApiKeys = {};
       }
 
       // Create a plain object with all the properties we need to save
       const configToSave = {
-        factorioPath: this._config.factorioPath,
-        openAIKey: this._config.openAIKey, // Keep for backward compatibility
-        aiBridgeEnabled: this._config.aiBridgeEnabled,
-        aiProvider: this._config.aiProvider,
-        aiModel: this._config.aiModel,
-        udpPort: this._config.udpPort,
-        providerApiKeys: { ...this._config.providerApiKeys }, // Ensure it's a proper object copy
+        factorioPath: configValue.factorioPath,
+        openAIKey: configValue.openAIKey, // Keep for backward compatibility
+        aiBridgeEnabled: configValue.aiBridgeEnabled,
+        aiProvider: configValue.aiProvider,
+        aiModel: configValue.aiModel,
+        udpPort: configValue.udpPort,
+        providerApiKeys: { ...configValue.providerApiKeys }, // Ensure it's a proper object copy
       };
 
       console.log("Sending config to backend:", configToSave);
       console.log("providerApiKeys being sent:", configToSave.providerApiKeys);
       await ipc.saveConfig(configToSave);
+      
+      // Update the store with the saved config
+      config.set(configValue);
     } catch (error) {
       console.error("Failed to save config:", error);
       throw error;
@@ -92,35 +97,44 @@ export class ConfigStore {
    * Update a specific config property
    */
   updateConfig(updates: Partial<Config>): void {
-    this._config = { ...this._config, ...updates };
+    config.update(current => ({ ...current, ...updates }));
   }
 
   /**
    * Get the API key for the current provider
    */
-  getCurrentProviderApiKey(): string {
-    if (!this._config.providerApiKeys) {
-      this._config.providerApiKeys = {};
+  getCurrentProviderApiKey(configValue: Config): string {
+    if (!configValue.providerApiKeys) {
+      configValue.providerApiKeys = {};
     }
-    return this._config.providerApiKeys[this._config.aiProvider] || "";
+    return configValue.providerApiKeys[configValue.aiProvider] || "";
   }
 
   /**
    * Set the API key for the current provider
    */
-  setCurrentProviderApiKey(apiKey: string): void {
+  setCurrentProviderApiKey(configValue: Config, apiKey: string): Config {
     console.log(
-      `Setting API key for provider ${this._config.aiProvider}:`,
+      `Setting API key for provider ${configValue.aiProvider}:`,
       apiKey ? "[REDACTED]" : "empty",
     );
-    if (!this._config.providerApiKeys) {
-      this._config.providerApiKeys = {};
+    if (!configValue.providerApiKeys) {
+      configValue.providerApiKeys = {};
       console.log("Initialized empty providerApiKeys object");
     }
-    this._config.providerApiKeys[this._config.aiProvider] = apiKey;
-    console.log("Updated providerApiKeys:", Object.keys(this._config.providerApiKeys));
+    
+    const newConfig = {
+      ...configValue,
+      providerApiKeys: {
+        ...configValue.providerApiKeys,
+        [configValue.aiProvider]: apiKey
+      }
+    };
+    
+    console.log("Updated providerApiKeys:", Object.keys(newConfig.providerApiKeys));
+    return newConfig;
   }
 }
 
 // Create and export a singleton instance
-export const configStore = new ConfigStore();
+export const configService = new ConfigService();

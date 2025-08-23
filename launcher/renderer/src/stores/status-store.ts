@@ -1,90 +1,84 @@
+import { writable } from 'svelte/store';
 import type { FactorioStatus } from "../utils/ipc";
 
 export type StatusType = "error" | "warning" | "success";
 
+export interface StatusState {
+  factorioStatus: FactorioStatus;
+  factorioStatusText: string;
+  factorioStatusClass: StatusType;
+  statusMessage: string;
+  isLaunching: boolean;
+  wasRunning: boolean;
+}
+
+// Create reactive status store
+const initialStatus: StatusState = {
+  factorioStatus: "not_found",
+  factorioStatusText: "Not found",
+  factorioStatusClass: "error",
+  statusMessage: "",
+  isLaunching: false,
+  wasRunning: false,
+};
+
+export const status = writable<StatusState>(initialStatus);
+
 /**
- * Status store for managing application status and messages
+ * Status service for managing application status and messages
  */
-export class StatusStore {
-  private _factorioStatus: FactorioStatus = $state("not_found");
-  private _factorioStatusText: string = $state("Not found");
-  private _factorioStatusClass: StatusType = $state("error");
-  private _statusMessage: string = $state("");
-  private _isLaunching: boolean = $state(false);
-  private _wasRunning: boolean = $state(false);
-
-  get factorioStatus(): FactorioStatus {
-    return this._factorioStatus;
-  }
-
-  get factorioStatusText(): string {
-    return this._factorioStatusText;
-  }
-
-  get factorioStatusClass(): StatusType {
-    return this._factorioStatusClass;
-  }
-
-  get statusMessage(): string {
-    return this._statusMessage;
-  }
-
-  get isLaunching(): boolean {
-    return this._isLaunching;
-  }
-
-  get wasRunning(): boolean {
-    return this._wasRunning;
-  }
-
+export class StatusService {
   /**
    * Update Factorio status
    */
-  setFactorioStatus(status: FactorioStatus): void {
-    this._factorioStatus = status;
-    if (status === "running") {
-      this._wasRunning = true;
-    }
-    this.updateFactorioStatusDisplay();
+  setFactorioStatus(factorioStatus: FactorioStatus): void {
+    status.update(current => {
+      const newStatus = { ...current, factorioStatus };
+      if (factorioStatus === "running") {
+        newStatus.wasRunning = true;
+      }
+      this.updateFactorioStatusDisplay(newStatus);
+      return newStatus;
+    });
   }
 
   /**
    * Set launching state
    */
   setLaunching(isLaunching: boolean): void {
-    this._isLaunching = isLaunching;
+    status.update(current => ({ ...current, isLaunching }));
   }
 
   /**
    * Set was running state
    */
   setWasRunning(wasRunning: boolean): void {
-    this._wasRunning = wasRunning;
+    status.update(current => ({ ...current, wasRunning }));
   }
 
   /**
    * Update the factorio status display based on current status
    */
-  updateFactorioStatusDisplay(): void {
+  private updateFactorioStatusDisplay(statusValue: StatusState): void {
     // If there's an active status message, don't update the factorioStatusText
-    if (this._statusMessage) return;
+    if (statusValue.statusMessage) return;
 
-    switch (this._factorioStatus) {
+    switch (statusValue.factorioStatus) {
       case "not_found":
-        this._factorioStatusText = "Not found";
-        this._factorioStatusClass = "error";
+        statusValue.factorioStatusText = "Not found";
+        statusValue.factorioStatusClass = "error";
         break;
       case "found":
-        this._factorioStatusText = "Found";
-        this._factorioStatusClass = "success";
+        statusValue.factorioStatusText = "Found";
+        statusValue.factorioStatusClass = "success";
         break;
       case "running":
-        this._factorioStatusText = "Running";
-        this._factorioStatusClass = "success";
+        statusValue.factorioStatusText = "Running";
+        statusValue.factorioStatusClass = "success";
         break;
       case "stopped":
-        this._factorioStatusText = "Stopped";
-        this._factorioStatusClass = "warning";
+        statusValue.factorioStatusText = "Stopped";
+        statusValue.factorioStatusClass = "warning";
         break;
     }
   }
@@ -93,14 +87,19 @@ export class StatusStore {
    * Set a temporary status message that will clear after a timeout
    */
   setStatus(message: string, type: StatusType, timeout: number = 5000): void {
-    this._statusMessage = message;
-    // Temporarily override the status class to show the message type
-    this._factorioStatusClass = type;
+    status.update(current => ({
+      ...current,
+      statusMessage: message,
+      factorioStatusClass: type // Temporarily override the status class
+    }));
 
     // After the timeout, clear the status message and restore the original factorio status display
     setTimeout(() => {
-      this._statusMessage = "";
-      this.updateFactorioStatusDisplay();
+      status.update(current => {
+        const newStatus = { ...current, statusMessage: "" };
+        this.updateFactorioStatusDisplay(newStatus);
+        return newStatus;
+      });
     }, timeout);
   }
 
@@ -108,10 +107,13 @@ export class StatusStore {
    * Clear the current status message
    */
   clearStatus(): void {
-    this._statusMessage = "";
-    this.updateFactorioStatusDisplay();
+    status.update(current => {
+      const newStatus = { ...current, statusMessage: "" };
+      this.updateFactorioStatusDisplay(newStatus);
+      return newStatus;
+    });
   }
 }
 
 // Create and export a singleton instance
-export const statusStore = new StatusStore();
+export const statusService = new StatusService();

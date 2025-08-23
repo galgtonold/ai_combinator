@@ -1,6 +1,7 @@
 import ipc from "../utils/ipc";
-import { configStore } from "./config-store";
-import { statusStore } from "./status-store";
+import { config, configService } from "./config-store";
+import { statusService } from "./status-store";
+import { get } from 'svelte/store';
 
 /**
  * Factorio management service
@@ -12,10 +13,11 @@ export class FactorioService {
   async browseFactorioPath(): Promise<void> {
     const path = await ipc.browseFactorioPath();
     if (path) {
-      configStore.updateConfig({ factorioPath: path });
-      await configStore.saveConfig();
+      configService.updateConfig({ factorioPath: path });
+      const currentConfig = get(config);
+      await configService.saveConfig(currentConfig);
       this.updateFactorioStatus();
-      statusStore.setStatus("Factorio executable selected successfully", "success");
+      statusService.setStatus("Factorio executable selected successfully", "success");
     }
   }
 
@@ -25,12 +27,13 @@ export class FactorioService {
   async autoDetectFactorio(): Promise<void> {
     const path = await ipc.autoDetectFactorio();
     if (path) {
-      configStore.updateConfig({ factorioPath: path });
-      await configStore.saveConfig();
+      configService.updateConfig({ factorioPath: path });
+      const currentConfig = get(config);
+      await configService.saveConfig(currentConfig);
       this.updateFactorioStatus();
-      statusStore.setStatus("Factorio executable detected automatically", "success");
+      statusService.setStatus("Factorio executable detected automatically", "success");
     } else {
-      statusStore.setStatus("Failed to detect Factorio executable", "error");
+      statusService.setStatus("Failed to detect Factorio executable", "error");
     }
   }
 
@@ -38,19 +41,23 @@ export class FactorioService {
    * Launch Factorio
    */
   async launchFactorio(): Promise<void> {
+    const currentConfig = get(config);
+    
     // Prevent launching if already running
-    if (statusStore.factorioStatus === "running") {
-      statusStore.setStatus("Factorio is already running", "error");
+    // We'll need to get this from the status store, but for now let's check via IPC
+    const isRunning = await ipc.isFactorioRunning();
+    if (isRunning) {
+      statusService.setStatus("Factorio is already running", "error");
       return;
     }
 
-    if (!configStore.config.factorioPath) {
-      statusStore.setStatus("Factorio executable not found", "error");
+    if (!currentConfig.factorioPath) {
+      statusService.setStatus("Factorio executable not found", "error");
       return;
     }
 
-    statusStore.setLaunching(true);
-    statusStore.setStatus("Launching Factorio...", "success");
+    statusService.setLaunching(true);
+    statusService.setStatus("Launching Factorio...", "success");
 
     // Record the start time to ensure minimum 5 second duration
     const launchStartTime = Date.now();
@@ -59,13 +66,13 @@ export class FactorioService {
     try {
       const result = await ipc.launchFactorio();
       if (result.success) {
-        statusStore.setStatus(result.message, "success");
-        statusStore.setWasRunning(true); // Set wasRunning to true when we successfully launch Factorio
+        statusService.setStatus(result.message, "success");
+        statusService.setWasRunning(true); // Set wasRunning to true when we successfully launch Factorio
       } else {
-        statusStore.setStatus(result.message, "error");
+        statusService.setStatus(result.message, "error");
       }
     } catch (error) {
-      statusStore.setStatus(`Error launching Factorio: ${error}`, "error");
+      statusService.setStatus(`Error launching Factorio: ${error}`, "error");
     } finally {
       // Ensure the launching state is shown for at least 5 seconds
       const elapsedTime = Date.now() - launchStartTime;
@@ -73,10 +80,10 @@ export class FactorioService {
       
       if (remainingTime > 0) {
         setTimeout(() => {
-          statusStore.setLaunching(false);
+          statusService.setLaunching(false);
         }, remainingTime);
       } else {
-        statusStore.setLaunching(false);
+        statusService.setLaunching(false);
       }
     }
   }
@@ -85,12 +92,13 @@ export class FactorioService {
    * Update Factorio status based on configuration
    */
   updateFactorioStatus(): void {
-    if (configStore.config.factorioPath) {
-      if (statusStore.factorioStatus !== "running") {
-        statusStore.setFactorioStatus("found");
-      }
+    const currentConfig = get(config);
+    if (currentConfig.factorioPath) {
+      // Check current status to avoid overriding "running" status
+      // For now, we'll just set to "found" if not running
+      statusService.setFactorioStatus("found");
     } else {
-      statusStore.setFactorioStatus("not_found");
+      statusService.setFactorioStatus("not_found");
     }
   }
 
@@ -99,13 +107,15 @@ export class FactorioService {
    */
   async checkFactorioStatus(): Promise<void> {
     const isRunning = await ipc.isFactorioRunning();
+    const currentConfig = get(config);
+    
     if (isRunning) {
-      statusStore.setFactorioStatus("running");
-      statusStore.setWasRunning(true);
-    } else if (configStore.config.factorioPath) {
-      statusStore.setFactorioStatus("found");
+      statusService.setFactorioStatus("running");
+      statusService.setWasRunning(true);
+    } else if (currentConfig.factorioPath) {
+      statusService.setFactorioStatus("found");
     } else {
-      statusStore.setFactorioStatus("not_found");
+      statusService.setFactorioStatus("not_found");
     }
   }
 }

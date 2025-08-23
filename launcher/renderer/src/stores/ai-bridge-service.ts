@@ -1,6 +1,7 @@
 import ipc from "../utils/ipc";
-import { configStore } from "./config-store";
-import { statusStore } from "./status-store";
+import { config, configService } from "./config-store";
+import { statusService } from "./status-store";
+import { get } from 'svelte/store';
 
 /**
  * AI Bridge management service
@@ -10,8 +11,9 @@ export class AIBridgeService {
    * Manage AI Bridge based on configuration
    */
   async manageAIBridge(): Promise<void> {
-    const currentApiKey = configStore.getCurrentProviderApiKey();
-    const shouldBeRunning = currentApiKey && configStore.config.aiBridgeEnabled;
+    const currentConfig = get(config);
+    const currentApiKey = configService.getCurrentProviderApiKey(currentConfig);
+    const shouldBeRunning = currentApiKey && currentConfig.aiBridgeEnabled;
     const isCurrentlyRunning = await ipc.isAIBridgeRunning();
 
     if (shouldBeRunning && !isCurrentlyRunning) {
@@ -25,21 +27,22 @@ export class AIBridgeService {
    * Start the AI Bridge
    */
   async startAIBridge(): Promise<void> {
-    const currentApiKey = configStore.getCurrentProviderApiKey();
+    const currentConfig = get(config);
+    const currentApiKey = configService.getCurrentProviderApiKey(currentConfig);
     if (!currentApiKey) {
-      statusStore.setStatus("API key is required", "error");
+      statusService.setStatus("API key is required", "error");
       return;
     }
 
     try {
       const result = await ipc.startAIBridge();
       if (result.success) {
-        statusStore.setStatus("AI Bridge started automatically", "success");
+        statusService.setStatus("AI Bridge started automatically", "success");
       } else {
-        statusStore.setStatus(result.message, "error");
+        statusService.setStatus(result.message, "error");
       }
     } catch (error) {
-      statusStore.setStatus(`Error starting AI Bridge: ${error}`, "error");
+      statusService.setStatus(`Error starting AI Bridge: ${error}`, "error");
     }
   }
 
@@ -50,12 +53,12 @@ export class AIBridgeService {
     try {
       const result = await ipc.stopAIBridge();
       if (result.success) {
-        statusStore.setStatus("AI Bridge stopped", "success");
+        statusService.setStatus("AI Bridge stopped", "success");
       } else {
-        statusStore.setStatus(result.message, "error");
+        statusService.setStatus(result.message, "error");
       }
     } catch (error) {
-      statusStore.setStatus(`Error stopping AI Bridge: ${error}`, "error");
+      statusService.setStatus(`Error stopping AI Bridge: ${error}`, "error");
     }
   }
 
@@ -75,10 +78,11 @@ export class AIBridgeService {
    */
   async updateAIModel(): Promise<void> {
     try {
-      await ipc.updateAIModel(configStore.config.aiModel);
-      statusStore.setStatus("AI model updated successfully", "success");
+      const currentConfig = get(config);
+      await ipc.updateAIModel(currentConfig.aiModel);
+      statusService.setStatus("AI model updated successfully", "success");
     } catch (error) {
-      statusStore.setStatus(`Error updating AI model: ${error}`, "error");
+      statusService.setStatus(`Error updating AI model: ${error}`, "error");
     }
   }
 }

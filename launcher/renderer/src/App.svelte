@@ -18,7 +18,7 @@
   } from "./components";
 
   // Stores and Services
-  import { configStore, statusStore, aiBridgeService } from "./stores";
+  import { config, configService, status, aiBridgeService } from "./stores";
   import { useAppEffects } from "./composables";
 
   // Initialize effects handler
@@ -39,7 +39,7 @@
 
   // Watch for provider changes to update the input field and handle provider logic
   $effect(() => {
-    currentApiKeyInput = configStore.getCurrentProviderApiKey();
+    currentApiKeyInput = configService.getCurrentProviderApiKey($config);
     appEffects.handleProviderChange();
   });
 
@@ -58,40 +58,43 @@
     console.log(
       `handleApiKeyChange called. currentApiKeyInput: ${currentApiKeyInput ? "[REDACTED]" : "empty"}`,
     );
-    console.log(`Current provider: ${configStore.config.aiProvider}`);
-    console.log(`Config providerApiKeys before update:`, Object.keys(configStore.config.providerApiKeys || {}));
+    console.log(`Current provider: ${$config.aiProvider}`);
+    console.log(`Config providerApiKeys before update:`, Object.keys($config.providerApiKeys || {}));
 
     // Update the provider-specific key with the current input value
-    configStore.setCurrentProviderApiKey(currentApiKeyInput);
+    const newConfig = configService.setCurrentProviderApiKey($config, currentApiKeyInput);
+    config.set(newConfig);
 
-    console.log(`Config providerApiKeys after update:`, Object.keys(configStore.config.providerApiKeys || {}));
+    console.log(`Config providerApiKeys after update:`, Object.keys(newConfig.providerApiKeys || {}));
     console.log(
-      `Value for current provider after update: ${configStore.config.providerApiKeys[configStore.config.aiProvider] ? "[REDACTED]" : "empty"}`,
+      `Value for current provider after update: ${newConfig.providerApiKeys[newConfig.aiProvider] ? "[REDACTED]" : "empty"}`,
     );
 
-    await configStore.saveConfig();
+    await configService.saveConfig(newConfig);
   }
 
   async function handleProviderChange(provider: string): Promise<void> {
-    configStore.updateConfig({ aiProvider: provider as any });
+    const newConfig = { ...$config, aiProvider: provider as any };
     
     // Check if model is available for new provider
-    if (!isModelAvailableForProvider(configStore.config.aiProvider, configStore.config.aiModel)) {
-      const defaultModel = getDefaultModelForProvider(configStore.config.aiProvider);
-      configStore.updateConfig({ aiModel: defaultModel });
+    if (!isModelAvailableForProvider(newConfig.aiProvider, newConfig.aiModel)) {
+      const defaultModel = getDefaultModelForProvider(newConfig.aiProvider);
+      newConfig.aiModel = defaultModel;
     }
     
-    await configStore.saveConfig();
+    config.set(newConfig);
+    await configService.saveConfig(newConfig);
     await aiBridgeService.updateAIModel();
   }
 
   async function handleModelChange(model: string): Promise<void> {
-    configStore.updateConfig({ aiModel: model });
-    await configStore.saveConfig();
+    const newConfig = { ...$config, aiModel: model };
+    config.set(newConfig);
+    await configService.saveConfig(newConfig);
   }
 
   async function handleFactorioPathChange(): Promise<void> {
-    await configStore.saveConfig();
+    await configService.saveConfig($config);
   }
 
   // Window control functions
@@ -112,26 +115,26 @@
 
       <div class="content-container">
         <StatusIndicator
-          status={statusStore.factorioStatusClass}
-          text={statusStore.statusMessage || `Factorio: ${statusStore.factorioStatusText}`}
+          status={$status.factorioStatusClass}
+          text={$status.statusMessage || `Factorio: ${$status.factorioStatusText}`}
         />
 
         <!-- Status Preview Display Section -->
         <StatusPreviewDisplay 
-          aiProvider={configStore.config.aiProvider} 
-          status={statusStore.factorioStatusClass} 
+          aiProvider={$config.aiProvider} 
+          status={$status.factorioStatusClass} 
         />
 
         <div style="margin-left: 5px; margin-right: 5px;">
           <FactorioPathSection
-            factorioPath={configStore.config.factorioPath}
+            factorioPath={$config.factorioPath}
             onPathChange={handleFactorioPathChange}
           />
 
           <HorizontalLine />
 
           <AIConfigSection
-            config={configStore.config}
+            config={$config}
             {currentApiKeyInput}
             onProviderChange={handleProviderChange}
             onModelChange={handleModelChange}
@@ -139,9 +142,9 @@
           />
 
           <LaunchSection
-            factorioPath={configStore.config.factorioPath}
-            isLaunching={statusStore.isLaunching}
-            factorioStatus={statusStore.factorioStatus}
+            factorioPath={$config.factorioPath}
+            isLaunching={$status.isLaunching}
+            factorioStatus={$status.factorioStatus}
           />
         </div>
       </div>
