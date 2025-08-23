@@ -1134,7 +1134,10 @@ end)
 
 -- Add event handler for ping responses
 event_handler.add_handler(constants.events.on_ping_response, function(payload)
-  game.print("Received ping response (uid: " .. (payload.uid or 0) .. ", status: " .. (payload.status or "unknown") .. ")")
+  -- Only print message for manual console commands, not automatic bridge checks
+  if (payload.uid or 0) ~= 999999 then
+    game.print("Received ping response (uid: " .. (payload.uid or 0) .. ", status: " .. (payload.status or "unknown") .. ")")
+  end
 end)
 
 -- Add event handler for bridge availability check

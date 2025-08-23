@@ -957,6 +957,8 @@ function guis.handle_task_dialog_click(event)
   if event.element.tags.set_task_button then
     local task_input = gui.task_textbox
     guis.set_task(uid, task_input.text)
+    -- Check bridge availability before sending task request
+    bridge.check_bridge_availability()
     bridge.send_task_request(uid, task_input.text)
     guis.close_dialog(event.player_index)
     return true
