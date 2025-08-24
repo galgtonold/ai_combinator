@@ -3,6 +3,8 @@ local cgui = require('cgui')
 local event_handler = require("event_handler")
 local bridge = require("bridge")
 
+local guis = {}
+
 local function ai_bridge_warning_window_toggle(pn, toggle_on)
 	local player = game.players[pn]
 	local gui_exists = player.gui.screen['mlc-ai-warning']
@@ -683,11 +685,14 @@ local function create_gui(player, entity)
 
   update_signals()
 
-  -- Horizontal line and add description button
+  -- Horizontal line and description section
 
   elc(entity_frame, {type='line', direction='horizontal'}, {horizontally_stretchable=true})
 
-  local desc_btn_flow = elc(entity_frame, {type='button', name='mlc-desc-btn-flow', direction='horizontal', caption='Add Description'})
+  local desc_container = elc(entity_frame, {type='flow', name='mlc-description-container', direction='vertical'})
+  gui_t.mlc_description_container = desc_container
+
+  -- Initialize the description UI (will be called after gui_t is stored in storage.guis)
 
 
   local code_text = elc( entity_frame, {type='text-box', name='mlc-code', text=mlc.code or ''},
@@ -789,8 +794,6 @@ local function find_gui(ev)
 	end
 end
 
-local guis = {}
-
 function guis.open(player, e)
 	local uid_old = storage.guis_player[player.index]
 	if uid_old then player.opened = guis.close(uid_old) end
@@ -798,6 +801,10 @@ function guis.open(player, e)
 	storage.guis[e.unit_number] = gui_t
 	player.opened = gui_t.mlc_gui
 	storage.guis_player[player.index] = e.unit_number
+	
+	-- Initialize the description UI now that gui_t is stored
+	guis.update_description_ui(e.unit_number)
+	
 	return gui_t
 end
 
@@ -981,6 +988,70 @@ function guis.open_edit_code_dialog(player_index, uid)
   code_textbox.focus()
 end
 
+function guis.open_set_description_dialog(player_index, uid)
+  local player = game.players[player_index]
+	local gui_t = storage.guis[uid]
+  local mlc = storage.combinators[uid]
+
+  local combinator_frame = gui_t.mlc_gui
+  local popup_location = {
+    x = combinator_frame.location.x + 28,
+    y = combinator_frame.location.y + 500
+  }
+  local popup_frame = player.gui.screen.add{
+    type = "frame",
+    direction = "vertical",
+    tags = {uid = uid, dialog = true, description_dialog = true},
+  }
+  gui_t.description_dialog = popup_frame
+  current_dialog[player_index] = popup_frame
+  popup_frame.location = popup_location
+  create_titlebar(popup_frame, "Set Description", {description_dialog_close = true}, {uid = uid, dialog = true, description_dialog = true})
+  local content_flow = popup_frame.add{
+    type = "flow",
+    direction = "vertical",
+    tags = {uid = uid, dialog = true, description_dialog = true},
+  }
+
+  local description_text = mlc.description or ""
+
+  local description_textbox = content_flow.add{
+    type = "text-box",
+    name = "mlc-description-input",
+    text = description_text,
+    style = "edit_blueprint_description_textbox",
+    tags = {uid = uid, dialog = true, description_dialog = true},
+  }
+  description_textbox.word_wrap = true
+  description_textbox.style.width = 400
+  description_textbox.style.bottom_margin = 8
+  gui_t.description_textbox = description_textbox
+
+  local confirm_flow = content_flow.add{
+    type = "flow",
+    direction = "horizontal",
+    tags = {uid = uid, dialog = true, description_dialog = true},
+  }
+  description_textbox.focus()
+
+  local filler = confirm_flow.add{
+    type = "empty-widget",
+    style = "draggable_space",
+    ignored_by_interaction = true,
+    tags = {uid = uid, dialog = true, description_dialog = true},
+  }
+  filler.style.horizontally_stretchable = true
+  filler.style.vertically_stretchable = true
+
+  local confirm_button = confirm_flow.add{
+    type = "button",
+    caption = "Set Description",
+    style = "confirm_button",
+    tags = {uid = uid, set_description_button = true, dialog = true, description_dialog = true},
+  }
+  confirm_button.style.left_margin = 8
+end
+
 function guis.save_code(uid, code)
 	local gui_t, mlc = storage.guis[uid], storage.combinators[uid]
 	if not mlc then return end
@@ -1024,6 +1095,88 @@ function guis.set_task(uid, task)
   gui_t.mlc_task_label.caption = task
 end
 
+function guis.set_description(uid, description)
+  local mlc = storage.combinators[uid]
+  local gui_t = storage.guis[uid]
+  
+  mlc.description = description
+  -- Update the UI to reflect the new description
+  guis.update_description_ui(uid)
+end
+
+function guis.update_description_ui(uid)
+  local mlc = storage.combinators[uid]
+  local gui_t = storage.guis[uid]
+  
+  if not mlc then
+    return
+  end
+  
+  if not gui_t then
+    return
+  end
+  
+  if not gui_t.mlc_description_container then
+    return
+  end
+  
+  local container = gui_t.mlc_description_container
+  container.clear()
+  
+  -- Helper function to add elements to the el_map
+  local function add_to_map(element)
+    if element.name then
+      gui_t.el_map[element.index] = element
+    end
+    return element
+  end
+  
+  if mlc.description and mlc.description ~= "" then
+    -- Show description with edit button
+    local header_flow = container.add{
+      type = "flow",
+      direction = "horizontal",
+      name = "mlc-description-header"
+    }
+    add_to_map(header_flow)
+    
+    local desc_label = header_flow.add{
+      type = "label",
+      caption = "Description",
+      style = "semibold_label"
+    }
+    
+    local edit_btn = header_flow.add{
+      type = "sprite-button",
+      name = "mlc-desc-btn-flow",
+      sprite = "utility/rename_icon",
+      tooltip = "Edit description",
+      style = "mini_button_aligned_to_text_vertically",
+      tags = {uid = uid, description_edit = true}
+    }
+    --edit_btn.style.left_margin = 8
+
+    add_to_map(edit_btn)
+    
+    local desc_text = container.add{
+      type = "label",
+      caption = mlc.description,
+      style = "label"
+    }
+    desc_text.style.single_line = false
+    desc_text.style.maximal_width = 380
+  else
+    -- Show "Add Description" button
+    local desc_btn = container.add{
+      type = "button",
+      name = "mlc-desc-btn-flow",
+      caption = "Add Description",
+      tags = {uid = uid, description_add = true}
+    }
+    add_to_map(desc_btn)
+  end
+end
+
 function guis.handle_task_dialog_click(event)
   local gui
   if not event.element.tags then
@@ -1040,6 +1193,11 @@ function guis.handle_task_dialog_click(event)
     bridge.send_task_request(uid, task_input.text)
     guis.close_dialog(event.player_index)
     return true
+  elseif event.element.tags.set_description_button then
+    local description_input = gui.description_textbox
+    guis.set_description(uid, description_input.text)
+    guis.close_dialog(event.player_index)
+    return true
   elseif event.element.tags.edit_code_apply then
     local code_input = gui.edit_code_textbox
     guis.save_code(uid, code_input.text)
@@ -1049,6 +1207,8 @@ function guis.handle_task_dialog_click(event)
     guis.close_dialog(event.player_index)
     return true
   elseif event.element.tags.task_dialog_close then
+    -- Don't do anthing as close is default option for other clicks not in dialog
+  elseif event.element.tags.description_dialog_close then
     -- Don't do anthing as close is default option for other clicks not in dialog
   elseif event.element.tags.edit_code_dialog_close then
     -- Don't do anthing as close is default option for other clicks not in dialog
@@ -1094,6 +1254,14 @@ function guis.on_gui_click(ev)
     return
   end
 
+  -- Handle description buttons that have tags with uid
+  if el.tags and el.tags.uid then
+    if el.tags.description_add or el.tags.description_edit then
+      guis.open_set_description_dialog(ev.player_index, el.tags.uid)
+      return
+    end
+  end
+
 	local uid, gui_t = find_gui(ev)
 	if not uid then return end
 
@@ -1111,6 +1279,7 @@ function guis.on_gui_click(ev)
 		end
 		gui_t.code_focused = true -- disables hotkeys and repeating cleanup above
   elseif el_id == 'mlc-set-task' then guis.open_set_task_dialog(ev.player_index, uid)
+  elseif el_id == 'mlc-desc-btn-flow' then guis.open_set_description_dialog(ev.player_index, uid)
   elseif el_id == 'mlc-edit-code' then guis.open_edit_code_dialog(ev.player_index, uid)
 	elseif el_id == 'mlc-save' then guis.save_code(uid)
 	elseif el_id == 'mlc-commit' then guis.save_code(uid); guis.close(uid)

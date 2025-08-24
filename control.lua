@@ -573,6 +573,7 @@ local function on_setup_blueprint(ev)
 	for bp_idx, uid in pairs(bp_mlc_uids) do
 		bp.set_blueprint_entity_tag(bp_idx, 'mlc_code', storage.combinators[uid].code)
     bp.set_blueprint_entity_tag(bp_idx, 'task', storage.combinators[uid].task)
+    bp.set_blueprint_entity_tag(bp_idx, 'description', storage.combinators[uid].description)
   end
 end
 
@@ -589,13 +590,18 @@ local function on_built(ev)
 	if ev.tags and ev.tags.mlc_code then
     mlc.code = ev.tags.mlc_code
     mlc.task = ev.tags.task
+    mlc.description = ev.tags.description
 	else
 		local ecc_params = e.get_or_create_control_behavior().parameters
 		local uid_src = ecc_params.first_constant or 0
 		if uid_src < 0 then uid_src = uid_src + 0x100000000 end -- int -> uint conversion
 		if uid_src ~= 0 then
 			local mlc_src = storage.combinators[uid_src]
-			if mlc_src then mlc.code = mlc_src.code else
+			if mlc_src then 
+				mlc.code = mlc_src.code
+				mlc.task = mlc_src.task
+				mlc.description = mlc_src.description
+			else
 				mlc.code = ('-- No code was stored in blueprint and'..
 					' Moon Logic [%s] is unavailable for OTA code update'):format(uid_src) end
 	end end
