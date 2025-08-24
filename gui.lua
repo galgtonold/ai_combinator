@@ -666,6 +666,8 @@ local function create_gui(player, entity)
 
   elc(entity_frame, {type="button", style="green_button", name='mlc-set-task', caption='Set Task'}, {horizontally_stretchable=true})
 
+  elc(entity_frame, {type="button", style="button", name='mlc-edit-code', caption='Edit Source Code'}, {horizontally_stretchable=true})
+
   elc(entity_frame, {type='line', direction='horizontal'}, {horizontally_stretchable=true})
 
   -- input and output signals
@@ -903,6 +905,82 @@ function guis.open_set_task_dialog(player_index, uid)
   confirm_button.style.left_margin = 8
 end
 
+function guis.open_edit_code_dialog(player_index, uid)
+  local player = game.players[player_index]
+	local gui_t = storage.guis[uid]
+	local mlc = storage.combinators[uid]
+
+  local combinator_frame = gui_t.mlc_gui
+  local popup_location = {
+    x = combinator_frame.location.x + 28,
+    y = combinator_frame.location.y + 500
+  }
+  local popup_frame = player.gui.screen.add{
+    type = "frame",
+    direction = "vertical",
+    tags = {uid = uid, dialog = true, edit_code_dialog = true},
+  }
+  gui_t.edit_code_dialog = popup_frame
+  current_dialog[player_index] = popup_frame
+  popup_frame.location = popup_location
+  create_titlebar(popup_frame, "Edit Source Code", {edit_code_dialog_close = true}, {uid = uid, dialog = true, edit_code_dialog = true})
+  
+  local content_flow = popup_frame.add{
+    type = "flow",
+    direction = "vertical",
+    tags = {uid = uid, dialog = true, edit_code_dialog = true},
+  }
+
+  -- Get current code from the combinator
+  local current_code = mlc.code or ""
+
+  local code_textbox = content_flow.add{
+    type = "text-box",
+    name = "mlc-edit-code-input",
+    text = current_code,
+    style = "edit_blueprint_description_textbox",
+    tags = {uid = uid, dialog = true, edit_code_dialog = true},
+  }
+  code_textbox.word_wrap = true
+  code_textbox.style.width = 600
+  code_textbox.style.height = 400
+  code_textbox.style.bottom_margin = 8
+  gui_t.edit_code_textbox = code_textbox
+
+  local button_flow = content_flow.add{
+    type = "flow",
+    direction = "horizontal",
+    tags = {uid = uid, dialog = true, edit_code_dialog = true},
+  }
+  
+  local filler = button_flow.add{
+    type = "empty-widget",
+    style = "draggable_space",
+    ignored_by_interaction = true,
+    tags = {uid = uid, dialog = true, edit_code_dialog = true},
+  }
+  filler.style.horizontally_stretchable = true
+  filler.style.vertically_stretchable = true
+
+  local cancel_button = button_flow.add{
+    type = "button",
+    caption = "Cancel",
+    style = "back_button",
+    tags = {uid = uid, edit_code_cancel = true, dialog = true, edit_code_dialog = true},
+  }
+  cancel_button.style.left_margin = 8
+
+  local apply_button = button_flow.add{
+    type = "button",
+    caption = "Apply Code",
+    style = "confirm_button",
+    tags = {uid = uid, edit_code_apply = true, dialog = true, edit_code_dialog = true},
+  }
+  apply_button.style.left_margin = 8
+  
+  code_textbox.focus()
+end
+
 function guis.save_code(uid, code)
 	local gui_t, mlc = storage.guis[uid], storage.combinators[uid]
 	if not mlc then return end
@@ -962,7 +1040,17 @@ function guis.handle_task_dialog_click(event)
     bridge.send_task_request(uid, task_input.text)
     guis.close_dialog(event.player_index)
     return true
+  elseif event.element.tags.edit_code_apply then
+    local code_input = gui.edit_code_textbox
+    guis.save_code(uid, code_input.text)
+    guis.close_dialog(event.player_index)
+    return true
+  elseif event.element.tags.edit_code_cancel then
+    guis.close_dialog(event.player_index)
+    return true
   elseif event.element.tags.task_dialog_close then
+    -- Don't do anthing as close is default option for other clicks not in dialog
+  elseif event.element.tags.edit_code_dialog_close then
     -- Don't do anthing as close is default option for other clicks not in dialog
   elseif event.element.tags.dialog then
     return true -- Any clicks inside dialog should not close it
@@ -1023,6 +1111,7 @@ function guis.on_gui_click(ev)
 		end
 		gui_t.code_focused = true -- disables hotkeys and repeating cleanup above
   elseif el_id == 'mlc-set-task' then guis.open_set_task_dialog(ev.player_index, uid)
+  elseif el_id == 'mlc-edit-code' then guis.open_edit_code_dialog(ev.player_index, uid)
 	elseif el_id == 'mlc-save' then guis.save_code(uid)
 	elseif el_id == 'mlc-commit' then guis.save_code(uid); guis.close(uid)
 	elseif el_id == 'mlc-clear' then
