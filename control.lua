@@ -1147,6 +1147,239 @@ event_handler.add_handler(constants.events.on_ping_response, function(payload)
 end)
 
 -- Add event handler for bridge availability check
+-- Function to execute combinator code with test inputs (global for gui.lua access)
+function execute_test_case(uid, red_input, green_input)
+  local mlc = storage.combinators[uid]
+  local mlc_env = Combinators[uid]
+  
+  if not mlc or not mlc_env or not mlc_env._func then
+    return {}
+  end
+  
+  -- Create test environment
+  local test_env = setmetatable({}, {__index = CombinatorEnv[uid]})
+  
+  -- Convert signal arrays to signal tables
+  local red_signals = {}
+  local green_signals = {}
+  
+  for _, signal_data in pairs(red_input or {}) do
+    if signal_data.signal and signal_data.count then
+      local signal_name = signal_data.signal.name
+      if signal_data.signal.type and signal_data.signal.type ~= "item" then
+        signal_name = cn_sig_str(signal_data.signal.type, signal_name)
+      end
+      red_signals[signal_name] = signal_data.count
+    end
+  end
+  
+  for _, signal_data in pairs(green_input or {}) do
+    if signal_data.signal and signal_data.count then
+      local signal_name = signal_data.signal.name
+      if signal_data.signal.type and signal_data.signal.type ~= "item" then
+        signal_name = cn_sig_str(signal_data.signal.type, signal_name)
+      end
+      green_signals[signal_name] = signal_data.count
+    end
+  end
+  
+  -- Create mock wire environments
+  local function create_test_wire_env(test_signals, wire_name)
+    return setmetatable({
+      _cache = test_signals or {},
+      _cache_tick = game.tick,
+      _debug = false,
+      _wire = wire_name,
+      _iter = function() return test_signals or {} end
+    }, {
+      __index = function(tbl, key)
+        return test_signals[key] or 0
+      end,
+      __len = function(tbl)
+        local count = 0
+        for _, v in pairs(test_signals or {}) do
+          if v ~= 0 then count = count + 1 end
+        end
+        return count
+      end
+    })
+  end
+  
+  -- Set up test wire environments
+  test_env.red = create_test_wire_env(red_signals, 'red')
+  test_env.green = create_test_wire_env(green_signals, 'green')
+  test_env[conf.red_wire_name] = test_env.red
+  test_env[conf.green_wire_name] = test_env.green
+  
+  -- Create fresh output table
+  local test_output = {}
+  test_env.out = setmetatable(test_output, {
+    __index = function(tbl, key)
+      return rawget(tbl, key) or 0
+    end,
+    __len = function(tbl)
+      local count = 0
+      for _, v in pairs(tbl) do
+        if v ~= 0 then count = count + 1 end
+      end
+      return count
+    end
+  })
+  
+  -- Reset per-run variables
+  test_env.delay = 1
+  test_env.irq = nil
+  test_env.debug = false
+  
+  -- Execute the code in test environment
+  local success, error_msg = pcall(function()
+    local old_env = getfenv(mlc_env._func)
+    setfenv(mlc_env._func, test_env)
+    mlc_env._func()
+    setfenv(mlc_env._func, old_env)
+  end)
+  
+  if not success then
+    return {}
+  end
+  
+  return test_output
+end
+
+-- Advanced test case execution with game tick, variables, and print capture
+function execute_test_case_advanced(uid, test_options)
+  local mlc = storage.combinators[uid]
+  local mlc_env = Combinators[uid]
+  
+  if not mlc or not mlc_env or not mlc_env._func then
+    return {output = {}, print_output = ""}
+  end
+  
+  -- Create test environment
+  local test_env = setmetatable({}, {__index = CombinatorEnv[uid]})
+  
+  -- Convert signal arrays to signal tables
+  local red_signals = {}
+  local green_signals = {}
+  
+  for _, signal_data in pairs(test_options.red_input or {}) do
+    if signal_data.signal and signal_data.count then
+      local signal_name = signal_data.signal.name
+      if signal_data.signal.type and signal_data.signal.type ~= "item" then
+        signal_name = cn_sig_str(signal_data.signal.type, signal_name)
+      end
+      red_signals[signal_name] = signal_data.count
+    end
+  end
+  
+  for _, signal_data in pairs(test_options.green_input or {}) do
+    if signal_data.signal and signal_data.count then
+      local signal_name = signal_data.signal.name
+      if signal_data.signal.type and signal_data.signal.type ~= "item" then
+        signal_name = cn_sig_str(signal_data.signal.type, signal_name)
+      end
+      green_signals[signal_name] = signal_data.count
+    end
+  end
+  
+  -- Create mock wire environments
+  local function create_test_wire_env(test_signals, wire_name)
+    return setmetatable({
+      _cache = test_signals or {},
+      _cache_tick = test_options.game_tick or 0,
+      _debug = false,
+      _wire = wire_name,
+      _iter = function() return test_signals or {} end
+    }, {
+      __index = function(tbl, key)
+        return test_signals[key] or 0
+      end,
+      __len = function(tbl)
+        local count = 0
+        for _, v in pairs(test_signals or {}) do
+          if v ~= 0 then count = count + 1 end
+        end
+        return count
+      end
+    })
+  end
+  
+  -- Set up test wire environments
+  test_env.red = create_test_wire_env(red_signals, 'red')
+  test_env.green = create_test_wire_env(green_signals, 'green')
+  test_env[conf.red_wire_name] = test_env.red
+  test_env[conf.green_wire_name] = test_env.green
+  
+  -- Create fresh output table
+  local test_output = {}
+  test_env.out = setmetatable(test_output, {
+    __index = function(tbl, key)
+      return rawget(tbl, key) or 0
+    end,
+    __len = function(tbl)
+      local count = 0
+      for _, v in pairs(tbl) do
+        if v ~= 0 then count = count + 1 end
+      end
+      return count
+    end
+  })
+  
+  -- Set up variables
+  local var_table = {}
+  if test_options.variables then
+    for _, var in pairs(test_options.variables) do
+      if var.name and var.name ~= "" then
+        var_table[var.name] = var.value or 0
+      end
+    end
+  end
+  test_env.var = setmetatable(var_table, {
+    __index = function(tbl, key)
+      return rawget(tbl, key) or 0
+    end
+  })
+  
+  -- Set game tick
+  test_env.game = {tick = test_options.game_tick or 0}
+  
+  -- Capture print output
+  local captured_output = {}
+  local original_print = test_env.print or print
+  test_env.print = function(...)
+    local args = {...}
+    local str_args = {}
+    for i, arg in ipairs(args) do
+      str_args[i] = tostring(arg)
+    end
+    table.insert(captured_output, table.concat(str_args, "\t"))
+  end
+  
+  -- Reset per-run variables
+  test_env.delay = 1
+  test_env.irq = nil
+  test_env.debug = false
+  
+  -- Execute the code in test environment
+  local success, error_msg = pcall(function()
+    local old_env = getfenv(mlc_env._func)
+    setfenv(mlc_env._func, test_env)
+    mlc_env._func()
+    setfenv(mlc_env._func, old_env)
+  end)
+  
+  -- Restore original print
+  test_env.print = original_print
+  
+  if not success then
+    return {output = {}, print_output = "Error: " .. (error_msg or "Unknown error")}
+  end
+  
+  local print_output = table.concat(captured_output, "\n")
+  
+  return {output = test_output, print_output = print_output}
+end
+
 event_handler.add_handler(constants.events.on_bridge_check_completed, function(payload)
   if not payload.available then
     -- Show warning window to all players
