@@ -1,7 +1,7 @@
-local conf = require('config')
-local cgui = require('cgui')
-local event_handler = require("event_handler")
-local bridge = require("bridge")
+local conf = require('src/core/config')
+local cgui = require('src/gui/cgui')
+local event_handler = require("src/events/event_handler")
+local bridge = require("src/services/bridge")
 
 local guis = {}
 

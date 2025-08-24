@@ -1,11 +1,11 @@
-local conf = require('config')
+local conf = require('src/core/config')
 conf.update_from_settings()
 
-local event_handler = require("event_handler")
-local constants = require("constants")
-local bridge = require('bridge')
+local event_handler = require("src/events/event_handler")
+local constants = require("src/core/constants")
+local bridge = require('src/services/bridge')
 
-local guis = require('gui')
+local guis = require('src/gui/gui')
 
 
 -- Stores code and built environments as {code=..., ro=..., vars=...}
@@ -14,41 +14,7 @@ local Combinators = {}
 local CombinatorEnv = {} -- to avoid self-recursive tables
 
 
-local function tt(s, value)
-	-- Helper to make padded table from other table keys or a string of keys
-	local t = {}
-	if not value then value = true end
-	if type(s) == 'table' then for k,_ in pairs(s) do t[k] = value end
-	else s:gsub('(%S+)', function(k) t[k] = value end) end
-	return t
-end
-
-local function tc(src)
-	-- Shallow-copy a table with keys
-	local t = {}
-	for k, v in pairs(src) do t[k] = v end
-	return t
-end
-
-local function tdc(object)
-	-- Deep-copy of lua table, from factorio util.lua
-	local lookup_table = {}
-	local function _copy(object)
-		if type(object) ~= 'table' then return object
-			elseif object.__self then return object
-			elseif lookup_table[object] then return lookup_table[object] end
-		local new_table = {}
-		lookup_table[object] = new_table
-		for index, value in pairs(object)
-			do new_table[_copy(index)] = _copy(value) end
-		return setmetatable(new_table, getmetatable(object))
-	end
-	return _copy(object)
-end
-
-local function console_warn(p, text)
-	p.print(('[Moon Logic mod] %s'):format(text), {0.957, 0.710, 0.659})
-end
+local util = require('src/core/utils')
 
 
 -- ----- Circuit network controls -----
@@ -295,7 +261,7 @@ local function mlc_update_output(mlc, output_raw)
 	local signals, errors, output = {red={}, green={}}, {}, {}
 	for k, v in pairs(output_raw) do output[tostring(k)] = v end
 
-	local sig_err, sig, st, err, pre, pre_label = tc(output)
+	local sig_err, sig, st, err, pre, pre_label = util.tc(output)
 	for _, k in ipairs{false, 'red', 'green'} do
 		st = signals[k] and {signals[k]} or {signals.red, signals.green}
 		if not k then pre, pre_label = '^.+$', '^.+$'
@@ -457,7 +423,7 @@ local function mlc_init(e)
 	local env_wire_red = {
 		_e=mlc_env._e, _wire='red', _debug=false, _out=mlc_env._out,
 		_iter=cn_input_signal_iter, _cache={}, _cache_tick=-1 }
-	local env_wire_green = tc(env_wire_red)
+	local env_wire_green = util.tc(env_wire_red)
 	env_wire_green._wire = 'green'
 
 	local env_ro = { -- sandbox_env_base + mlc_env proxies
@@ -624,7 +590,7 @@ local function on_entity_copy(ev)
 		-- For cloned entities, mlc-core's might not yet exist - create/register them here, remove clones above
 		-- It'd give zero-outputs for one tick, but probably not an issue, easier to handle it like this
 		else mlc_old_outs = {out_wire_connect_both(ev.destination)} end
-	storage.combinators[uid_dst] = tdc(storage.combinators[uid_src])
+	storage.combinators[uid_dst] = util.tdc(storage.combinators[uid_src])
 	local mlc_dst, mlc_src = storage.combinators[uid_dst], storage.combinators[uid_src]
 	mlc_dst.e, mlc_dst.next_tick, mlc_dst.core = ev.destination, 0
 	mlc_dst.out_red, mlc_dst.out_green = table.unpack(mlc_old_outs)
@@ -704,7 +670,7 @@ local function update_signals_in_guis()
 		::skip:: end end
 
 		-- Outputs
-		mlc_out, mlc_out_idx, mlc_out_err = {}, {}, tc((Combinators[uid] or {})._out or {})
+		mlc_out, mlc_out_idx, mlc_out_err = {}, {}, util.tc((Combinators[uid] or {})._out or {})
 		for k, cb in pairs{red=mlc.out_red, green=mlc.out_green} do
 			cb = cb.get_control_behavior()
 			for _, cbs in pairs(cb.sections[1].filters or {}) do
@@ -781,7 +747,7 @@ end
 
 local function run_moon_logic_tick(mlc, mlc_env, tick)
 	-- Runs logic of the specified combinator, reading its input and setting outputs
-	local out_tick, out_diff = mlc.next_tick, tc(mlc_env._out)
+	local out_tick, out_diff = mlc.next_tick, util.tc(mlc_env._out)
 	local dbg = mlc.vars.debug and function(fmt, ...)
 		mlc_log((' -- moon-logic [%s]: %s'):format(mlc_env._uid, fmt:format(...))) end
 	mlc.vars.delay, mlc.vars.var, mlc.vars.debug, mlc.vars.irq, mlc.irq = 1, mlc.vars.var or {}
@@ -1102,7 +1068,7 @@ script.on_init(function()
 	--strict_mode_enable()
 	update_signal_quality_table()
 	update_signal_types_table()
-	for k, _ in pairs(tt('combinators presets guis guis_player')) do storage[k] = {} end
+	for k, _ in pairs(util.tt('combinators presets guis guis_player')) do storage[k] = {} end
 end)
 
 script.on_load(function()

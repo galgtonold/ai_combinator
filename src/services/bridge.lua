@@ -1,5 +1,5 @@
-local event_handler = require("event_handler")
-local constants = require("constants")
+local event_handler = require("src/events/event_handler")
+local constants = require("src/core/constants")
 
 local bridge = {}
 
