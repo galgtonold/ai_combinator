@@ -139,14 +139,6 @@ data:extend{
 
 	-- Key bindings
 	{ type = 'custom-input',
-		name = 'mlc-code-undo',
-		key_sequence = 'CONTROL + LEFT',
-		order = '01' },
-	{ type = 'custom-input',
-		name = 'mlc-code-redo',
-		key_sequence = 'CONTROL + RIGHT',
-		order = '02' },
-	{ type = 'custom-input',
 		name = 'mlc-code-save',
 		key_sequence = 'CONTROL + S',
 		order = '03' },

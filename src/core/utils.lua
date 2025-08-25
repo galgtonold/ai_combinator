@@ -36,4 +36,30 @@ function utils.console_warn(p, text)
 	p.print(('[Moon Logic mod] %s'):format(text), {0.957, 0.710, 0.659})
 end
 
+function utils.format_number(num)
+  if num < 0 then
+    return "-" .. utils.format_number(-num)
+  end
+  
+  if num < 1000 then
+    return tostring(num)
+  elseif num < 10000 then
+    return string.format("%.1fk", num / 1000):gsub("%.0+k$", "k")
+  elseif num < 100000 then
+    return string.format("%dk", math.floor(num / 1000))
+  elseif num < 1000000 then
+    return string.format("%dk", math.floor(num / 1000))
+  elseif num < 10000000 then
+    return string.format("%.1fM", num / 1000000):gsub("%.0+M$", "M")
+  elseif num < 100000000 then
+    return string.format("%dM", math.floor(num / 1000000))
+  elseif num < 1000000000 then
+    return string.format("%dM", math.floor(num / 1000000))
+  elseif num < 10000000000 then
+    return string.format("%.1fG", num / 1000000000):gsub("%.0+G$", "G")
+  else
+    return string.format("%dG", math.floor(num / 1000000000))
+  end
+end
+
 return utils

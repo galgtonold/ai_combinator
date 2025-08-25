@@ -7,6 +7,10 @@ local bridge = require('src/services/bridge')
 
 local guis = require('src/gui/gui')
 
+local ai_bridge_warning_dialog = require('src/gui/dialogs/ai_bridge_warning_dialog')
+local help_dialog = require('src/gui/dialogs/help_dialog')
+local vars_dialog = require('src/gui/dialogs/vars_dialog')
+
 
 -- Stores code and built environments as {code=..., ro=..., vars=...}
 -- This stuff can't be global (kept in `storage`?), built locally, might be cause for desyncs
@@ -594,7 +598,6 @@ local function on_entity_copy(ev)
 	local mlc_dst, mlc_src = storage.combinators[uid_dst], storage.combinators[uid_src]
 	mlc_dst.e, mlc_dst.next_tick, mlc_dst.core = ev.destination, 0
 	mlc_dst.out_red, mlc_dst.out_green = table.unpack(mlc_old_outs)
-	guis.history_insert(mlc_src, mlc_src.code or '', storage.guis[uid_dst])
 end
 
 script.on_event(
@@ -855,8 +858,11 @@ local function on_tick(ev)
 			then mlc.irq_tick, mlc.next_tick = tick end
 		if tick >= (mlc.next_tick or 0) and mlc_env._func then
 			run_moon_logic_tick(mlc, mlc_env, tick)
-			for _, p in ipairs(game.connected_players)
-				do guis.vars_window_update(p.index, uid) end
+			for _, p in ipairs(game.connected_players) do
+        local player, vars_uid = game.players[p.index], storage.guis_player['vars.'..p.index]
+        if not player or vars_uid ~= uid then return end
+        vars_dialog.update(player, uid)
+      end
 			if mlc.err_run then guis.update_error_highlight(uid, mlc, mlc.err_run) end
 		end
 	::skip:: end
@@ -950,20 +956,6 @@ script.on_event('mlc-code-save', function(ev)
 	if uid then guis.save_code(uid) end
 end)
 
-script.on_event('mlc-code-undo', function(ev)
-	local uid, gui_t = get_active_gui()
-	if not gui_t then return end
-	local mlc = storage.combinators[gui_t.uid]
-	if mlc then guis.history_restore(gui_t, mlc, -1) end
-end)
-
-script.on_event('mlc-code-redo', function(ev)
-	local uid, gui_t = get_active_gui()
-	if not gui_t then return end
-	local mlc = storage.combinators[gui_t.uid]
-	if mlc then guis.history_restore(gui_t, mlc, 1) end
-end)
-
 script.on_event('mlc-code-commit', function(ev)
 	local uid, gui_t = next(storage.guis)
 	if not uid then return end
@@ -973,7 +965,7 @@ end)
 
 script.on_event('mlc-code-close', function(ev)
 	guis.vars_window_toggle(ev.player_index, false)
-	guis.help_window_toggle(ev.player_index, false)
+	help_dialog.show(ev.player_index, false)
 	local uid, gui_t = next(storage.guis)
 	if not uid then return end
 	guis.close(uid)
@@ -1351,7 +1343,7 @@ event_handler.add_handler(constants.events.on_bridge_check_completed, function(p
     -- Show warning window to all players
     for _, player in pairs(game.players) do
       if player.valid then
-        guis.ai_bridge_warning_window_toggle(player.index, true)
+        ai_bridge_warning_dialog.show(player.index, true)
       end
     end
   end

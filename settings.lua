@@ -1,4 +1,4 @@
-local conf = require('config')
+local conf = require('src/core/config')
 
 data:extend{
 	{ order = '01',
