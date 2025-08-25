@@ -3,7 +3,8 @@ local util = require('src/core/utils')
 local cn = require('src/core/circuit_network')
 local conf = require('src/core/config')
 local sandbox = require('src/sandbox/base')
-local mlc_update = require('src/mlc/update')
+local update = require('src/ai_combinator/update')
+local memory = require('src/ai_combinator/memory')
 local guis = require('src/gui/gui')
 
 local init = {}
@@ -66,22 +67,10 @@ function init.mlc_init(e)
 	-- Lua env for code is composed from: sandbox.env_base + local mlc_env proxies + global (storage) mlc.vars
 	if not e.valid then return end
 	local uid = e.unit_number
-	if Combinators[uid] then error('Double-init for existing combinator unit_number') end
-	Combinators[uid] = {} -- some state (e.g. loaded func) has to be local
+	if memory.combinators[uid] then error('Double-init for existing combinator unit_number') end
+	memory.combinators[uid] = {} -- some state (e.g. loaded func) has to be local
 	if not storage.combinators[uid] then storage.combinators[uid] = {e=e} end
-	local mlc_env, mlc = Combinators[uid], storage.combinators[uid]
-
-	if not sandbox.env_base._init then
-		-- This is likely to cause mp desyncs
-		sandbox.env_base.game = {
-			tick=game.tick, log=mlc_log,
-			print=sandbox.game_print, print_color=game.print }
-		sandbox.env_base._api = { game=game, script=script,
-			remote=remote, commands=commands, settings=settings,
-			rcon=rcon, rendering=rendering, global=storage, defines=defines, prototypes=prototypes }
-		sandbox.env_pairs_mt_iter[cn.cn_input_signal_get] = true
-		sandbox.env_base._init = true
-	end
+	local mlc_env, mlc = memory.combinators[uid], storage.combinators[uid]
 
 	mlc.output, mlc.vars = mlc.output or {}, mlc.vars or {}
 	mlc_env._e, mlc_env._uid, mlc_env._out = e, uid, mlc.output
@@ -124,8 +113,8 @@ function init.mlc_init(e)
 	-- Migration from pre-0.0.52 to separate wire outputs
 	if mlc.core then init.out_wire_connect_mlc(mlc) end
 
-	CombinatorEnv[uid] = env
-	mlc_update.mlc_update_code(mlc, mlc_env, env)
+	memory.combinator_env[uid] = env
+	update.mlc_update_code(mlc, mlc_env, env)
 	return mlc_env
 end
 
@@ -135,7 +124,7 @@ function init.mlc_remove(uid, keep_entities, to_be_mined)
 		local mlc = init.out_wire_clear_mlc(storage.combinators[uid] or {})
 		if not to_be_mined and mlc.e and mlc.e.valid then mlc.e.destroy() end
 	end
-	Combinators[uid], CombinatorEnv[uid], storage.combinators[uid], storage.guis[uid] = nil
+	memory.combinators[uid], memory.combinator_env[uid], storage.combinators[uid], storage.guis[uid] = nil, nil, nil, nil
 end
 
 return init

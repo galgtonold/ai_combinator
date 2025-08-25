@@ -4,6 +4,10 @@ conf.update_from_settings()
 local event_handler = require("src/events/event_handler")
 local constants = require("src/core/constants")
 local bridge = require('src/services/bridge')
+local init = require('src/ai_combinator/init')
+local update = require('src/ai_combinator/update')
+local circuit_network = require('src/core/circuit_network')
+local memory = require('src/ai_combinator/memory')
 
 local guis = require('src/gui/gui')
 
@@ -12,337 +16,12 @@ local help_dialog = require('src/gui/dialogs/help_dialog')
 local vars_dialog = require('src/gui/dialogs/vars_dialog')
 
 
--- Stores code and built environments as {code=..., ro=..., vars=...}
--- This stuff can't be global (kept in `storage`?), built locally, might be cause for desyncs
-local Combinators = {}
-local CombinatorEnv = {} -- to avoid self-recursive tables
-
-
 local util = require('src/core/utils')
-
-
--- ----- Circuit network controls -----
-
-local function cn_sig_quality(sig_str)
-	-- removes quality prefix from signal string, returns signal name and quality
-	if not sig_str then return end
-	local q_name = ""
-	for _, q in pairs(storage.quality) do
-		if string.match(sig_str, "^"..q) then
-			q_name = q
-			break
-		end
-	end
-	if q_name == "" then return sig_str end
-	return string.gsub(sig_str, q_name.."/", ''), q_name
-end
-
-local cn_sig_str_prefix = {item='#', fluid='=', virtual='@', recipe='~'}
-local function cn_sig_str(t, name)
-	-- Translates name or type/name or signal to its type-prefixed string-id
-	if not name then
-		if type(t) == 'string' then
-			name = storage.signals_short[t]
-			if name == false then return end -- ambiguous name
-			return name or t
-		else 
-			if t.type == nil then t.type = 'item' end
-			name = t.name
-
-		end
-	end
-	if not t then
-		return storage.signals_short[name]
-	end
-	if t.quality ~= "normal" and t.quality ~= nil then
-		return t.quality.."/"..cn_sig_str_prefix[t.type]..name
-	end
-	return cn_sig_str_prefix[t.type or t]..name
-end
-
-local function cn_sig_name(sig_str)
-	-- Returns abbreviated signal name without prefix
-	local signame, qname = cn_sig_quality(sig_str)
-	local k = signame:sub(2)
-	local sig_str2 = storage.signals_short[k]
-	if sig_str2 == false then return sig_str
-	elseif sig_str2 == sig_str then return k
-	elseif qname ~= nil and qname.."/"..sig_str2 == sig_str then return qname.."/"..k
-	elseif not sig_str2 then error(('MOD BUG - abbreviation for invalid signal string: %s'):format(sig_str))
-	else error(('MOD BUG - signal string/abbrev mismatch: %s != %s'):format(sig_str, sig_str2)) end
-end
-
-local function cn_sig(k, err_level)
-	local signame, qname = cn_sig_quality(k)
-	local sig = storage.signals_short[signame or k]
-	if type(sig) ~= false then sig = storage.signals[sig or signame] end
-	if sig and qname ~="" then
-		sig.quality = qname
-		return sig
-	elseif sig then
-		return sig
-	end
-	if not err_level then return end
-	if sig == false then
-		local m = {}
-		for _,t in ipairs{'virtual', 'item', 'fluid'} do
-			sig = cn_sig_str(t, k)
-			if storage.signals[sig] then table.insert(m, sig) end
-		end
-		error(( 'Ambiguous short signal name "%s",'..
-			' matching: %s' ):format(k, table.concat(m, ' ')), err_level)
-	end
-	error('Unknown signal: '..k, err_level)
-end
-
-local function cn_wire_signals(e, wire_type, canon)
-	-- Returns signal=count table, with signal names abbreviated where possible
-	local ccid
-	if wire_type == defines.wire_type.green then
-		ccid = defines.wire_connector_id.combinator_input_green
-	elseif wire_type == defines.wire_type.red then
-		ccid = defines.wire_connector_id.combinator_input_red
-	end
-	local res, cn, k = {}, e.get_or_create_control_behavior()
-		.get_circuit_network(ccid)
-	for _, sig in pairs(cn and cn.signals or {}) do
-		-- Check for name=nil SignalIDs (dunno what these are), and items w/ flag=hidden
-		if storage.signals_short[sig.signal.name] == nil then goto skip end
-		if canon then k = cn_sig_str(sig.signal)
-		elseif sig.signal.quality ~= nil and sig.signal.type == 'recipe' then
-			k = sig.signal.quality.."/~"..storage.signals_short[sig.signal.name] and sig.signal.quality.."/~"..sig.signal.name or "~"..cn_sig_str(sig.signal)
-		elseif sig.signal.type == 'recipe' then
-			k = "~"..storage.signals_short[sig.signal.name] and "~"..sig.signal.name or "~"..cn_sig_str(sig.signal)
-		elseif sig.signal.quality ~= nil then
-			k = sig.signal.quality.."/"..storage.signals_short[sig.signal.name] and sig.signal.quality.."/"..sig.signal.name or cn_sig_str(sig.signal)
-		else k = storage.signals_short[sig.signal.name]
-			and sig.signal.name or cn_sig_str(sig.signal) end
-		res[k] = sig.count
-	::skip:: end
-	return res
-end
-
-local function cn_input_signal(wenv, wire_type, k)
-	local signals = wenv._cache
-	if wenv._cache_tick ~= game.tick then
-		signals = cn_wire_signals(wenv._e, wire_type, true)
-		wenv._cache, wenv._cache_tick = signals, game.tick
-	end
-	if k and #storage.quality ~= 0 then
-		local signame, q_name = cn_sig_quality(k)
-		if q_name == nil or q_name == "normal" then
-			signals = signals[cn_sig_str(cn_sig(signame, 4))]
-			return signals
-		end
-		signals = signals[q_name.."/"..cn_sig_str(cn_sig(signame, 4))]
-		return signals
-	end
-	if k then signals = signals[cn_sig_str(cn_sig(k, 4))] end
-	return signals
-end
-
-local function cn_input_signal_get(wenv, k)
-	local v = cn_input_signal(wenv, defines.wire_type[wenv._wire], k) or 0
-	if wenv._debug then wenv._debug[conf.get_wire_label(wenv._wire)..'['..k..']'] = v end
-	return v
-end
-local function cn_input_signal_set(wenv, k, v)
-	error(( 'Attempt to set value on input wire:'..
-		' %s[%s] = %s' ):format(conf.get_wire_label(wenv._wire), k, v), 2)
-end
-
-local function cn_input_signal_len(wenv)
-	local n, sigs = 0, cn_input_signal(wenv, defines.wire_type[wenv._wire])
-	for sig, c in pairs(sigs) do if c ~= 0 then n = n + 1 end end
-	return n
-end
-local function cn_input_signal_iter(wenv)
-	-- This returns shortened signal names for simplicity and compatibility
-	local signals, sig_cache = {}, cn_input_signal(wenv, defines.wire_type[wenv._wire])
-	for k, v in pairs(sig_cache) do signals[cn_sig_name(k)] = sig_cache[k] end
-	if wenv._debug then
-		local sig_fmt = conf.get_wire_label(wenv._wire)..'[%s]'
-		for sig, v in pairs(signals) do wenv._debug[sig_fmt:format(sig)] = v or 0 end
-	end
-	return signals
-end
-
-local function cn_input_signal_table_serialize(wenv)
-	return {__wire_inputs=conf.get_wire_label(wenv._wire)}
-end
-
-local function cn_output_table_len(out) -- rawlen won't skip 0 and doesn't work anyway
-	local n = 0
-	for k, v in pairs(out) do if v ~= 0 then n = n + 1 end end
-	return n
-end
-local function cn_output_table_value(out, k)
-	if k == '__self' then return end -- for table.deepcopy to tell this apart from factorio object
-	return rawget(out, k) or rawget(out, storage.signals_short[k]) or 0
-end
-local function cn_output_table_replace(out, new_tbl)
-	-- Note: validation for sig_names/values is done when output table is used later
-	for sig, v in pairs(out) do out[sig] = nil end
-	for sig, v in pairs(new_tbl or {}) do out[sig] = v end
-end
-
-
--- ----- Sandbox base -----
-
-local sandbox_env_pairs_mt_iter = {}
-local function sandbox_env_pairs(tbl) -- allows to iterate over red/green ro-tables
-	local mt = getmetatable(tbl)
-	if mt and sandbox_env_pairs_mt_iter[mt.__index] then tbl = tbl._iter(tbl) end
-	return pairs(tbl)
-end
-
-local function sandbox_clean_table(tbl, apply_func)
-	local tbl_clean = {}
-	for k, v in sandbox_env_pairs(tbl) do tbl_clean[k] = v end
-	if apply_func then return apply_func(tbl_clean) else return tbl_clean end
-end
-
-local function sandbox_game_print(...)
-	local args, msg = table.pack(...), ''
-	for _, arg in ipairs(args) do
-		if msg ~= '' then msg = msg..' ' end
-		if type(arg) == 'table' then arg = sandbox_clean_table(arg, serpent.line) end
-		msg = msg..(tostring(arg or 'nil') or '[value]')
-	end
-	game.print(msg)
-end
-
--- This env gets modified on ticks, which might cause mp desyncs
-local sandbox_env_base = {
-	_init = false,
-
-	pairs = sandbox_env_pairs,
-	ipairs = ipairs,
-	next = next,
-	pcall = pcall,
-	tonumber = tonumber,
-	tostring = tostring,
-	type = type,
-	assert = assert,
-	error = error,
-	select = select,
-
-	serpent = {
-		block = function(tbl) return sandbox_clean_table(tbl, serpent.block) end,
-		line = function(tbl) return sandbox_clean_table(tbl, serpent.line) end },
-	string = {
-		byte = string.byte, char = string.char, find = string.find,
-		format = string.format, gmatch = string.gmatch, gsub = string.gsub,
-		len = string.len, lower = string.lower, match = string.match,
-		rep = string.rep, reverse = string.reverse, sub = string.sub,
-		upper = string.upper },
-	table = {
-		concat = table.concat, insert = table.insert, remove = table.remove,
-		sort = table.sort, pack = table.pack, unpack = table.unpack },
-	math = {
-		abs = math.abs, acos = math.acos, asin = math.asin,
-		atan = math.atan, atan2 = math.atan2, ceil = math.ceil, cos = math.cos,
-		cosh = math.cosh, deg = math.deg, exp = math.exp, floor = math.floor,
-		fmod = math.fmod, frexp = math.frexp, huge = math.huge,
-		ldexp = math.ldexp, log = math.log, max = math.max,
-		min = math.min, modf = math.modf, pi = math.pi, pow = math.pow,
-		rad = math.rad, random = math.random, sin = math.sin, sinh = math.sinh,
-		sqrt = math.sqrt, tan = math.tan, tanh = math.tanh },
-	bit32 = {
-		arshift = bit32.arshift, band = bit32.band, bnot = bit32.bnot,
-		bor = bit32.bor, btest = bit32.btest, bxor = bit32.bxor,
-		extract = bit32.extract, replace = bit32.replace, lrotate = bit32.lrotate,
-		lshift = bit32.lshift, rrotate = bit32.rrotate, rshift = bit32.rshift }
-}
 
 
 -- ----- MLC update processing -----
 
 local mlc_err_sig = {type='virtual', name='mlc-error'}
-
-local function mlc_update_output(mlc, output_raw)
-	-- Sets signal outputs on invisible mlc-core combinators connected to visible outputs
-	local signals, errors, output = {red={}, green={}}, {}, {}
-	for k, v in pairs(output_raw) do output[tostring(k)] = v end
-
-	local sig_err, sig, st, err, pre, pre_label = util.tc(output)
-	for _, k in ipairs{false, 'red', 'green'} do
-		st = signals[k] and {signals[k]} or {signals.red, signals.green}
-		if not k then pre, pre_label = '^.+$', '^.+$'
-			else pre, pre_label = '^'..k..'/(.+)$', '^'..conf.get_wire_label(k)..'/(.+)$' end
-		for k, v in pairs(output) do
-			sig, err = cn_sig(k:match(pre) or k:match(pre_label))
-			if not sig then goto skip end
-			sig_err[k] = nil
-			if type(v) == 'boolean' then v = v and 1 or 0
-			elseif type(v) ~= 'number' then
-				err = ('signal must be a number [%s=(%s) %s]'):format(sig.name, type(v), v)
-			elseif not (v >= -2147483648 and v <= 2147483647) then
-				err = ('signal value out of range [%s=%s]'):format(sig.name, v) end
-			if err then table.insert(errors, err); goto skip end
-			for _, sig_table in ipairs(st) do sig_table[cn_sig_str(sig)] = v end
-	::skip:: end end
-	for sig, _ in pairs(sig_err)
-		do table.insert(errors, ('unknown signal [%s]'):format(sig)) end
-
-	local ps, ecc, n
-	for _, k in ipairs{'red', 'green'} do
-		ps, ecc = {}, mlc['out_'..k].get_or_create_control_behavior()
-		if not (ecc and ecc.valid) then goto skip end
-		n = 1
-		for sig, v in pairs(signals[k]) do
-			local qname = ""
-			sig,qname = cn_sig_quality(sig)
-			ps[n] = {value={name = "", quality = "", type = ""}, min=v}
-			ps[n].value.name = storage.signals[sig].name
-			ps[n].value.type = storage.signals[sig].type
-			ps[n].value.quality = qname or "normal"
-			n = n + 1
-		end
-		ecc.enabled = true
-		ecc.get_section(1).filters = ps
-	::skip:: end
-
-	if next(errors) then mlc.err_out = table.concat(errors, ', ') end
-end
-
-local function mlc_update_led(mlc, mlc_env)
-	-- This should set state in a way that doesn't actually produce any signals
-	-- Combinator is not considered 'active', as it ends up with 0 value, unless it's mlc-error
-	-- It's possible to have it output value and cancel it out, but shows-up on ALT-display
-	-- First constant on the combinator encodes its uid value, as a fallback to copy code in blueprints
-	if mlc.state == mlc_env._state then return end
-	local st, cb = mlc.state, mlc.e.get_or_create_control_behavior()
-	if not (cb and cb.valid) then return end
-
-	local op, a, b, out = '*', mlc_env._uid, 0
-	-- uid is uint, signal is int (signed), so must be negative if >=2^31
-	if a >= 0x80000000 then a = a - 0x100000000 end
-	if not st then op = '*'
-	elseif st == 'run' then op = '%'
-	elseif st == 'sleep' then op = '-'
-	elseif st == 'no-power' then op = '^'
-	elseif st == 'error' then op, b, out = '+', 1 - a, mlc_err_sig end -- shown with ALT
-	mlc_env._state, cb.parameters = st, {
-		operation=op, first_signal=nil, second_signal=nil,
-		first_constant=a, second_constant=b, output_signal=out }
-end
-
-local function mlc_update_code(mlc, mlc_env, lua_env)
-	mlc.next_tick, mlc.state, mlc.err_parse, mlc.err_run, mlc.err_out = 0
-	local code, err = (mlc.code or '')
-	if code:match('^%s*(.-)%s*$') ~= '' then
-		mlc_env._func, err = load(
-			code, code, 't', lua_env or CombinatorEnv[mlc_env._uid] )
-		if not mlc_env._func then mlc.err_parse, mlc.state = err, 'error' end
-	else
-		mlc_env._func = nil
-		cn_output_table_replace(mlc_env._out)
-		mlc_update_output(mlc, mlc_env._out)
-	end
-	mlc_update_led(mlc, mlc_env)
-end
-
 
 -- ----- MLC (+ sandbox) init / remove -----
 
@@ -396,87 +75,6 @@ local function out_wire_connect_mlc(mlc)
 	return mlc
 end
 
-local function mlc_log(...) log(...) end -- to avoid logging func code
-
-local function mlc_init(e)
-	-- Inits *local* mlc_env state for combinator - builds env, evals lua code, etc
-	-- *storage* (previously `global`) state will be used for init values if it exists, otherwise empty defaults
-	-- Lua env for code is composed from: sandbox_env_base + local mlc_env proxies + global (storage) mlc.vars
-	if not e.valid then return end
-	local uid = e.unit_number
-	if Combinators[uid] then error('Double-init for existing combinator unit_number') end
-	Combinators[uid] = {} -- some state (e.g. loaded func) has to be local
-	if not storage.combinators[uid] then storage.combinators[uid] = {e=e} end
-	local mlc_env, mlc = Combinators[uid], storage.combinators[uid]
-
-	if not sandbox_env_base._init then
-		-- This is likely to cause mp desyncs
-		sandbox_env_base.game = {
-			tick=game.tick, log=mlc_log,
-			print=sandbox_game_print, print_color=game.print }
-		sandbox_env_base._api = { game=game, script=script,
-			remote=remote, commands=commands, settings=settings,
-			rcon=rcon, rendering=rendering, global=storage, defines=defines, prototypes=prototypes }
-		sandbox_env_pairs_mt_iter[cn_input_signal_get] = true
-		sandbox_env_base._init = true
-	end
-
-	mlc.output, mlc.vars = mlc.output or {}, mlc.vars or {}
-	mlc_env._e, mlc_env._uid, mlc_env._out = e, uid, mlc.output
-
-	local env_wire_red = {
-		_e=mlc_env._e, _wire='red', _debug=false, _out=mlc_env._out,
-		_iter=cn_input_signal_iter, _cache={}, _cache_tick=-1 }
-	local env_wire_green = util.tc(env_wire_red)
-	env_wire_green._wire = 'green'
-
-	local env_ro = { -- sandbox_env_base + mlc_env proxies
-		uid = mlc_env._uid,
-		out = setmetatable( mlc_env._out,
-			{__index=cn_output_table_value, __len=cn_output_table_len} ),
-		red = setmetatable(env_wire_red, {
-			__serialize=cn_input_signal_table_serialize, __len=cn_input_signal_len,
-			__index=cn_input_signal_get, __newindex=cn_input_signal_set }),
-		green = setmetatable(env_wire_green, {
-			__serialize=cn_input_signal_table_serialize, __len=cn_input_signal_len,
-			__index=cn_input_signal_get, __newindex=cn_input_signal_set }) }
-	env_ro[conf.red_wire_name] = env_ro.red
-	env_ro[conf.green_wire_name] = env_ro.green
-	setmetatable(env_ro, {__index=sandbox_env_base})
-
-	if not mlc.vars.var then mlc.vars.var = {} end
-	local env = setmetatable(mlc.vars, { -- env_ro + mlc.vars
-		__index=env_ro, __newindex=function(vars, k, v)
-			if k == 'out' then
-				cn_output_table_replace(env_ro.out, v)
-				rawset(env_wire_red, '_debug', v)
-				rawset(env_wire_green, '_debug', v)
-			else rawset(vars, k, v) end end })
-
-	mlc_env.debug_wires_set = function(v)
-		local v_prev = rawget(env_wire_red, '_debug')
-		rawset(env_wire_red, '_debug', v or false)
-		rawset(env_wire_green, '_debug', v or false)
-		return v_prev end
-
-	-- Migration from pre-0.0.52 to separate wire outputs
-	if mlc.core then out_wire_connect_mlc(mlc) end
-
-	CombinatorEnv[uid] = env
-	mlc_update_code(mlc, mlc_env, env)
-	return mlc_env
-end
-
-local function mlc_remove(uid, keep_entities, to_be_mined)
-	guis.close(uid)
-	if not keep_entities then
-		local mlc = out_wire_clear_mlc(storage.combinators[uid] or {})
-		if not to_be_mined and mlc.e and mlc.e.valid then mlc.e.destroy() end
-	end
-	Combinators[uid], CombinatorEnv[uid], storage.combinators[uid], storage.guis[uid] = nil
-end
-
-
 -- ----- Misc events -----
 
 local mlc_filter = { { filter = 'name', name = 'mlc' },
@@ -487,7 +85,7 @@ local function blueprint_match_positions(bp_es, map_es)
 	-- Hack to work around invalidated ev.mapping - match entities by x/y position
 	-- Same idea as in https://forums.factorio.com/viewtopic.php?p=466734
 	--  but x/y in blueprints seem to be absolute in current factorio, not offset from center
-	local bp_mlcs, bp_mlc_uids, be, k = {}, {}
+	local bp_mlcs, bp_mlc_uids, be, k = {}, {}, nil, nil
 	for _, e in ipairs(bp_es) do if e.name == 'mlc'
 		then bp_mlcs[e.position.x..'_'..e.position.y] = e end end
 	if not next(bp_mlcs) then return bp_mlc_uids end -- no mlcs in blueprint
@@ -588,7 +186,7 @@ local function on_entity_copy(ev)
 	if not (ev.source.name == 'mlc' and ev.destination.name == 'mlc') then return end
 	local uid_src, uid_dst = ev.source.unit_number, ev.destination.unit_number
 	local mlc_old_outs = storage.combinators[uid_dst]
-	mlc_remove(uid_dst, true)
+	init.mlc_remove(uid_dst, true)
 	if mlc_old_outs
 		then mlc_old_outs = {mlc_old_outs.out_red, mlc_old_outs.out_green}
 		-- For cloned entities, mlc-core's might not yet exist - create/register them here, remove clones above
@@ -596,7 +194,7 @@ local function on_entity_copy(ev)
 		else mlc_old_outs = {out_wire_connect_both(ev.destination)} end
 	storage.combinators[uid_dst] = util.tdc(storage.combinators[uid_src])
 	local mlc_dst, mlc_src = storage.combinators[uid_dst], storage.combinators[uid_src]
-	mlc_dst.e, mlc_dst.next_tick, mlc_dst.core = ev.destination, 0
+	mlc_dst.e, mlc_dst.next_tick, mlc_dst.core = ev.destination, 0, nil
 	mlc_dst.out_red, mlc_dst.out_green = table.unpack(mlc_old_outs)
 end
 
@@ -605,8 +203,8 @@ script.on_event(
 	{{filter='name', name='mlc'}, {filter='name', name='mlc-core'}} )
 script.on_event(defines.events.on_entity_settings_pasted, on_entity_copy)
 
-local function on_destroyed(ev) mlc_remove(ev.entity.unit_number) end
-local function on_mined(ev) mlc_remove(ev.entity.unit_number, nil, true) end
+local function on_destroyed(ev) init.mlc_remove(ev.entity.unit_number) end
+local function on_mined(ev) init.mlc_remove(ev.entity.unit_number, nil, true) end
 
 script.on_event(defines.events.on_pre_player_mined_item, on_mined, mlc_filter)
 script.on_event(defines.events.on_robot_pre_mined, on_mined, mlc_filter)
@@ -648,19 +246,19 @@ local function update_signals_in_guis()
 	local colors = {red={1,0.3,0.3}, green={0.3,1,0.3}}
 	for uid, gui_t in pairs(storage.guis) do
 		mlc = storage.combinators[uid]
-		if not (mlc and mlc.e.valid) then mlc_remove(uid); goto skip end
+		if not (mlc and mlc.e.valid) then init.mlc_remove(uid); goto skip end
 		gui_flow = gui_t.signal_pane
 		if not (gui_flow and gui_flow.valid) then goto skip end
 		gui_flow.clear()
 
 		-- Inputs
 		for k, color in pairs(colors) do
-			cb = cn_wire_signals(mlc.e, defines.wire_type[k])
+			cb = circuit_network.cn_wire_signals(mlc.e, defines.wire_type[k])
 			for sig, v in pairs(cb) do
 				if v == 0 then goto skip end
 				if not sig then goto skip end
-				local signame, qname = cn_sig_quality(sig)
-				local icon = signal_icon_tag(cn_sig_str(signame))
+				local signame, qname = circuit_network.cn_sig_quality(sig)
+				local icon = signal_icon_tag(circuit_network.cn_sig_str(signame))
 				if qname then
 					icon = quality_icon_tag(qname) .. icon
 				end
@@ -673,7 +271,7 @@ local function update_signals_in_guis()
 		::skip:: end end
 
 		-- Outputs
-		mlc_out, mlc_out_idx, mlc_out_err = {}, {}, util.tc((Combinators[uid] or {})._out or {})
+		mlc_out, mlc_out_idx, mlc_out_err = {}, {}, util.tc((memory.combinators[uid] or {})._out or {})
 		for k, cb in pairs{red=mlc.out_red, green=mlc.out_green} do
 			cb = cb.get_control_behavior()
 			for _, cbs in pairs(cb.sections[1].filters or {}) do
@@ -682,20 +280,19 @@ local function update_signals_in_guis()
 				if cbs.value.quality ~= nil and cbs.value.quality ~= "normal" then
 					sig = cbs.value.quality.."/"..sig
 				end
-				mlc_out_err[sig],
-					mlc_out_err[('%s/%s'):format(k, sig)],
-					mlc_out_err[('%s/%s'):format(label, sig)] = nil
-				sig = cn_sig_str(cbs.value)
-				mlc_out_err[sig],
-					mlc_out_err[('%s/%s'):format(k, sig)],
-					mlc_out_err[('%s/%s'):format(label, sig)] = nil
+				mlc_out_err[sig], mlc_out_err[('%s/%s'):format(k, sig)] = nil, nil
+				mlc_out_err[('%s/%s'):format(label, sig)] = nil
+				sig = circuit_network.cn_sig_str(cbs.value)
+				mlc_out_err[sig], mlc_out_err[('%s/%s'):format(k, sig)] = nil, nil
+				mlc_out_err[('%s/%s'):format(label, sig)] = nil
 				if cbs.min ~= 0 then
 					if not mlc_out[sig] then mlc_out_idx[#mlc_out_idx+1], mlc_out[sig] = sig, {} end
-					mlc_out[sig][k] = cbs.min end
+					mlc_out[sig][k] = cbs.min
+        end
 		end ::cb_slots_end:: end
 		table.sort(mlc_out_idx)
 		for val, k in pairs(mlc_out_idx) do
-			local signame, qname = cn_sig_quality(k)
+			local signame, qname = circuit_network.cn_sig_quality(k)
 			val, sig, label = mlc_out[k], storage.signals[signame].name, signal_icon_tag(signame)
 			if string.sub(signame,1,1)== '~' then
 				sig = "~"..sig
@@ -752,12 +349,12 @@ local function run_moon_logic_tick(mlc, mlc_env, tick)
 	-- Runs logic of the specified combinator, reading its input and setting outputs
 	local out_tick, out_diff = mlc.next_tick, util.tc(mlc_env._out)
 	local dbg = mlc.vars.debug and function(fmt, ...)
-		mlc_log((' -- moon-logic [%s]: %s'):format(mlc_env._uid, fmt:format(...))) end
+		log((' -- moon-logic [%s]: %s'):format(mlc_env._uid, fmt:format(...))) end
 	mlc.vars.delay, mlc.vars.var, mlc.vars.debug, mlc.vars.irq, mlc.irq = 1, mlc.vars.var or {}
 
 	if mlc.e.energy < conf.energy_fail_level then
 		mlc.state = 'no-power'
-		mlc_update_led(mlc, mlc_env)
+		update.mlc_update_led(mlc, mlc_env)
 		mlc.next_tick = game.tick + conf.energy_fail_delay
 		return
 	end
@@ -796,7 +393,7 @@ local function run_moon_logic_tick(mlc, mlc_env, tick)
 
 	local sig = mlc.vars.irq
 	if sig then
-		sig = cn_sig(sig)
+		sig = circuit_network.cn_sig(sig)
 		if sig then mlc.irq, mlc.irq_delay = sig, tonumber(mlc.vars.irq_min_interval) else
 			mlc.err_run = ('Unknown/ambiguous "irq" signal: %s'):format(serpent.line(mlc.vars.irq)) end
 	end
@@ -813,7 +410,7 @@ local function run_moon_logic_tick(mlc, mlc_env, tick)
 		end end
 		dbg('out-sync=%s out-diff :: %s', out_sync and true, serpent.line(out_diff)) end
 
-	if out_sync then mlc_update_output(mlc, mlc_env._out) end
+	if out_sync then update.mlc_update_output(mlc, mlc_env._out) end
 
 	local err_msg = format_mlc_err_msg(mlc)
 	if err_msg then
@@ -823,7 +420,7 @@ local function run_moon_logic_tick(mlc, mlc_env, tick)
 	end
 
 	if dbg then dbg('--- debug-run end [tick=%s] ---', tick) end -- debug
-	mlc_update_led(mlc, mlc_env)
+	update.mlc_update_led(mlc, mlc_env)
 
 	if mlc.vars.ota_update_from_uid then
 		local mlc_src = mlc.vars.ota_update_from_uid
@@ -837,14 +434,13 @@ end
 
 local function on_tick(ev)
 	local tick = ev.tick
-	if sandbox_env_base.game then sandbox_env_base.game.tick = tick end
 
 	for uid, mlc in pairs(storage.combinators) do
-		local mlc_env = Combinators[uid]
-		if not mlc_env then mlc_env = mlc_init(mlc.e) end
+		local mlc_env = memory.combinators[uid]
+		if not mlc_env then mlc_env = init.mlc_init(mlc.e) end
 		if not ( mlc_env and mlc.e.valid
 				and mlc.out_red.valid and mlc.out_green.valid )
-			then mlc_remove(uid); goto skip end
+			then init.mlc_remove(uid); goto skip end
 
 		local err_msg = format_mlc_err_msg(mlc)
 		if err_msg then
@@ -854,14 +450,19 @@ local function on_tick(ev)
 		elseif mlc_env._alert then alert_clear(mlc_env) end
 
 		if mlc.irq and (mlc.irq_tick or 0) < tick - (mlc.irq_delay or 0)
-				and mlc.e.get_signal(mlc.irq, defines.wire_connector_id.combinator_input_green, defines.wire_connector_id.combinator_input_red) ~= 0
-			then mlc.irq_tick, mlc.next_tick = tick end
+				and mlc.e.get_signal(mlc.irq, defines.wire_connector_id.combinator_input_green, defines.wire_connector_id.combinator_input_red) ~= 0 then
+      mlc.irq_tick = tick
+      mlc.next_tick = nil
+    end
 		if tick >= (mlc.next_tick or 0) and mlc_env._func then
 			run_moon_logic_tick(mlc, mlc_env, tick)
 			for _, p in ipairs(game.connected_players) do
         local player, vars_uid = game.players[p.index], storage.guis_player['vars.'..p.index]
-        if not player or vars_uid ~= uid then return end
+        if not player or vars_uid ~= uid then
+          goto skip_vars
+        end
         vars_dialog.update(player, uid)
+        ::skip_vars::
       end
 		end
 	::skip:: end
@@ -886,13 +487,13 @@ end)
 -- ----- GUI events and entity interactions -----
 
 function load_code_from_gui(code, uid) -- note: in global _ENV, used from gui.lua
-	local mlc, mlc_env = storage.combinators[uid], Combinators[uid]
+	local mlc, mlc_env = storage.combinators[uid], memory.combinators[uid]
 	if not ( mlc and mlc.e.valid
 			and mlc.out_red.valid and mlc.out_green.valid )
-		then return mlc_remove(uid) end
+		then return init.mlc_remove(uid) end
 	mlc.code = code or ''
-	if not mlc_env then return mlc_init(mlc.e) end
-	mlc_update_code(mlc, mlc_env)
+	if not mlc_env then return init.mlc_init(mlc.e) end
+	update.mlc_update_code(mlc, mlc_env, memory.combinator_env[mlc_env._uid])
 	if not mlc.err_parse then
 		for _, player in pairs(game.players)
 			do player.remove_alert{entity=mlc_env._e}
@@ -901,10 +502,10 @@ function load_code_from_gui(code, uid) -- note: in global _ENV, used from gui.lu
 end
 
 function clear_outputs_from_gui(uid) -- note: in global _ENV, used from gui.lua
-	local mlc, mlc_env = storage.combinators[uid], Combinators[uid]
+	local mlc, mlc_env = storage.combinators[uid], memory.combinators[uid]
 	if not (mlc and mlc_env) then return end
-	cn_output_table_replace(mlc_env._out)
-	mlc_update_output(mlc, mlc_env._out)
+	circuit_network.cn_output_table_replace(mlc_env._out)
+	update.mlc_update_output(mlc, mlc_env._out)
 end
 
 script.on_event(defines.events.on_gui_opened, function(ev)
@@ -989,7 +590,7 @@ local remote_err = function(msg, ...) for n, p in pairs(game.players)
 	do p.print(('Moon-Logic remote-call error: '..msg):format(...), {1,1,0}) end end
 remote.add_interface('mlc', {run = function(uid_raw, count)
 	local uid = tonumber(uid_raw)
-	local mlc, mlc_env = storage.combinators[uid], Combinators[uid]
+	local mlc, mlc_env = storage.combinators[uid], memory.combinators[uid]
 	if not mlc or not mlc_env then
 		return remote_err('cannot find combinator with uid=%s', uid_raw) end
 	local err_n, st, err, err_last = 0
@@ -1023,18 +624,18 @@ local function update_signal_types_table()
 	local sig_str, sig
 	for k, sig in pairs(prototypes.virtual_signal) do
 		if sig.special then goto skip end -- anything/everything/each
-		sig_str, sig = cn_sig_str('virtual', k), {type='virtual', name=k, quality="normal"}
+		sig_str, sig = circuit_network.cn_sig_str('virtual', k), {type='virtual', name=k, quality="normal"}
 		storage.signals_short[k], storage.signals[sig_str] = sig_str, sig
 	::skip:: end
 	for t, protos in pairs{ fluid=prototypes.fluid,
 			item=prototypes.get_item_filtered{{filter='hidden', invert=true}} } do
 		for k, _ in pairs(protos) do
-			sig_str, sig = cn_sig_str(t, k), {type=t, name=k, quality="normal"}
+			sig_str, sig = circuit_network.cn_sig_str(t, k), {type=t, name=k, quality="normal"}
 			storage.signals_short[k] = storage.signals_short[k] == nil and sig_str or false
 			storage.signals[sig_str] = sig
 	end end
 	for t, k in pairs(prototypes.recipe) do
-		sig_str, sig = cn_sig_str('recipe', t), {type='recipe', name=t, quality="normal"}
+		sig_str, sig = circuit_network.cn_sig_str('recipe', t), {type='recipe', name=t, quality="normal"}
 		if storage.signals_short[t] == nil then
 			storage.signals_short[t] = sig_str
 		end
@@ -1108,14 +709,14 @@ end)
 -- Function to execute combinator code with test inputs (global for gui.lua access)
 function execute_test_case(uid, red_input, green_input)
   local mlc = storage.combinators[uid]
-  local mlc_env = Combinators[uid]
+  local mlc_env = memory.combinators[uid]
   
   if not mlc or not mlc_env or not mlc_env._func then
     return {}
   end
   
   -- Create test environment
-  local test_env = setmetatable({}, {__index = CombinatorEnv[uid]})
+  local test_env = setmetatable({}, {__index = memory.combinator_env[uid]})
   
   -- Convert signal arrays to signal tables
   local red_signals = {}
@@ -1125,7 +726,7 @@ function execute_test_case(uid, red_input, green_input)
     if signal_data.signal and signal_data.count then
       local signal_name = signal_data.signal.name
       if signal_data.signal.type and signal_data.signal.type ~= "item" then
-        signal_name = cn_sig_str(signal_data.signal.type, signal_name)
+        signal_name = circuit_network.cn_sig_str(signal_data.signal.type, signal_name)
       end
       red_signals[signal_name] = signal_data.count
     end
@@ -1135,7 +736,7 @@ function execute_test_case(uid, red_input, green_input)
     if signal_data.signal and signal_data.count then
       local signal_name = signal_data.signal.name
       if signal_data.signal.type and signal_data.signal.type ~= "item" then
-        signal_name = cn_sig_str(signal_data.signal.type, signal_name)
+        signal_name = circuit_network.cn_sig_str(signal_data.signal.type, signal_name)
       end
       green_signals[signal_name] = signal_data.count
     end
@@ -1207,14 +808,14 @@ end
 -- Advanced test case execution with game tick, variables, and print capture
 function execute_test_case_advanced(uid, test_options)
   local mlc = storage.combinators[uid]
-  local mlc_env = Combinators[uid]
+  local mlc_env = memory.combinators[uid]
   
   if not mlc or not mlc_env or not mlc_env._func then
     return {output = {}, print_output = ""}
   end
   
   -- Create test environment
-  local test_env = setmetatable({}, {__index = CombinatorEnv[uid]})
+  local test_env = setmetatable({}, {__index = memory.combinator_env[uid]})
   
   -- Convert signal arrays to signal tables
   local red_signals = {}
@@ -1224,7 +825,7 @@ function execute_test_case_advanced(uid, test_options)
     if signal_data.signal and signal_data.count then
       local signal_name = signal_data.signal.name
       if signal_data.signal.type and signal_data.signal.type ~= "item" then
-        signal_name = cn_sig_str(signal_data.signal.type, signal_name)
+        signal_name = circuit_network.cn_sig_str(signal_data.signal.type, signal_name)
       end
       red_signals[signal_name] = signal_data.count
     end
@@ -1234,7 +835,7 @@ function execute_test_case_advanced(uid, test_options)
     if signal_data.signal and signal_data.count then
       local signal_name = signal_data.signal.name
       if signal_data.signal.type and signal_data.signal.type ~= "item" then
-        signal_name = cn_sig_str(signal_data.signal.type, signal_name)
+        signal_name = circuit_network.cn_sig_str(signal_data.signal.type, signal_name)
       end
       green_signals[signal_name] = signal_data.count
     end

@@ -1,4 +1,5 @@
--- src/sandbox/base.lua
+local event_handler = require("src/events/event_handler")
+local cn = require("src/core/circuit_network")
 
 local sandbox = {}
 
@@ -67,5 +68,25 @@ sandbox.env_base = {
 		extract = bit32.extract, replace = bit32.replace, lrotate = bit32.lrotate,
 		lshift = bit32.lshift, rrotate = bit32.rrotate, rshift = bit32.rshift }
 }
+
+local function mlc_log(...) log(...) end -- to avoid logging func code
+
+event_handler.add_handler(defines.events.on_tick, function(event)
+	if not sandbox.env_base._init then
+		-- This is likely to cause mp desyncs
+		sandbox.env_base.game = {
+			tick=game.tick, log=mlc_log,
+			print=sandbox.game_print, print_color=game.print }
+		sandbox.env_base._api = { game=game, script=script,
+			remote=remote, commands=commands, settings=settings,
+			rcon=rcon, rendering=rendering, global=storage, defines=defines, prototypes=prototypes }
+		sandbox.env_pairs_mt_iter[cn.cn_input_signal_get] = true
+		sandbox.env_base._init = true
+	end
+
+  if sandbox.env_base.game then
+    sandbox.env_base.game.tick = event.tick
+  end
+end)
 
 return sandbox

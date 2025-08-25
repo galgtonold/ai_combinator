@@ -76,11 +76,10 @@ function update.mlc_update_led(mlc, mlc_env)
 end
 
 function update.mlc_update_code(mlc, mlc_env, lua_env)
-	mlc.next_tick, mlc.state, mlc.err_parse, mlc.err_run, mlc.err_out = 0
+	mlc.next_tick, mlc.state, mlc.err_parse, mlc.err_run, mlc.err_out = 0, nil, nil, nil, nil
 	local code, err = (mlc.code or '')
-	if code:match('^%s*(.-)%s*$') ~= '' then
-		mlc_env._func, err = load(
-			code, code, 't', lua_env or CombinatorEnv[mlc_env._uid] )
+	if code:match('^%s*(.-)%s*$') ~= '' then -- Check if not just whitespace
+		mlc_env._func, err = load(code, code, 't', lua_env)
 		if not mlc_env._func then mlc.err_parse, mlc.state = err, 'error' end
 	else
 		mlc_env._func = nil
