@@ -1,6 +1,6 @@
 local tbar = {}
 
-function tbar.show(gui, caption, close_button_tags, extra_tags)
+function tbar.show(gui, caption, close_button_tags, extra_tags, extra_buttons)
   extra_tags = extra_tags or {}
 
   local titlebar = gui.add{type = "flow", style = "frame_header_flow", tags = extra_tags}
@@ -23,7 +23,13 @@ function tbar.show(gui, caption, close_button_tags, extra_tags)
   filler.style.height = 24
   filler.style.horizontally_stretchable = true
   filler.style.right_margin = 5
-  
+
+  if extra_buttons then
+    for _, button in ipairs(extra_buttons) do
+      titlebar.add(button)
+    end
+  end  
+
   local close_button_tags = close_button_tags or {}
   for k, v in pairs(extra_tags) do
     close_button_tags[k] = v
@@ -33,8 +39,6 @@ function tbar.show(gui, caption, close_button_tags, extra_tags)
     type = "sprite-button",
     style = "frame_action_button",
     sprite = "utility/close",
-    hovered_sprite = "utility/close_black",
-    clicked_sprite = "utility/close_black",
     tooltip = {"gui.close-instruction"},
     tags = close_button_tags,
   }

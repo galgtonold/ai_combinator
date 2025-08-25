@@ -1,6 +1,6 @@
 local component = {}
 
-function component.add(parent, red_network, green_network)
+function component.show(parent, red_network, green_network)
   local has_network = red_network ~= nil or green_network ~= nil
 
   if not has_network then

@@ -1,22 +1,24 @@
 local conf = require('src/core/config')
-local cgui = require('src/gui/cgui')
 local event_handler = require("src/events/event_handler")
 local bridge = require("src/services/bridge")
 local utils = require("src/core/utils")
 local constants = require("src/core/constants")
 
-local titlebar = require('src/gui/titlebar')
+local titlebar = require('src/gui/components/titlebar')
 local dialog_manager = require('src/gui/dialogs/dialog_manager')
 local variable_row = require('src/gui/components/variable_row')
 
-local help_dialog = require('src/gui/dialogs/help_dialog')
 local vars_dialog = require('src/gui/dialogs/vars_dialog')
 local set_task_dialog = require('src/gui/dialogs/set_task_dialog')
 local set_description_dialog = require('src/gui/dialogs/set_description_dialog')
+local set_quantity_dialog = require('src/gui/dialogs/set_quantity_dialog')
 local edit_code_dialog = require('src/gui/dialogs/edit_code_dialog')
 local test_case_dialog = require('src/gui/dialogs/test_case_dialog')
 
 local ai_combinator_header = require('src/gui/components/ai_combinator_header')
+local signal_table = require('src/gui/components/signal_table')
+
+local testing = require('src/testing/testing')
 
 local guis = {}
 
@@ -26,73 +28,15 @@ local function vars_window_uid(gui)
 	return tonumber(gui.caption:match('%[(%d+)%]'))
 end
 
-local err_icon_sub_add = '[color=#c02a2a]%1[/color]'
-local err_icon_sub_clear = '%[color=#c02a2a%]([^\n]+)%[/color%]'
-local function code_error_highlight(text, line_err)
-	-- Add/strip rich error highlight tags
-	if type(line_err) == 'string'
-		then line_err = line_err:match(':(%d+):') end
-	text = text:gsub(err_icon_sub_clear, '%1')
-	text = text:match('^(.-)%s*$') -- strip trailing newlines/spaces
-	line_err = tonumber(line_err)
-	if not line_err then return text end
-	local _, line_count = text:gsub('([^\n]*)\n?','')
-	if string.sub(text, -1) == '\n'
-		then line_count = line_count + 1 end
-	local n, result = 0, ''
-	for line in text:gmatch('([^\n]*)\n?') do
-		n = n + 1
-		if n == line_err
-			then line = line:gsub('^(.+)$', err_icon_sub_add) end
-		if n < line_count or line ~= '' then result = result..line..'\n' end
-	end
-	return result
-end
-
-local function draw_signal_element(parent, style, signal_with_count, count)
-  local flow = parent.add{type="flow"}
-
-  local button = flow.add{
-      type="choose-elem-button",
-      elem_type="signal",
-      signal = signal_with_count.signal,
-      style=style
-  }
-
-  local count_label = flow.add{
-    type="label", 
-    caption=tostring(utils.format_number(signal_with_count.count)),
-    style="count_label",
-    ignored_by_interaction=true
-  }
-  count_label.style.top_margin = 20
-  count_label.style.left_margin = -40
-  count_label.style.right_margin = -40
-  count_label.style.horizontal_align = "right"
-  count_label.style.maximal_width = 33
-  count_label.style.minimal_width = 33
-  button.locked = true
-end
-
-local function draw_signal_section(parent, signals_with_count, style)
-  local button_table = parent.add{type="table", column_count=10, style="filter_slot_table"}
-  local row_count = math.ceil(#signals_with_count / 10)
-  button_table.style.height = 40 * row_count
-
-  for _, signal in pairs(signals_with_count) do
-    draw_signal_element(button_table, style, signal)
-  end
-  return row_count
-end
 
 local function draw_signals(button_frame, signals, red_signals, green_signals)
   button_frame.clear()
 
   local row_count = 0
-  row_count = row_count + draw_signal_section(button_frame, signals, "slot")
-  row_count = row_count + draw_signal_section(button_frame, red_signals, "red_slot")
-  row_count = row_count + draw_signal_section(button_frame, green_signals, "green_slot")
-  
+  row_count = row_count + signal_table.show(button_frame, signals, "slot")
+  row_count = row_count + signal_table.show(button_frame, red_signals, "red_slot")
+  row_count = row_count + signal_table.show(button_frame, green_signals, "green_slot")
+
   if row_count == 0 then
     row_count = 1
   end
@@ -295,12 +239,6 @@ local function create_gui(player, entity)
   local test_cases_container = elc(entity_frame, {type='flow', name='mlc-test-cases-container', direction='vertical'})
   gui_t.mlc_test_cases_container = test_cases_container
 
-
-  local code_text = elc( entity_frame, {type='text-box', name='mlc-code', text=mlc.code or ''},
-  {maximal_height=max_height, width=400, minimal_height=300} )
-  el.text = code_error_highlight(el.text, mlc_err)
-  code_text.visible = false
-
   local error_label = elc(entity_frame, {type='label', name='mlc-errors', direction='horizontal'}, {horizontally_stretchable=true})
   error_label.visible = false
 
@@ -317,20 +255,6 @@ local function create_gui(player, entity)
 	-- MT column-1: action button bar at the top
 	local top_btns = elc( mt_left,
 		{type='flow', name='mt-top-btns', direction='horizontal'}, {width=400} )
-
-	local function top_btns_add(name, tooltip)
-		local sz, pad = 20, 0
-		return elc( top_btns,
-			{type='sprite-button', name=name, sprite=name, direction='horizontal', tooltip=tooltip, style='button'},
-			{height=sz, width=sz, top_padding=pad, bottom_padding=pad, left_padding=pad, right_padding=pad} )
-	end
-
-	top_btns_add('mlc-help', 'Toggle quick reference window')
-
-	-- MT column-1: code textbox
-	elc( mt_left, {type='text-box', name='mlc-code', text=mlc.code or ''},
-		{maximal_height=max_height, width=400, minimal_height=300} )
-	el.text = code_error_highlight(el.text, mlc_err)
 
 	-- MT column-1: error bar at the bottom
 	elc(mt_left, {type='label', name='mlc-errors', direction='horizontal'}, {horizontally_stretchable=true})
@@ -384,19 +308,8 @@ end
 function guis.save_code(uid, code)
 	local gui_t, mlc = storage.guis[uid], storage.combinators[uid]
 	if not mlc then return end
-	if gui_t then
-		code = code_error_highlight(code or gui_t.mlc_code.text)
-		gui_t.mlc_code.text = code
-	end
 	load_code_from_gui(code, uid)
   mlc.task_request_time = nil -- reset task request time on code change
-end
-
-function guis.update_error_highlight(uid, mlc, err)
-	local gui_t = storage.guis[uid]
-	if not gui_t then return end
-	gui_t.mlc_code.text = code_error_highlight(
-		gui_t.mlc_code.text, err or mlc.err_parse or mlc.err_run )
 end
 
 function guis.on_gui_text_changed(ev)
@@ -424,10 +337,6 @@ function guis.on_gui_text_changed(ev)
     
     return 
   end
-	local uid, gui_t = find_gui(ev)
-	if not uid then return end
-	local mlc = storage.combinators[uid]
-	if not mlc then return end
 end
 
 function guis.on_gui_elem_changed(ev)
@@ -799,9 +708,9 @@ function guis.update_test_status_in_dialog(uid, test_index)
   local test_case = mlc.test_cases[test_index]
   local actual_output = test_case.actual_output or {}
   local expected_output = test_case.expected_output or {}
-  
-  local signals_match = guis.test_case_matches(expected_output, actual_output)
-  
+
+  local signals_match = testing.test_case_matches(expected_output, actual_output)
+
   -- Check print output if expected
   local print_matches = true
   if test_case.expected_print and test_case.expected_print ~= "" then
@@ -1004,101 +913,7 @@ function guis.handle_test_signal_change(event)
   end
 end
 
-function guis.open_quantity_dialog(player_index, uid, test_index, signal_type, slot_index)
-  -- Simple quantity input dialog
-  local player = game.players[player_index]
-  local mlc = storage.combinators[uid]
-  
-  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then
-    return
-  end
-  
-  -- Prevent multiple instances - close existing dialog if it exists
-  local gui_t = storage.guis[uid]
-  if gui_t and gui_t.quantity_dialog and gui_t.quantity_dialog.valid then
-    gui_t.quantity_dialog.destroy()
-    gui_t.quantity_dialog = nil
-    gui_t.quantity_input = nil
-  end
-  
-  local test_case = mlc.test_cases[test_index]
-  local signal_array
-  if signal_type == "red" then
-    signal_array = test_case.red_input
-  elseif signal_type == "green" then
-    signal_array = test_case.green_input
-  elseif signal_type == "expected" then
-    signal_array = test_case.expected_output
-  else
-    return
-  end
-  
-  local signal_data = signal_array[slot_index] or {}
-  local current_count = signal_data.count or 1
-  
-  -- Create simple input dialog
-  local quantity_frame = player.gui.screen.add{
-    type = "frame",
-    direction = "vertical",
-    tags = {quantity_dialog = true, uid = uid, test_index = test_index, signal_type = signal_type, slot_index = slot_index}
-  }
-  quantity_frame.location = {player.display_resolution.width / 2 - 100, player.display_resolution.height / 2 - 50}
 
-  titlebar.show(quantity_frame, "Set Quantity", {quantity_dialog_close = true}, {quantity_dialog = true, uid = uid, test_index = test_index, signal_type = signal_type, slot_index = slot_index})
-
-  local content = quantity_frame.add{
-    type = "flow",
-    direction = "vertical",
-    tags = {quantity_dialog = true, uid = uid, test_index = test_index, signal_type = signal_type, slot_index = slot_index}
-  }
-  
-  local input_flow = content.add{
-    type = "flow",
-    direction = "horizontal",
-    tags = {quantity_dialog = true, uid = uid, test_index = test_index, signal_type = signal_type, slot_index = slot_index}
-  }
-  
-  input_flow.add{type = "label", caption = "Quantity:"}
-  
-  local quantity_input = input_flow.add{
-    type = "textfield",
-    text = tostring(current_count),
-    numeric = true,
-    allow_negative = true,
-    name = "quantity-input",
-    tags = {quantity_dialog = true, uid = uid, test_index = test_index, signal_type = signal_type, slot_index = slot_index}
-  }
-  quantity_input.style.width = 100
-  quantity_input.style.left_margin = 8
-  quantity_input.focus()
-  quantity_input.select_all()
-  
-  local button_flow = content.add{
-    type = "flow",
-    direction = "horizontal",
-    tags = {quantity_dialog = true, uid = uid, test_index = test_index, signal_type = signal_type, slot_index = slot_index}
-  }
-  
-  local ok_btn = button_flow.add{
-    type = "button",
-    caption = "OK",
-    style = "confirm_button",
-    tags = {quantity_ok = true, uid = uid, test_index = test_index, signal_type = signal_type, slot_index = slot_index}
-  }
-  
-  local cancel_btn = button_flow.add{
-    type = "button",
-    caption = "Cancel",
-    style = "back_button",
-    tags = {quantity_cancel = true}
-  }
-  cancel_btn.style.left_margin = 8
-  
-  -- Store references for later access
-  local gui_t = storage.guis[uid]
-  gui_t.quantity_dialog = quantity_frame
-  gui_t.quantity_input = quantity_input
-end
 
 -- Toggle advanced section visibility
 function guis.toggle_advanced_section(uid, test_index, state)
@@ -1153,7 +968,7 @@ function guis.add_variable_row(uid, test_index)
   if vars_table then
     vars_table.clear()
     for i, var in ipairs(test_case.variables) do
-      variable_row.create(vars_table, uid, test_index, i, var.name or "", var.value or 0)
+      variable_row.show(vars_table, uid, test_index, i, var.name or "", var.value or 0)
     end
   end
 end
@@ -1184,11 +999,11 @@ function guis.delete_variable_row(uid, test_index, row_index)
     if vars_table then
       vars_table.clear()
       for i, var in ipairs(test_case.variables) do
-        variable_row.create(vars_table, uid, test_index, i, var.name or "", var.value or 0)
+        variable_row.show(vars_table, uid, test_index, i, var.name or "", var.value or 0)
       end
       -- Always have at least one empty row
       if #test_case.variables == 0 then
-        variable_row.create(vars_table, uid, test_index, 1, "", 0)
+        variable_row.show(vars_table, uid, test_index, 1, "", 0)
       end
     end
   end
@@ -1499,34 +1314,6 @@ function guis.create_signal_display(parent, signals)
   end
 end
 
-function guis.test_case_matches(expected, actual)
-  -- Check if expected output matches actual output
-  if not expected or not actual then
-    return false
-  end
-  
-  -- Check all expected signals are present with correct values
-  for signal, expected_count in pairs(expected) do
-    if expected_count ~= 0 then
-      local actual_count = actual[signal] or 0
-      if actual_count ~= expected_count then
-        return false
-      end
-    end
-  end
-  
-  -- Check no unexpected signals are present
-  for signal, actual_count in pairs(actual) do
-    if actual_count ~= 0 then
-      local expected_count = expected[signal] or 0
-      if expected_count == 0 then
-        return false
-      end
-    end
-  end
-  
-  return true
-end
 
 function guis.update_test_cases_ui(uid)
   local mlc = storage.combinators[uid]
@@ -1565,7 +1352,7 @@ function guis.update_test_cases_ui(uid)
     direction = "horizontal"
   }
   
-  local header_label = title_flow.add{
+  title_flow.add{
     type = "label",
     caption = "Test Cases",
     style = "semibold_label"
@@ -1589,7 +1376,7 @@ function guis.update_test_cases_ui(uid)
     -- Check signal output match
     local signals_match = true
     if test_case.expected_output and next(test_case.expected_output) then
-      signals_match = guis.test_case_matches(test_case.expected_output, test_case.actual_output or {})
+      signals_match = testing.test_case_matches(test_case.expected_output, test_case.actual_output or {})
     end
     
     -- Check print output match
@@ -1657,8 +1444,8 @@ function guis.update_test_cases_ui(uid)
         tags = {uid = uid, edit_test_case = i}
       }
       local actual_output = test_case.actual_output or {}
-      local status_matches = guis.test_case_matches(test_case.expected_output or {}, actual_output)
-      
+      local status_matches = testing.test_case_matches(test_case.expected_output or {}, actual_output)
+
       if test_case.expected_output then
         if status_matches then
           status_sprite.sprite = "utility/status_working"
@@ -1821,7 +1608,7 @@ function guis.handle_task_dialog_click(event)
     guis.run_test_case_in_dialog(uid, event.element.tags.test_index)
     return true
   elseif event.element.tags.edit_signal_quantity then
-    guis.open_quantity_dialog(event.player_index, uid, event.element.tags.test_index, event.element.tags.signal_type, event.element.tags.slot_index)
+    set_quantity_dialog.show(event.player_index, uid, event.element.tags.test_index, event.element.tags.signal_type, event.element.tags.slot_index)
     return true
   elseif event.element.tags.test_signal_elem then
     -- Handle signal element changes in test dialog
@@ -1866,16 +1653,11 @@ function guis.on_gui_click(ev)
   if not el.valid then return end
 
 	-- Separate "help" and "vars" windows, not tracked in globals (storage), unlike main MLC gui
-	if el.name == 'mlc-copy-close' then return cgui.close()
-	elseif el.name == 'mlc-help-close' then return el.parent.destroy()
+	if el.name == 'mlc-help-close' then return el.parent.destroy()
 	elseif el.name == 'mlc-vars-close' then
 		return (el.parent.paent or el.parent).destroy()
 	elseif el.name == 'mlc-vars-pause' then
 		return vars_dialog.show( ev.player_index, vars_window_uid(el), el.style.name ~= 'green_button', true)
-	elseif string.sub(el.name,1,8) == "mlc-sig-" then
-		if (ev.element.tags["signal"] ~= nil) then
-			cgui.open(game.players[ev.player_index], ev.element.tags["signal"])
-		end
 	end
 
   if el.tags and el.tags.close_combinator_ui then
@@ -1937,8 +1719,6 @@ function guis.on_gui_click(ev)
 		guis.save_code(uid, '')
 		guis.on_gui_text_changed{element=gui_t.mlc_code}
 	elseif el_id == 'mlc-close' then guis.close(uid)
-	elseif el_id == 'mlc-help' then 
-    help_dialog.show(ev.player_index)
 	elseif el_id == 'mlc-vars' then
 		if ev.button == rmb then
 			if ev.shift then clear_outputs_from_gui(uid)

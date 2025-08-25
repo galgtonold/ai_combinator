@@ -863,7 +863,6 @@ local function on_tick(ev)
         if not player or vars_uid ~= uid then return end
         vars_dialog.update(player, uid)
       end
-			if mlc.err_run then guis.update_error_highlight(uid, mlc, mlc.err_run) end
 		end
 	::skip:: end
 
@@ -896,8 +895,9 @@ function load_code_from_gui(code, uid) -- note: in global _ENV, used from gui.lu
 	mlc_update_code(mlc, mlc_env)
 	if not mlc.err_parse then
 		for _, player in pairs(game.players)
-			do player.remove_alert{entity=mlc_env._e} end
-	else guis.update_error_highlight(uid, mlc, mlc.err_parse) end
+			do player.remove_alert{entity=mlc_env._e}
+    end
+	end
 end
 
 function clear_outputs_from_gui(uid) -- note: in global _ENV, used from gui.lua

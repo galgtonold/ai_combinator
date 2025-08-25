@@ -1,6 +1,6 @@
 local variable_row = {}
 
-function variable_row.create(table, uid, test_index, row_index, name, value)
+function variable_row.show(table, uid, test_index, row_index, name, value)
   -- Variable name input
   local name_input = table.add{
     type = "textfield",

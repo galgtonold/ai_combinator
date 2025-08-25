@@ -2,7 +2,7 @@ local circuit_connection_header = require("src/gui/components/circuit_connection
 
 local component = {}
 
-function component.add()
+function component.show()
 
 end
 
@@ -15,7 +15,7 @@ function component.update(frame, mlc)
     }
     red_network = mlc.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_red)
     green_network = mlc.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_green)
-    circuit_connection_header.add(frame, red_network, green_network)
+    circuit_connection_header.show(frame, red_network, green_network)
 
     local spacer = frame.add{
       type = "empty-widget",
@@ -36,7 +36,7 @@ function component.update(frame, mlc)
     if green_network and green_network.connected_circuit_count < 3 then
       green_network = nil
     end
-    circuit_connection_header.add(frame, red_network, green_network)
+    circuit_connection_header.show(frame, red_network, green_network)
 end
 
 return component

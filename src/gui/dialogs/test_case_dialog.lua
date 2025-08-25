@@ -1,5 +1,5 @@
 local dialog_manager = require("src/gui/dialogs/dialog_manager")
-local titlebar = require("src/gui/titlebar")
+local titlebar = require('src/gui/components/titlebar')
 local variable_row = require("src/gui/components/variable_row")
 local compact_signal_panel = require("src/gui/components/compact_signal_panel")
 
@@ -148,7 +148,7 @@ function dialog.show(player_index, uid, test_index)
   }
   red_signal_panel.style.top_margin = 4
   
-  compact_signal_panel.create(red_signal_panel, test_case.red_input or {}, uid, test_index, "red")
+  compact_signal_panel.show(red_signal_panel, test_case.red_input or {}, uid, test_index, "red")
   
   -- Green input with minimal styling
   local green_section = inputs_flow.add{
@@ -169,7 +169,7 @@ function dialog.show(player_index, uid, test_index)
   }
   green_signal_panel.style.top_margin = 4
   
-  compact_signal_panel.create(green_signal_panel, test_case.green_input or {}, uid, test_index, "green")
+  compact_signal_panel.show(green_signal_panel, test_case.green_input or {}, uid, test_index, "green")
   
   -- Expected output section
   local expected_section = main_content_frame.add{
@@ -189,7 +189,7 @@ function dialog.show(player_index, uid, test_index)
   }
   expected_signal_panel.style.top_margin = 8
   
-  compact_signal_panel.create(expected_signal_panel, test_case.expected_output or {}, uid, test_index, "expected")
+  compact_signal_panel.show(expected_signal_panel, test_case.expected_output or {}, uid, test_index, "expected")
   
   -- Actual output section (read-only)
   local actual_section = main_content_frame.add{
@@ -209,7 +209,7 @@ function dialog.show(player_index, uid, test_index)
   }
   actual_signal_panel.style.top_margin = 8
   
-  compact_signal_display_panel.create(actual_signal_panel, test_case.actual_output or {})
+  compact_signal_display_panel.show(actual_signal_panel, test_case.actual_output or {})
   
   -- Advanced section
   local advanced_section = main_content_frame.add{
@@ -307,12 +307,12 @@ function dialog.show(player_index, uid, test_index)
   -- Add existing variables
   local variables = test_case.variables or {}
   for i, var in ipairs(variables) do
-    variable_row.create(vars_table, uid, test_index, i, var.name or "", var.value or 0)
+    variable_row.show(vars_table, uid, test_index, i, var.name or "", var.value or 0)
   end
   
   -- Always have one empty row
   if #variables == 0 then
-    variable_row.create(vars_table, uid, test_index, 1, "", 0)
+    variable_row.show(vars_table, uid, test_index, 1, "", 0)
   end
   
   -- Expected print output section

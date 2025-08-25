@@ -1,14 +1,42 @@
 local dialog_manager = require("src/gui/dialogs/dialog_manager")
-local titlebar = require("src/gui/titlebar")
+local titlebar = require('src/gui/components/titlebar')
 local event_handler = require("src/events/event_handler")
 local constants = require("src/core/constants")
 
+local help_dialog = require("src/gui/dialogs/help_dialog")
+
 local dialog = {}
+
+
+local err_icon_sub_add = '[color=#c02a2a]%1[/color]'
+local err_icon_sub_clear = '%[color=#c02a2a%]([^\n]+)%[/color%]'
+local function code_error_highlight(text, line_err)
+	-- Add/strip rich error highlight tags
+	if type(line_err) == 'string'
+		then line_err = line_err:match(':(%d+):') end
+	text = text:gsub(err_icon_sub_clear, '%1')
+	text = text:match('^(.-)%s*$') -- strip trailing newlines/spaces
+	line_err = tonumber(line_err)
+	if not line_err then return text end
+	local _, line_count = text:gsub('([^\n]*)\n?','')
+	if string.sub(text, -1) == '\n'
+		then line_count = line_count + 1 end
+	local n, result = 0, ''
+	for line in text:gmatch('([^\n]*)\n?') do
+		n = n + 1
+		if n == line_err
+			then line = line:gsub('^(.+)$', err_icon_sub_add) end
+		if n < line_count or line ~= '' then result = result..line..'\n' end
+	end
+	return result
+end
 
 function dialog.show(player_index, uid)
   local player = game.players[player_index]
 	local gui_t = storage.guis[uid]
 	local mlc = storage.combinators[uid]
+	local mlc_err = mlc.err_parse or mlc.errun
+
 
   local combinator_frame = gui_t.mlc_gui
   local popup_location = {
@@ -22,7 +50,16 @@ function dialog.show(player_index, uid)
   }
   gui_t.edit_code_dialog = popup_frame
   dialog_manager.set_current_dialog(player_index, popup_frame)
-  titlebar.show(popup_frame, "Edit Source Code", {edit_code_dialog_close = true}, {uid = uid, dialog = true, edit_code_dialog = true})
+
+  local extra_buttons = {{
+      type = "sprite-button",
+      style = "frame_action_button",
+      sprite = "mlc-help",
+      tooltip = "Show help",
+      tags = {show_help_button = true}
+    }
+  }
+  titlebar.show(popup_frame, "Edit Source Code", {edit_code_dialog_close = true}, {uid = uid, dialog = true, edit_code_dialog = true}, extra_buttons)
 
   local content_flow = popup_frame.add{
     type = "flow",
@@ -40,6 +77,8 @@ function dialog.show(player_index, uid)
     style = "edit_blueprint_description_textbox",
     tags = {uid = uid, dialog = true, edit_code_dialog = true},
   }
+  code_textbox.text = code_error_highlight(code_textbox.text, mlc_err)
+
   code_textbox.word_wrap = true
   code_textbox.style.width = 600
   code_textbox.style.height = 400
@@ -94,6 +133,8 @@ function on_gui_click(event)
     local code_input = gui.edit_code_textbox
     event_handler.raise_event(constants.events.on_code_updated, {player_index = event.player_index, uid = uid, code = code_input.text})
     dialog_manager.close_dialog(event.player_index)
+  elseif event.element.tags.show_help_button then
+    help_dialog.show(event.player_index)
   end
 end
 

@@ -2,7 +2,7 @@ local utils = require("src/core/utils")
 
 local compact_signal_display_panel = {}
 
-function compact_signal_display_panel.create(parent, signals)
+function compact_signal_display_panel.show(parent, signals)
   -- Create a 6-column grid for displaying actual output signals
   local signal_table = parent.add{
     type = "table",

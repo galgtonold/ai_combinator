@@ -1,5 +1,5 @@
 local event_handler = require("src/events/event_handler")
-local titlebar = require('src/gui/titlebar')
+local titlebar = require('src/gui/components/titlebar')
 local dialog_manager = require('src/gui/dialogs/dialog_manager')
 
 
