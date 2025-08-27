@@ -1,3 +1,7 @@
+local event_handler = require("src/events/event_handler")
+local dialog_manager = require("src/gui/dialogs/dialog_manager")
+local utils = require("src/core/utils")
+
 local tbar = {}
 
 function tbar.show(gui, caption, close_button_tags, extra_tags, extra_buttons)
@@ -40,9 +44,21 @@ function tbar.show(gui, caption, close_button_tags, extra_tags, extra_buttons)
     style = "frame_action_button",
     sprite = "utility/close",
     tooltip = {"gui.close-instruction"},
-    tags = close_button_tags,
+    tags = utils.merge(close_button_tags, {close_button = true})
   }
   return titlebar
 end
+
+local function on_gui_click(event)
+	local el = event.element
+
+  if not el.valid or not el.tags then return end
+
+  if event.element.tags.close_button then
+    dialog_manager.close_dialog(event.player_index)
+  end
+end
+
+event_handler.add_handler(defines.events.on_gui_click, on_gui_click)
 
 return tbar

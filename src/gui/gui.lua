@@ -105,65 +105,6 @@ function guis.on_gui_text_changed(ev)
   end
 end
 
-function guis.on_gui_elem_changed(ev)
-  -- Handle test case signal selection changes
-  if ev.element.tags and ev.element.tags.test_signal_elem then
-    guis.handle_test_signal_change(ev)
-  end
-  
-  -- Handle new compact test signal changes
-  if ev.element.name and ev.element.name:match("^test%-signal%-") then
-    guis.handle_test_signal_change(ev)
-  end
-end
-
-function guis.handle_quantity_dialog_click(event)
-  if not event.element.valid or not event.element.tags then
-    return false
-  end
-  
-  if event.element.tags.quantity_ok then
-    local gui_t = storage.guis[event.element.tags.uid]
-    if gui_t and gui_t.quantity_input then
-      local quantity = tonumber(gui_t.quantity_input.text) or 0
-      guis.set_signal_quantity(
-        event.element.tags.uid,
-        event.element.tags.test_index,
-        event.element.tags.signal_type,
-        event.element.tags.slot_index,
-        quantity
-      )
-    end
-    guis.close_quantity_dialog(event.player_index)
-    return true
-  elseif event.element.tags.quantity_cancel or event.element.tags.quantity_dialog_close then
-    guis.close_quantity_dialog(event.player_index)
-    return true
-  elseif event.element.tags.quantity_dialog then
-    return true -- Prevent closing on clicks inside
-  end
-  
-  return false
-end
-
-function guis.close_quantity_dialog(player_index)
-  local player = game.players[player_index]
-  for _, gui in pairs(player.gui.screen.children) do
-    if gui.valid and gui.tags and gui.tags.quantity_dialog then
-      -- Clean up stored references
-      local uid = gui.tags.uid
-      if uid then
-        local gui_t = storage.guis[uid]
-        if gui_t then
-          gui_t.quantity_dialog = nil
-          gui_t.quantity_input = nil
-        end
-      end
-      gui.destroy()
-      break
-    end
-  end
-end
 
 function guis.set_signal_quantity(uid, test_index, signal_type, slot_index, quantity)
   local mlc = storage.combinators[uid]
@@ -608,78 +549,6 @@ function guis.handle_test_count_change(event)
   -- Auto-run the test
   guis.run_test_case(mlc, test_index)
 end
-
-function guis.handle_test_signal_change(event)
-  local element = event.element
-  if not element.tags then return end
-  
-  local uid = element.tags.uid
-  local test_index = element.tags.test_index
-  local signal_type = element.tags.signal_type
-  local slot_index = element.tags.slot_index
-  
-  local mlc = storage.combinators[uid]
-  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then return end
-  
-  local test_case = mlc.test_cases[test_index]
-  
-  -- Determine which signal array to update
-  local signal_array
-  if signal_type == "red" then
-    signal_array = test_case.red_input
-  elseif signal_type == "green" then
-    signal_array = test_case.green_input
-  elseif signal_type == "expected" then
-    signal_array = test_case.expected_output
-  else
-    return
-  end
-  
-  -- Ensure the array is large enough
-  while #signal_array < slot_index do
-    table.insert(signal_array, {})
-  end
-  
-  -- Update the signal
-  if not signal_array[slot_index] then
-    signal_array[slot_index] = {}
-  end
-  
-  signal_array[slot_index].signal = element.elem_value
-  
-  -- If signal was cleared, also clear the count
-  if not element.elem_value then
-    signal_array[slot_index].count = nil
-  elseif not signal_array[slot_index].count then
-    signal_array[slot_index].count = 1 -- Default count
-  end
-  
-  -- Clean up empty entries
-  for i = #signal_array, 1, -1 do
-    local entry = signal_array[i]
-    if not entry.signal or not entry.count or entry.count == 0 then
-      table.remove(signal_array, i)
-    end
-  end
-  
-  -- Refresh the dialog to show/hide edit buttons properly and expand rows if needed
-  local gui_t = storage.guis[uid]
-  if gui_t and gui_t.test_case_dialog and gui_t.test_case_dialog.valid then
-    local panel_name = signal_type .. "-signal-panel"
-    local panel = gui_t.test_case_dialog[panel_name]
-    if panel then
-      panel.clear()
-      guis.create_compact_signal_panel(panel, signal_array, uid, test_index, signal_type)
-    end
-  end
-  
-  -- Auto-run the test after signal changes
-  if signal_type == "red" or signal_type == "green" then
-    guis.run_test_case_in_dialog(uid, test_index)
-  end
-end
-
-
 
 -- Toggle advanced section visibility
 function guis.toggle_advanced_section(uid, test_index, state)
@@ -1373,13 +1242,6 @@ function guis.handle_task_dialog_click(event)
   elseif event.element.tags.run_test_dialog then
     guis.run_test_case_in_dialog(uid, event.element.tags.test_index)
     return true
-  elseif event.element.tags.edit_signal_quantity then
-    set_quantity_dialog.show(event.player_index, uid, event.element.tags.test_index, event.element.tags.signal_type, event.element.tags.slot_index)
-    return true
-  elseif event.element.tags.test_signal_elem then
-    -- Handle signal element changes in test dialog
-    guis.handle_test_signal_change(event)
-    return true
   elseif event.element.tags.advanced_toggle then
     guis.toggle_advanced_section(uid, event.element.tags.test_index, event.element.state)
     return true
@@ -1402,70 +1264,65 @@ function guis.handle_task_dialog_click(event)
   end
 end
 
-function guis.on_gui_click(ev)
-  if guis.handle_task_dialog_click(ev) then
-    return
-  end
-  
-  if guis.handle_quantity_dialog_click(ev) then
+function guis.on_gui_click(event)
+  if guis.handle_task_dialog_click(event) then
     return
   end
 
-  dialog_manager.close_dialog(ev.player_index)
-  guis.close_quantity_dialog(ev.player_index)
+  --dialog_manager.close_background_dialogs(event)
   
-	local el = ev.element
+	local element = event.element
 
-  if not el.valid then return end
+  if not element.valid then return end
 
 	-- Separate "help" and "vars" windows, not tracked in globals (storage), unlike main MLC gui
-	if el.name == 'mlc-help-close' then return el.parent.destroy()
-	elseif el.name == 'mlc-vars-close' then
-		return (el.parent.paent or el.parent).destroy()
-	elseif el.name == 'mlc-vars-pause' then
-		return vars_dialog.show( ev.player_index, vars_window_uid(el), el.style.name ~= 'green_button', true)
+	if element.name == 'mlc-help-close' then return element.parent.destroy()
+	elseif element.name == 'mlc-vars-close' then
+		return (element.parent.paent or element.parent).destroy()
+	elseif element.name == 'mlc-vars-pause' then
+		return vars_dialog.show( event.player_index, vars_window_uid(element), element.style.name ~= 'green_button', true)
 	end
 
-  if el.tags and el.tags.close_combinator_ui then
-    guis.close(el.tags.uid)
+  if element.tags and element.tags.close_combinator_ui then
+    guis.close(element.tags.uid)
     return
   end
 
   -- Handle description buttons that have tags with uid
-  if el.tags and el.tags.uid then
-    if el.tags.description_add or el.tags.description_edit then
-      set_description_dialog.show(ev.player_index, el.tags.uid)
+  if element.tags and element.tags.uid then
+    if element.tags.description_add or element.tags.description_edit then
+      set_description_dialog.show(event.player_index, element.tags.uid)
       return
     end
     
     -- Handle test case buttons
-    if el.tags.add_test_case then
-      guis.add_test_case(el.tags.uid)
+    if element.tags.add_test_case then
+      guis.add_test_case(element.tags.uid)
       return
     end
     
-    if el.tags.auto_generate_tests then
-      guis.auto_generate_test_cases(el.tags.uid)
+    if element.tags.auto_generate_tests then
+      guis.auto_generate_test_cases(element.tags.uid)
       return
     end
     
-    if el.tags.edit_test_case then
-      test_case_dialog.show(ev.player_index, el.tags.uid, el.tags.edit_test_case)
+    if element.tags.edit_test_case then
+      test_case_dialog.show(event.player_index, element.tags.uid, element.tags.edit_test_case)
       return
     end
     
-    if el.tags.delete_test_case then
-      guis.delete_test_case(el.tags.uid, el.tags.delete_test_case)
+    if element.tags.delete_test_case then
+      guis.delete_test_case(element.tags.uid, element.tags.delete_test_case)
       return
     end
   end
 
-	local uid, gui_t = find_gui(ev)
+	local uid, gui_t = find_gui(event)
 	if not uid then return end
 
 	local mlc = storage.combinators[uid]
 	if not mlc then return guis.close(uid) end
-	local el_id = el.name
+	local el_id = element.name
 	local rmb = defines.mouse_button_type.right
 
 	if el_id == 'mlc-code' then
@@ -1476,9 +1333,9 @@ function guis.on_gui_click(ev)
 		end
 		gui_t.code_focused = true -- disables hotkeys and repeating cleanup above
   elseif el_id == 'mlc-set-task' then 
-    set_task_dialog.show(ev.player_index, uid)
-  elseif el_id == 'mlc-desc-btn-flow' then set_description_dialog.show(ev.player_index, uid)
-  elseif el_id == 'mlc-edit-code' then edit_code_dialog.show(ev.player_index, uid)
+    set_task_dialog.show(event.player_index, uid)
+  elseif el_id == 'mlc-desc-btn-flow' then set_description_dialog.show(event.player_index, uid)
+  elseif el_id == 'mlc-edit-code' then edit_code_dialog.show(event.player_index, uid)
 	elseif el_id == 'mlc-save' then guis.save_code(uid)
 	elseif el_id == 'mlc-commit' then guis.save_code(uid); guis.close(uid)
 	elseif el_id == 'mlc-clear' then
@@ -1486,14 +1343,14 @@ function guis.on_gui_click(ev)
 		guis.on_gui_text_changed{element=gui_t.mlc_code}
 	elseif el_id == 'mlc-close' then guis.close(uid)
 	elseif el_id == 'mlc-vars' then
-		if ev.button == rmb then
-			if ev.shift then clear_outputs_from_gui(uid)
+		if event.button == rmb then
+			if event.shift then clear_outputs_from_gui(uid)
 			else -- clear env
 				for k, _ in pairs(mlc.vars) do mlc.vars[k] = nil end
-				vars_dialog.update(game.players[ev.player_index], uid)
+				vars_dialog.update(game.players[event.player_index], uid)
 			end
 		else 
-      vars_dialog.show(ev.player_index, uid, ev.shift, ev.shift or nil)
+      vars_dialog.show(event.player_index, uid, event.shift, event.shift or nil)
     end
   end
 end
@@ -1534,7 +1391,6 @@ end
 event_handler.add_handler(defines.events.on_gui_click, guis.on_gui_click)
 event_handler.add_handler(defines.events.on_gui_closed, guis.on_gui_close)
 event_handler.add_handler(defines.events.on_gui_text_changed, guis.on_gui_text_changed)
-event_handler.add_handler(defines.events.on_gui_elem_changed, guis.on_gui_elem_changed)
 event_handler.add_handler(defines.events.on_gui_checked_state_changed, guis.on_gui_checked_state_changed)
 
 return guis

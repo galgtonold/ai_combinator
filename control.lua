@@ -8,6 +8,8 @@ local init = require('src/ai_combinator/init')
 local update = require('src/ai_combinator/update')
 local circuit_network = require('src/core/circuit_network')
 local memory = require('src/ai_combinator/memory')
+local sandbox = require('src/sandbox/base')
+
 
 local guis = require('src/gui/gui')
 
@@ -192,7 +194,7 @@ local function on_entity_copy(ev)
 		-- For cloned entities, mlc-core's might not yet exist - create/register them here, remove clones above
 		-- It'd give zero-outputs for one tick, but probably not an issue, easier to handle it like this
 		else mlc_old_outs = {out_wire_connect_both(ev.destination)} end
-	storage.combinators[uid_dst] = util.tdc(storage.combinators[uid_src])
+	storage.combinators[uid_dst] = util.deep_copy(storage.combinators[uid_src])
 	local mlc_dst, mlc_src = storage.combinators[uid_dst], storage.combinators[uid_src]
 	mlc_dst.e, mlc_dst.next_tick, mlc_dst.core = ev.destination, 0, nil
 	mlc_dst.out_red, mlc_dst.out_green = table.unpack(mlc_old_outs)
@@ -271,7 +273,7 @@ local function update_signals_in_guis()
 		::skip:: end end
 
 		-- Outputs
-		mlc_out, mlc_out_idx, mlc_out_err = {}, {}, util.tc((memory.combinators[uid] or {})._out or {})
+		mlc_out, mlc_out_idx, mlc_out_err = {}, {}, util.shallow_copy((memory.combinators[uid] or {})._out or {})
 		for k, cb in pairs{red=mlc.out_red, green=mlc.out_green} do
 			cb = cb.get_control_behavior()
 			for _, cbs in pairs(cb.sections[1].filters or {}) do
@@ -347,7 +349,7 @@ end
 
 local function run_moon_logic_tick(mlc, mlc_env, tick)
 	-- Runs logic of the specified combinator, reading its input and setting outputs
-	local out_tick, out_diff = mlc.next_tick, util.tc(mlc_env._out)
+	local out_tick, out_diff = mlc.next_tick, util.shallow_copy(mlc_env._out)
 	local dbg = mlc.vars.debug and function(fmt, ...)
 		log((' -- moon-logic [%s]: %s'):format(mlc_env._uid, fmt:format(...))) end
 	mlc.vars.delay, mlc.vars.var, mlc.vars.debug, mlc.vars.irq, mlc.irq = 1, mlc.vars.var or {}

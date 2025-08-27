@@ -32,7 +32,7 @@ function dialog.show(player_index, uid, test_index)
   popup_frame.location = popup_location
   
   local test_case = mlc.test_cases[test_index]
-  titlebar.show(popup_frame, "Edit Test Case", {test_case_dialog_close = true}, {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index})
+  titlebar.show(popup_frame, "Test Case", {test_case_dialog_close = true}, {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index})
 
   local content_flow = popup_frame.add{
     type = "flow",
@@ -136,7 +136,7 @@ function dialog.show(player_index, uid, test_index)
     direction = "vertical",
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
-  red_section.style.width = 260
+  red_section.style.width = 250
   
   red_section.add{type = "label", caption = "Red", style = "caption_label"}
   
@@ -156,8 +156,8 @@ function dialog.show(player_index, uid, test_index)
     direction = "vertical",
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
-  green_section.style.width = 260
-  green_section.style.left_margin = 16
+  green_section.style.width = 250
+  green_section.style.left_margin = 30
   
   green_section.add{type = "label", caption = "Green", style = "caption_label"}
   

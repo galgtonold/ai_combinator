@@ -6,6 +6,8 @@ constants.events = {
   on_bridge_check_completed = script.generate_event_name(),
   on_description_updated = script.generate_event_name(),
   on_code_updated = script.generate_event_name(),
+  on_test_case_updated = script.generate_event_name(),
+  on_quantity_set = script.generate_event_name(),
   entity_removed_events = {
       defines.events.on_pre_player_mined_item,
       defines.events.on_robot_pre_mined,

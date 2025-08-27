@@ -9,14 +9,14 @@ function utils.tt(s, value)
 	return t
 end
 
-function utils.tc(src)
+function utils.shallow_copy(src)
 	-- Shallow-copy a table with keys
 	local t = {}
 	for k, v in pairs(src) do t[k] = v end
 	return t
 end
 
-function utils.tdc(object)
+function utils.deep_copy(object)
 	-- Deep-copy of lua table, from factorio util.lua
 	local lookup_table = {}
 	local function _copy(object)
@@ -60,6 +60,32 @@ function utils.format_number(num)
   else
     return string.format("%dG", math.floor(num / 1000000000))
   end
+end
+
+function utils.merge(...)
+    local result = {}
+    for i = 1, select('#', ...) do
+        local t = select(i, ...)
+        for k, v in pairs(t) do
+            result[k] = v
+        end
+    end
+    return result
+end
+
+function utils.exclude(t, ...)
+    local excluded = {}
+    for i = 1, select('#', ...) do
+        excluded[select(i, ...)] = true
+    end
+    
+    local result = {}
+    for k, v in pairs(t) do
+        if not excluded[k] then
+            result[k] = v
+        end
+    end
+    return result
 end
 
 return utils

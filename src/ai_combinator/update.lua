@@ -12,7 +12,7 @@ function update.mlc_update_output(mlc, output_raw)
 	local signals, errors, output = {red={}, green={}}, {}, {}
 	for k, v in pairs(output_raw) do output[tostring(k)] = v end
 
-	local sig_err, sig, st, err, pre, pre_label = util.tc(output)
+	local sig_err, sig, st, err, pre, pre_label = util.shallow_copy(output)
 	for _, k in ipairs{false, 'red', 'green'} do
 		st = signals[k] and {signals[k]} or {signals.red, signals.green}
 		if not k then pre, pre_label = '^.+$', '^.+$'

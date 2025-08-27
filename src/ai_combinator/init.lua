@@ -78,7 +78,7 @@ function init.mlc_init(e)
 	local env_wire_red = {
 		_e=mlc_env._e, _wire='red', _debug=false, _out=mlc_env._out,
 		_iter=cn.cn_input_signal_iter, _cache={}, _cache_tick=-1 }
-	local env_wire_green = util.tc(env_wire_red)
+	local env_wire_green = util.shallow_copy(env_wire_red)
 	env_wire_green._wire = 'green'
 
 	local env_ro = { -- sandbox.env_base + mlc_env proxies

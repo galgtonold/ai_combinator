@@ -17,6 +17,24 @@ function dialog_manager.close_dialog(player_index)
   end
 end
 
+function dialog_manager.close_background_dialogs(event)
+  -- Close dialogs when the user clicks outside of them
+  local player_index = event.player_index
+  local element = event.element
+  -- Do not close dialog when clicked inside current dialog
+  while element and element.valid do
+    if dialog_manager.current_dialog[player_index] and element == dialog_manager.current_dialog[player_index] then
+      return
+    end
+    element = element.parent
+  end
+
+  if dialog_manager.current_dialog[player_index] and dialog_manager.current_dialog[player_index].valid then
+    dialog_manager.current_dialog[player_index].destroy()
+    dialog_manager.current_dialog[player_index] = nil
+  end
+end
+
 
 function dialog_manager.handle_dialog_closed(player_index)
 	-- Also fired for original auto-closed combinator GUI, which is ignored due to uid=gui_t=nil

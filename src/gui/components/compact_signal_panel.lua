@@ -1,17 +1,27 @@
 local utils = require("src/core/utils")
+local event_handler = require("src/events/event_handler")
+local constants = require("src/core/constants")
+
+local signal_element = require("src/gui/components/signal_element")
 
 local compact_signal_panel = {}
 
 function compact_signal_panel.show(parent, signals, uid, test_index, signal_type)
+  local gui_t = storage.guis[uid]
   -- Create a compact 6-column grid of signal slots
-  local signal_table = parent.add{
-    type = "table",
-    column_count = 6,
-    style = "filter_slot_table",
-    name = "signal-table-" .. signal_type,
+  local signal_frame = parent.add{
+    type="frame", direction="vertical", style="ugg_deep_frame", name = "signal-table-" .. signal_type, 
     tags = {uid = uid, test_index = test_index, signal_type = signal_type}
   }
-  
+  gui_t["compact_" .. signal_type .. "_signal_panel"] = signal_frame
+  compact_signal_panel.update(signal_frame, signals, uid, test_index, signal_type)
+end
+
+function compact_signal_panel.update(signal_frame, signals, uid, test_index, signal_type)
+  signal_frame.clear()
+  local signal_table = signal_frame.add{type="table", column_count=6, style="filter_slot_table"}
+
+
   -- Convert signal array to lookup table for easier access
   local signal_lookup = {}
   for i, signal_data in ipairs(signals) do
@@ -34,76 +44,118 @@ function compact_signal_panel.show(parent, signals, uid, test_index, signal_type
     rows_needed = rows_needed + 1 -- Add one more row if last slot of current row is filled
   end
   local total_slots = rows_needed * 6
-  
+  signal_table.style.height = 40 * rows_needed
+
   -- Create slots
   for i = 1, total_slots do
     local signal_data = signal_lookup[i] or {}
-    local slot_flow = signal_table.add{
-      type = "flow",
-      direction = "vertical",
-      name = "slot-" .. i,
-      tags = {uid = uid, test_index = test_index, signal_type = signal_type, slot_index = i}
+    local button_tags = {
+      uid = uid,
+      test_index = test_index,
+      signal_type = signal_type,
+      slot_index = i
     }
-    
-    -- Signal chooser button
-    local signal_button = slot_flow.add{
-      type = "choose-elem-button",
-      elem_type = "signal",
-      signal = signal_data.signal,
-      name = "signal-button-" .. i,
-      tags = {
+    local edit_button_tags = {
+        edit_test_signal_quantity = true,
         uid = uid,
         test_index = test_index,
         signal_type = signal_type,
         slot_index = i,
-        test_signal_elem = true
-      }
     }
-    signal_button.style.width = 40
-    signal_button.style.height = 40
-    
-    -- Overlay count label (positioned like in the base game)
-    if signal_data.count and signal_data.count ~= 0 then
-      local count_label = slot_flow.add{
-        type = "label",
-        caption = utils.format_number(signal_data.count),
-        style = "count_label",
-        name = "count-label-" .. i,
-        ignored_by_interaction = true,
-        tags = {uid = uid, test_index = test_index, signal_type = signal_type, slot_index = i}
-      }
-      count_label.style.top_margin = -40
-      count_label.style.left_margin = 0
-      count_label.style.right_margin = 0
-      count_label.style.horizontal_align = "right"
-      count_label.style.maximal_width = 38
-      count_label.style.minimal_width = 38
-    end
-    
-    -- Overlay edit button (small button in corner for editing quantity)
-    if signal_data.signal then
-      local edit_button = slot_flow.add{
-        type = "sprite-button",
-        sprite = "utility/rename_icon",
-        name = "edit-button-" .. i,
-        style = "mini_button",
-        tooltip = "Edit quantity",
-        tags = {
-          uid = uid,
-          test_index = test_index,
-          signal_type = signal_type,
-          slot_index = i,
-          edit_signal_quantity = true
-        }
-      }
-      edit_button.style.width = 16
-      edit_button.style.height = 16
-      edit_button.style.top_margin = -20
-      edit_button.style.left_margin = 22
+    signal_element.show(signal_table, nil, signal_data, true, button_tags, edit_button_tags)
+  end
+end
+
+
+local function get_signal_array(uid, test_index, signal_type)
+  local mlc = storage.combinators[uid]
+  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then return {} end
+  local test_case = mlc.test_cases[test_index]
+  if signal_type == "red" then
+    return test_case.red_input
+  elseif signal_type == "green" then
+    return test_case.green_input
+  elseif signal_type == "expected" then
+    return test_case.expected_output
+  else
+    return {}
+  end
+
+end
+
+
+function compact_signal_panel.on_gui_elem_changed(event)
+  local element = event.element
+  if not element.tags then return end
+  
+  local uid = element.tags.uid
+  local test_index = element.tags.test_index
+  local signal_type = element.tags.signal_type
+  local slot_index = element.tags.slot_index
+      
+  local signal_array = get_signal_array(uid, test_index, signal_type)
+
+  -- Ensure the array is large enough
+  while #signal_array < slot_index do
+    table.insert(signal_array, {})
+  end
+  
+  -- Update the signal
+  if not signal_array[slot_index] then
+    signal_array[slot_index] = {}
+  end
+  
+  signal_array[slot_index].signal = element.elem_value
+  
+  -- If signal was cleared, also clear the count
+  if not element.elem_value then
+    signal_array[slot_index].count = nil
+  elseif not signal_array[slot_index].count then
+    signal_array[slot_index].count = 1 -- Default count
+  end
+  
+  -- Clean up empty entries
+  for i = #signal_array, 1, -1 do
+    local entry = signal_array[i]
+    if not entry.signal or not entry.count or entry.count == 0 then
+      table.remove(signal_array, i)
+    else
+      break
     end
   end
   
-  signal_table.style.height = 40 * rows_needed
+  -- Refresh the dialog to show/hide edit buttons properly and expand rows if needed
+  local gui_t = storage.guis[uid]
+  if gui_t and gui_t.test_case_dialog and gui_t.test_case_dialog.valid then
+    local panel_name = "compact_" .. signal_type .. "_signal_panel"
+    local panel = gui_t[panel_name]
+    if panel then
+      compact_signal_panel.update(panel, signal_array, uid, test_index, signal_type)
+    end
+  end
+  
+  -- Auto-run the test after signal changes
+  if signal_type == "red" or signal_type == "green" then
+    event_handler.raise_event(constants.events.on_test_case_updated, {uid = uid, test_index = test_index})
+  end
 end
+
+function compact_signal_panel.on_quantity_set(event)
+  if not event.edit_test_signal_quantity then return end
+
+  local signal_array = get_signal_array(event.uid, event.test_index, event.signal_type)
+  if not signal_array then return end
+
+  signal_array[event.slot_index] = signal_array[event.slot_index] or {}
+  signal_array[event.slot_index].count = event.quantity
+
+  local gui_t = storage.guis[event.uid]
+  local panel_name = "compact_" .. event.signal_type .. "_signal_panel"
+  local panel = gui_t[panel_name]
+  compact_signal_panel.update(panel, signal_array, event.uid, event.test_index, event.signal_type)
+end
+
+event_handler.add_handler(defines.events.on_gui_elem_changed, compact_signal_panel.on_gui_elem_changed)
+event_handler.add_handler(constants.events.on_quantity_set, compact_signal_panel.on_quantity_set)
 
 return compact_signal_panel

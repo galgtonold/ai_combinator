@@ -69,7 +69,7 @@ function dialog.show(player_index, uid)
   confirm_button.style.left_margin = 8
 end
 
-function on_gui_click(event)
+local function on_gui_click(event)
 	local el = event.element
 
   if not el.valid or not el.tags then return end
