@@ -3,8 +3,6 @@ local titlebar = require('src/gui/components/titlebar')
 local variable_row = require("src/gui/components/variable_row")
 local compact_signal_panel = require("src/gui/components/compact_signal_panel")
 
-local compact_signal_display_panel = require("src/gui/components/compact_signal_display_panel")
-
 local dialog = {}
 
 function dialog.show(player_index, uid, test_index)
@@ -209,7 +207,7 @@ function dialog.show(player_index, uid, test_index)
   }
   actual_signal_panel.style.top_margin = 8
   
-  compact_signal_display_panel.show(actual_signal_panel, test_case.actual_output or {})
+  compact_signal_panel.show(actual_signal_panel, test_case.actual_output or {}, uid, test_index, "actual")
   
   -- Advanced section
   local advanced_section = main_content_frame.add{

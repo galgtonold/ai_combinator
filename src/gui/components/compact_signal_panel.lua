@@ -10,7 +10,7 @@ function compact_signal_panel.show(parent, signals, uid, test_index, signal_type
   local gui_t = storage.guis[uid]
   -- Create a compact 6-column grid of signal slots
   local signal_frame = parent.add{
-    type="frame", direction="vertical", style="ugg_deep_frame", name = "signal-table-" .. signal_type, 
+    type="frame", direction="vertical", style="ugg_deep_frame", name = "signal-table-" .. signal_type,
     tags = {uid = uid, test_index = test_index, signal_type = signal_type}
   }
   gui_t["compact_" .. signal_type .. "_signal_panel"] = signal_frame
@@ -62,7 +62,7 @@ function compact_signal_panel.update(signal_frame, signals, uid, test_index, sig
         signal_type = signal_type,
         slot_index = i,
     }
-    signal_element.show(signal_table, nil, signal_data, true, button_tags, edit_button_tags)
+    signal_element.show(signal_table, nil, signal_data, signal_type ~= "actual", button_tags, edit_button_tags)
   end
 end
 
@@ -77,6 +77,8 @@ local function get_signal_array(uid, test_index, signal_type)
     return test_case.green_input
   elseif signal_type == "expected" then
     return test_case.expected_output
+  elseif signal_type == "actual" then
+    return test_case.actual_output
   else
     return {}
   end
@@ -84,7 +86,7 @@ local function get_signal_array(uid, test_index, signal_type)
 end
 
 
-function compact_signal_panel.on_gui_elem_changed(event)
+local function on_gui_elem_changed(event)
   local element = event.element
   if not element.tags then return end
   
@@ -134,13 +136,10 @@ function compact_signal_panel.on_gui_elem_changed(event)
     end
   end
   
-  -- Auto-run the test after signal changes
-  if signal_type == "red" or signal_type == "green" then
-    event_handler.raise_event(constants.events.on_test_case_updated, {uid = uid, test_index = test_index})
-  end
+  event_handler.raise_event(constants.events.on_test_case_updated, {uid = uid, test_index = test_index})
 end
 
-function compact_signal_panel.on_quantity_set(event)
+local function on_quantity_set(event)
   if not event.edit_test_signal_quantity then return end
 
   local signal_array = get_signal_array(event.uid, event.test_index, event.signal_type)
@@ -152,10 +151,24 @@ function compact_signal_panel.on_quantity_set(event)
   local gui_t = storage.guis[event.uid]
   local panel_name = "compact_" .. event.signal_type .. "_signal_panel"
   local panel = gui_t[panel_name]
+
   compact_signal_panel.update(panel, signal_array, event.uid, event.test_index, event.signal_type)
+  event_handler.raise_event(constants.events.on_test_case_updated, {uid = event.uid, test_index = event.test_index})
 end
 
-event_handler.add_handler(defines.events.on_gui_elem_changed, compact_signal_panel.on_gui_elem_changed)
-event_handler.add_handler(constants.events.on_quantity_set, compact_signal_panel.on_quantity_set)
+local function on_test_case_evaluated(event)
+  local gui_t = storage.guis[event.uid]
+  if gui_t and gui_t.compact_actual_signal_panel then
+    local panel = gui_t.compact_actual_signal_panel
+    if gui_t.compact_actual_signal_panel.tags.uid ~= event.uid then return end
+    if gui_t.compact_actual_signal_panel.tags.test_index ~= event.test_index then return end
+    local signal_array = get_signal_array(event.uid, event.test_index, "actual")
+    compact_signal_panel.update(panel, signal_array, event.uid, event.test_index, "actual")
+  end
+end
+
+event_handler.add_handler(defines.events.on_gui_elem_changed, on_gui_elem_changed)
+event_handler.add_handler(constants.events.on_quantity_set, on_quantity_set)
+event_handler.add_handler(constants.events.on_test_case_evaluated, on_test_case_evaluated)
 
 return compact_signal_panel
