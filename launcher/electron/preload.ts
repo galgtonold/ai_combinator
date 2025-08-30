@@ -117,6 +117,13 @@ export const CONTEXT_BRIDGE = {
    */
   closeWindow: (): void => {
     ipcRenderer.send("close-window");
+  },
+  
+  /**
+   * Open a URL in the default browser
+   */
+  openExternal: async (url: string): Promise<boolean> => {
+    return await ipcRenderer.invoke("open-external-url", url);
   }
 };
 

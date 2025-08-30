@@ -4,7 +4,7 @@
     aiProviderOptions,
     getModelOptionsForProvider,
   } from "../../config/ai-config";
-  import { Dropdown, KeyToggleInput, Label, Row, Section } from "../index.js";
+  import { Button, Dropdown, KeyToggleInput, Label, Row, Section } from "../index.js";
 
   interface Props {
     config: Config;
@@ -15,6 +15,14 @@
   }
 
   let { config, currentApiKeyInput, onProviderChange, onModelChange, onApiKeyChange }: Props = $props();
+  
+  // Function to open API key URL in default browser
+  async function openApiKeyUrl() {
+    const provider = aiProviderOptions.find(p => p.value === config.aiProvider);
+    if (provider && provider.apiKeyURL) {
+      await window.bridge.openExternal(provider.apiKeyURL);
+    }
+  }
 
   // Get current model options based on selected provider
   const currentModelOptions = $derived(getModelOptionsForProvider(config.aiProvider));
@@ -26,7 +34,7 @@
     <Dropdown
       value={config.aiProvider}
       options={aiProviderOptions}
-      width="300px"
+      width="350px"
       onChange={onProviderChange}
     />
   </Row>
@@ -36,18 +44,26 @@
       <Dropdown
         value={config.aiModel}
         options={currentModelOptions}
-        width="300px"
+        width="350px"
         onChange={onModelChange}
       />
     {/key}
   </Row>
   <Row justify="space-between" marginBottom="30px">
     <Label size="small">API Key:</Label>
-    <KeyToggleInput
-      bind:value={currentApiKeyInput}
-      placeholder={`Enter your ${aiProviderOptions.find((p) => p.value === config.aiProvider)?.label || "API"} key...`}
-      onChange={onApiKeyChange}
-      width="400px"
-    />
+    <div style="display: flex; gap: 10px;">
+      <KeyToggleInput
+        bind:value={currentApiKeyInput}
+        placeholder={`Enter your ${aiProviderOptions.find((p) => p.value === config.aiProvider)?.label || "API"} key...`}
+        onChange={onApiKeyChange}
+        width="233px"
+      />
+      <Button 
+        onClick={openApiKeyUrl}
+        primary={true}
+      >
+        Get Key
+      </Button>
+    </div>
   </Row>
 </Section>

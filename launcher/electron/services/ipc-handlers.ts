@@ -1,5 +1,5 @@
 // IPC handlers module - separates business logic from IPC communication
-import { ipcMain, dialog, BrowserWindow, app } from "electron";
+import { ipcMain, dialog, BrowserWindow, app, shell } from "electron";
 import { ConfigManager, Config } from "../managers/config-manager";
 import { FactorioManager } from "../managers/factorio-manager";
 import { AIBridgeManager } from "../managers/ai-bridge-manager";
@@ -131,6 +131,17 @@ export class IPCHandlers {
     ipcMain.on("close-window", () => {
       if (this.mainWindow) {
         this.mainWindow.close();
+      }
+    });
+    
+    // External URL handler
+    ipcMain.handle("open-external-url", async (_, url: string) => {
+      try {
+        await shell.openExternal(url);
+        return true;
+      } catch (error) {
+        console.error("Failed to open external URL:", error);
+        return false;
       }
     });
   }

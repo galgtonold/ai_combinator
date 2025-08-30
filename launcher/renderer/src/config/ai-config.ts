@@ -3,6 +3,7 @@
 export interface AIProvider {
   value: string;
   label: string;
+  apiKeyURL: string;
 }
 
 export interface AIModel {
@@ -16,11 +17,11 @@ export interface ModelsByProvider {
 
 // AI Provider options
 export const aiProviderOptions: AIProvider[] = [
-  { value: "openai", label: "OpenAI" },
-  { value: "anthropic", label: "Anthropic" },
-  { value: "google", label: "Google" },
-  { value: "xai", label: "xAI" },
-  { value: "deepseek", label: "DeepSeek" },
+  { value: "openai", label: "OpenAI", apiKeyURL: "https://platform.openai.com/api-keys" },
+  { value: "anthropic", label: "Anthropic", apiKeyURL: "https://console.anthropic.com/settings/keys" },
+  { value: "google", label: "Google", apiKeyURL: "https://aistudio.google.com/apikey" },
+  { value: "xai", label: "xAI", apiKeyURL: "https://console.x.ai/" },
+  { value: "deepseek", label: "DeepSeek", apiKeyURL: "https://deepseek.com/api-keys" },
 ];
 
 // Model options for each provider
