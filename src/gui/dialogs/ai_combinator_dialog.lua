@@ -4,6 +4,7 @@ local config = require('src/core/config')
 local signal_table = require('src/gui/components/signal_table')
 local titlebar = require('src/gui/components/titlebar')
 local ai_combinator_header = require('src/gui/components/ai_combinator_header')
+local test_cases_section = require('src/gui/components/test_cases_section')
 
 local dialog = {}
 
@@ -135,6 +136,8 @@ function dialog.show(player, entity)
 	local el_map = {} -- map is to check if el belonds to this gui
   local el = nil
 	local gui_t = {uid=uid, el_map=el_map}
+	storage.guis[entity.unit_number] = gui_t
+
 
 	local function elc(parent, props, style_tweaks)
 		el = parent.add(props)
@@ -210,8 +213,7 @@ function dialog.show(player, entity)
   elc(entity_frame, {type='line', direction='horizontal'}, {horizontally_stretchable=true})
 
   -- Test cases section
-  local test_cases_container = elc(entity_frame, {type='flow', name='mlc-test-cases-container', direction='vertical'})
-  gui_t.mlc_test_cases_container = test_cases_container
+  test_cases_section.show(entity_frame, uid)
 
   local error_label = elc(entity_frame, {type='label', name='mlc-errors', direction='horizontal'}, {horizontally_stretchable=true})
   error_label.visible = false

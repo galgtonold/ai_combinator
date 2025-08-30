@@ -1,4 +1,3 @@
-local conf = require('src/core/config')
 local event_handler = require("src/events/event_handler")
 local bridge = require("src/services/bridge")
 local utils = require("src/core/utils")
@@ -10,7 +9,6 @@ local variable_row = require('src/gui/components/variable_row')
 local vars_dialog = require('src/gui/dialogs/vars_dialog')
 local set_task_dialog = require('src/gui/dialogs/set_task_dialog')
 local set_description_dialog = require('src/gui/dialogs/set_description_dialog')
-local set_quantity_dialog = require('src/gui/dialogs/set_quantity_dialog')
 local edit_code_dialog = require('src/gui/dialogs/edit_code_dialog')
 local test_case_dialog = require('src/gui/dialogs/test_case_dialog')
 local ai_combinator_dialog = require('src/gui/dialogs/ai_combinator_dialog')
@@ -50,15 +48,11 @@ function guis.open(player, e)
 	local uid_old = storage.guis_player[player.index]
 	if uid_old then player.opened = guis.close(uid_old) end
 	local gui_t = ai_combinator_dialog.show(player, e)
-	storage.guis[e.unit_number] = gui_t
 	player.opened = gui_t.mlc_gui
 	storage.guis_player[player.index] = e.unit_number
 	
 	-- Initialize the description UI now that gui_t is stored
 	guis.update_description_ui(e.unit_number)
-	
-	-- Initialize the test cases UI
-	guis.update_test_cases_ui(e.unit_number)
 	
 	return gui_t
 end
@@ -80,15 +74,6 @@ end
 
 function guis.on_gui_text_changed(ev)
 	if ev.element.name ~= 'mlc-code' then
-    -- Handle test case value changes
-    if ev.element.tags and ev.element.tags.test_case_value then
-      guis.handle_test_case_input_change(ev)
-    end
-
-    -- Handle test case count field changes
-    if ev.element.name and ev.element.name:match("^test%-count%-") then
-      guis.handle_test_count_change(ev)
-    end
     
     -- Handle advanced section text inputs
     if ev.element.tags then
@@ -101,66 +86,9 @@ function guis.on_gui_text_changed(ev)
       end
     end
     
-    return 
-  end
-end
-
-
-function guis.set_signal_quantity(uid, test_index, signal_type, slot_index, quantity)
-  local mlc = storage.combinators[uid]
-  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then
     return
   end
-  
-  local test_case = mlc.test_cases[test_index]
-  local signal_array
-  if signal_type == "red" then
-    signal_array = test_case.red_input
-  elseif signal_type == "green" then
-    signal_array = test_case.green_input
-  elseif signal_type == "expected" then
-    signal_array = test_case.expected_output
-  else
-    return
-  end
-  
-  -- Ensure array is large enough
-  while #signal_array < slot_index do
-    table.insert(signal_array, {})
-  end
-  
-  if not signal_array[slot_index] then
-    signal_array[slot_index] = {}
-  end
-  
-  signal_array[slot_index].count = quantity
-  
-  -- Clean up empty entries
-  for i = #signal_array, 1, -1 do
-    local entry = signal_array[i]
-    if not entry.signal or not entry.count or entry.count == 0 then
-      table.remove(signal_array, i)
-    end
-  end
-  
-  -- Refresh the dialog if it's open
-  local gui_t = storage.guis[uid]
-  if gui_t and gui_t.test_case_dialog and gui_t.test_case_dialog.valid then
-    -- Find and refresh the appropriate signal panel
-    local panel_name = signal_type .. "-signal-panel"
-    local panel = gui_t.test_case_dialog[panel_name]
-    if panel then
-      panel.clear()
-      guis.create_test_signal_panel(panel, signal_array, uid, test_index, signal_type)
-    end
-    
-    -- Auto-run test if inputs or expected output changed
-    if signal_type == "red" or signal_type == "green" or signal_type == "expected" then
-      guis.run_test_case_in_dialog(uid, test_index)
-    end
-  end
 end
-
 
 function guis.set_task(uid, task)
   local mlc = storage.combinators[uid]
@@ -185,154 +113,6 @@ function guis.set_description(uid, description)
   guis.update_description_ui(uid)
 end
 
-function guis.add_test_case(uid)
-  local mlc = storage.combinators[uid]
-  if not mlc then return end
-  
-  if not mlc.test_cases then
-    mlc.test_cases = {}
-  end
-  
-  local new_test_index = #mlc.test_cases + 1
-  table.insert(mlc.test_cases, {
-    name = "Test Case " .. new_test_index,
-    red_input = {},
-    green_input = {},
-    expected_output = {},
-    actual_output = {}
-  })
-  
-  -- Auto-run the new test case
-  guis.run_test_case(mlc, new_test_index)
-  
-  guis.update_test_cases_ui(uid)
-end
-
-function guis.auto_generate_test_cases(uid)
-  -- Placeholder for auto-generation logic
-  local mlc = storage.combinators[uid]
-  if not mlc then return end
-  
-  -- TODO: Implement auto-generation based on current inputs/outputs
-  -- For now, just add a placeholder test case and auto-run it
-  guis.add_test_case(uid)
-end
-
-
-
--- Create compact signal panel with 6 elements per row max, using slot-based design
--- Create compact signal display panel (read-only)
-function guis.create_test_signal_panel(parent, signals, uid, test_index, signal_type)
-  -- Create a 10x4 grid of signal slots (smaller for the new layout)
-  local signal_table = parent.add{
-    type = "table",
-    column_count = 10,
-    style = "filter_slot_table",
-    name = "signal-table-" .. signal_type,
-    tags = {uid = uid, test_index = test_index, signal_type = signal_type}
-  }
-  signal_table.style.height = 160
-  
-  -- Convert signal array to lookup table for easier access
-  local signal_lookup = {}
-  for i, signal_data in ipairs(signals) do
-    if signal_data.signal and signal_data.count then
-      signal_lookup[i] = signal_data
-    end
-  end
-  
-  -- Create 40 slots (10x4)
-  for i = 1, 40 do
-    local signal_data = signal_lookup[i] or {}
-    
-    -- Create a container flow for proper layering
-    local container_flow = signal_table.add{
-      type = "flow",
-      direction = "vertical",
-      name = "container-" .. i,
-      tags = {uid = uid, test_index = test_index, signal_type = signal_type, slot_index = i}
-    }
-    container_flow.style.width = 40
-    container_flow.style.height = 40
-    
-    -- Signal chooser button
-    local signal_button = container_flow.add{
-      type = "choose-elem-button",
-      elem_type = "signal",
-      signal = signal_data.signal,
-      name = "signal-button-" .. i,
-      tags = {
-        uid = uid,
-        test_index = test_index,
-        signal_type = signal_type,
-        slot_index = i,
-        test_signal_elem = true
-      }
-    }
-    signal_button.style.width = 40
-    signal_button.style.height = 40
-    
-    -- Create overlay elements in a separate overlay flow
-    local overlay_flow = container_flow.add{
-      type = "flow",
-      direction = "horizontal",
-      name = "overlay-" .. i,
-      ignored_by_interaction = true
-    }
-    overlay_flow.style.top_margin = -40
-    overlay_flow.style.width = 40
-    overlay_flow.style.height = 40
-    
-    -- Spacer to push elements to the right
-    local overlay_spacer = overlay_flow.add{
-      type = "empty-widget",
-      ignored_by_interaction = true
-    }
-    overlay_spacer.style.horizontally_stretchable = true
-    
-    -- Right side container for count and edit button
-    local right_overlay = overlay_flow.add{
-      type = "flow",
-      direction = "vertical",
-      ignored_by_interaction = true
-    }
-    right_overlay.style.vertical_align = "bottom"
-    
-    -- Edit button (always present but invisible if no signal)
-    local edit_button = right_overlay.add{
-      type = "sprite-button",
-      sprite = "utility/rename_icon",
-      name = "edit-button-" .. i,
-      style = "mini_button",
-      tooltip = "Edit quantity",
-      tags = {
-        uid = uid,
-        test_index = test_index,
-        signal_type = signal_type,
-        slot_index = i,
-        edit_signal_quantity = true
-      }
-    }
-    edit_button.style.width = 16
-    edit_button.style.height = 16
-    edit_button.visible = signal_data.signal ~= nil
-    
-    -- Count label (overlaid on the button)
-    if signal_data.count and signal_data.count ~= 0 then
-      local count_label = right_overlay.add{
-        type = "label",
-        caption = utils.format_number(signal_data.count),
-        style = "count_label",
-        name = "count-label-" .. i,
-        ignored_by_interaction = true
-      }
-      count_label.style.top_margin = -20
-      count_label.style.horizontal_align = "right"
-      count_label.style.maximal_width = 38
-      count_label.style.minimal_width = 38
-    end
-  end
-end
 
 function guis.create_test_signal_display_panel(parent, signals)
   -- Create read-only display of actual output signals
@@ -445,40 +225,6 @@ function guis.update_test_status_in_dialog(uid, test_index)
   end
 end
 
-function guis.run_test_case_in_dialog(uid, test_index)
-  -- Run the test case and update the actual output display in the dialog
-  local mlc = storage.combinators[uid]
-  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then
-    return
-  end
-  
-  local test_case = mlc.test_cases[test_index]
-  
-  -- Calculate actual output with advanced options
-  local result = guis.calculate_test_output_advanced(uid, test_case)
-  test_case.actual_output = result.output
-  test_case.actual_print = result.print_output
-  
-  -- Update the actual output panel in the dialog if it's open
-  local gui_t = storage.guis[uid]
-  if gui_t and gui_t.test_case_dialog and gui_t.test_case_dialog.valid then
-    local actual_panel = gui_t.test_case_dialog["actual-signal-panel"]
-    if actual_panel then
-      actual_panel.clear()
-      guis.create_test_signal_display_panel(actual_panel, test_case.actual_output)
-    end
-    
-    -- Update actual print output
-    local actual_print_label = gui_t.test_case_dialog["actual-print-label"]
-    if actual_print_label then
-      actual_print_label.caption = test_case.actual_print or "(none)"
-    end
-    
-    -- Update the status indicator
-    guis.update_test_status_in_dialog(uid, test_index)
-  end
-end
-
 function guis.save_test_case_from_dialog(uid, test_index, player_index)
   local mlc = storage.combinators[uid]
   local gui_t = storage.guis[uid]
@@ -488,15 +234,16 @@ function guis.save_test_case_from_dialog(uid, test_index, player_index)
   end
   
   local test_case = mlc.test_cases[test_index]
-  
+
+  if not gui_t.test_case_name_input.valid then
+    return
+  end
+
   -- Save the test case name
   if gui_t.test_case_name_input then
     test_case.name = gui_t.test_case_name_input.text
   end
   
-  -- The signal data is already saved through the element change handlers
-  -- Just update the main UI
-  guis.update_test_cases_ui(uid)
 end
 
 function guis.handle_test_count_change(event)
@@ -655,8 +402,6 @@ function guis.handle_tick_input_change(event)
   local tick = tonumber(event.element.text) or 0
   mlc.test_cases[test_index].game_tick = tick
   
-  -- Auto-run test case
-  guis.run_test_case_in_dialog(uid, test_index)
 end
 
 -- Handle expected print input changes  
@@ -669,8 +414,6 @@ function guis.handle_print_input_change(event)
   
   mlc.test_cases[test_index].expected_print = event.element.text
   
-  -- Auto-run test case
-  guis.run_test_case_in_dialog(uid, test_index)
 end
 
 -- Handle variable input changes
@@ -725,17 +468,8 @@ function guis.handle_variable_input_change(event)
     end
   end
   
-  -- Auto-run test case
-  guis.run_test_case_in_dialog(uid, test_index)
 end
 
-function guis.delete_test_case(uid, test_index)
-  local mlc = storage.combinators[uid]
-  if not mlc or not mlc.test_cases then return end
-  
-  table.remove(mlc.test_cases, test_index)
-  guis.update_test_cases_ui(uid)
-end
 
 function guis.run_test_case(uid, test_index)
   local mlc = storage.combinators[uid]
@@ -748,7 +482,6 @@ function guis.run_test_case(uid, test_index)
   test_case.actual_output = result.output
   test_case.actual_print = result.print_output
   
-  guis.update_test_cases_ui(uid)
 end
 
 function guis.calculate_test_output(uid, red_input, green_input)
@@ -767,77 +500,6 @@ function guis.calculate_test_output_advanced(uid, test_case)
   })
   
   return result or {output = {}, print_output = ""}
-end
-
-function guis.handle_test_case_input_change(event)
-  local element = event.element
-  if not element.tags then return end
-  
-  local uid = element.tags.uid
-  local test_index = element.tags.test_index
-  local signal_type = element.tags.signal_type
-  local signal_index = element.tags.signal_index
-  
-  local mlc = storage.combinators[uid]
-  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then return end
-  
-  local test_case = mlc.test_cases[test_index]
-  
-  -- Determine which input array to update
-  local input_array
-  if signal_type == "red" then
-    input_array = test_case.red_input
-  elseif signal_type == "green" then
-    input_array = test_case.green_input
-  elseif signal_type == "expected" then
-    input_array = test_case.expected_output
-  else
-    return
-  end
-  
-  -- Ensure the array is large enough
-  while #input_array < signal_index do
-    table.insert(input_array, {})
-  end
-  
-  if element.tags.test_case_signal then
-    -- Signal selection changed
-    if not input_array[signal_index] then
-      input_array[signal_index] = {}
-    end
-    input_array[signal_index].signal = element.elem_value
-  elseif element.tags.test_case_value then
-    -- Value changed
-    local value = tonumber(element.text)
-    if value == nil and element.text ~= "" then
-      -- If the text is not a valid number and not empty, reset to 0
-      element.text = "0"
-      value = 0
-    elseif value == nil then
-      value = 0
-    end
-    
-    if not input_array[signal_index] then
-      input_array[signal_index] = {}
-    end
-    input_array[signal_index].count = value
-  end
-  
-  -- Clean up empty entries
-  for i = #input_array, 1, -1 do
-    local entry = input_array[i]
-    if not entry.signal or not entry.count or entry.count == 0 then
-      table.remove(input_array, i)
-    end
-  end
-  
-  -- If this was a change to inputs, automatically run the test case
-  if signal_type == "red" or signal_type == "green" then
-    guis.run_test_case(uid, test_index)
-  else
-    -- Just update the UI for expected output changes
-    guis.update_test_cases_ui(uid)
-  end
 end
 
 function guis.create_signal_inputs(parent, signals, uid, test_index, signal_type, gui_t)
@@ -950,187 +612,7 @@ function guis.create_signal_display(parent, signals)
 end
 
 
-function guis.update_test_cases_ui(uid)
-  local mlc = storage.combinators[uid]
-  local gui_t = storage.guis[uid]
-  
-  if not mlc or not gui_t or not gui_t.mlc_test_cases_container then
-    return
-  end
-  
-  local container = gui_t.mlc_test_cases_container
-  container.clear()
-  
-  -- Helper function to add elements to the el_map
-  local function add_to_map(element)
-    if element.name then
-      gui_t.el_map[element.index] = element
-    end
-    return element
-  end
-  
-  -- Initialize test cases if not present
-  if not mlc.test_cases then
-    mlc.test_cases = {}
-  end
-  
-  -- Header with summary and buttons
-  local header_flow = container.add{
-    type = "flow",
-    direction = "horizontal",
-    name = "mlc-test-cases-header"
-  }
-  add_to_map(header_flow)
-  
-  local title_flow = header_flow.add{
-    type = "flow",
-    direction = "horizontal"
-  }
-  
-  title_flow.add{
-    type = "label",
-    caption = "Test Cases",
-    style = "semibold_label"
-  }
-  
-  local add_test_btn = title_flow.add{
-    type = "sprite-button",
-    name = "mlc-add-test-case",
-    sprite = "utility/add",
-    tooltip = "Add test case",
-    style = "mini_button_aligned_to_text_vertically",
-    tags = {uid = uid, add_test_case = true}
-  }
-  add_test_btn.style.left_margin = 8
-  add_to_map(add_test_btn)
-  
-  -- Calculate test case summary
-  local total_tests = #mlc.test_cases
-  local passed_tests = 0
-  for _, test_case in ipairs(mlc.test_cases) do
-    -- Check signal output match
-    local signals_match = true
-    if test_case.expected_output and next(test_case.expected_output) then
-      signals_match = testing.test_case_matches(test_case.expected_output, test_case.actual_output or {})
-    end
-    
-    -- Check print output match
-    local print_matches = true
-    if test_case.expected_print and test_case.expected_print ~= "" then
-      local actual_print = test_case.actual_print or ""
-      print_matches = actual_print:find(test_case.expected_print, 1, true) ~= nil
-    end
-    
-    -- Test passes only if both signal and print outputs match (or are not specified)
-    if signals_match and print_matches then
-      passed_tests = passed_tests + 1
-    end
-  end
-  
-  if total_tests > 0 then
-    local summary_label = title_flow.add{
-      type = "label",
-      caption = string.format("(%d/%d passing)", passed_tests, total_tests),
-      style = "label"
-    }
-    summary_label.style.left_margin = 8
-    summary_label.style.font_color = passed_tests == total_tests and {0.3, 0.8, 0.3} or {0.8, 0.8, 0.3}
-  end
-  
-  local spacer = header_flow.add{type = "empty-widget"}
-  spacer.style.horizontally_stretchable = true
-  
-  local auto_generate_btn = header_flow.add{
-    type = "button",
-    name = "mlc-auto-generate-tests",
-    caption = "Auto Generate",
-    tooltip = "Automatically generate test cases based on current inputs",
-    style = "button",
-    tags = {uid = uid, auto_generate_tests = true}
-  }
-  add_to_map(auto_generate_btn)
-  
-  -- Condensed test cases list
-  if #mlc.test_cases > 0 then
-    local test_scroll = container.add{
-      type = "scroll-pane",
-      name = "mlc-test-cases-scroll",
-      direction = "vertical"
-    }
-    test_scroll.style.maximal_height = 200
-    test_scroll.style.horizontally_stretchable = true
-    add_to_map(test_scroll)
-    
-    for i, test_case in ipairs(mlc.test_cases) do
-      local test_frame = test_scroll.add{
-        type = "frame",
-        direction = "horizontal",
-        style = "subheader_frame",
-        name = "test-case-frame-" .. i,
-        tags = {uid = uid, edit_test_case = i}
-      }
-      test_frame.style.horizontally_stretchable = true
-      test_frame.style.padding = 4
-      
-      -- Status indicator
-      local status_sprite = test_frame.add{
-        type = "sprite", 
-        sprite = "utility/status_working",
-        tags = {uid = uid, edit_test_case = i}
-      }
-      local actual_output = test_case.actual_output or {}
-      local status_matches = testing.test_case_matches(test_case.expected_output or {}, actual_output)
 
-      if test_case.expected_output then
-        if status_matches then
-          status_sprite.sprite = "utility/status_working"
-          status_sprite.tooltip = "Test passes"
-        else
-          status_sprite.sprite = "utility/status_not_working"
-          status_sprite.tooltip = "Test fails"
-        end
-      else
-        status_sprite.sprite = "utility/status_yellow"
-        status_sprite.tooltip = "No expected output defined"
-      end
-      
-      -- Test name
-      local name_label = test_frame.add{
-        type = "label",
-        caption = test_case.name or ("Test Case " .. i),
-        style = "label",
-        tags = {uid = uid, edit_test_case = i}
-      }
-      name_label.style.left_margin = 8
-      
-      local spacer = test_frame.add{
-        type = "empty-widget",
-        tags = {uid = uid, edit_test_case = i}
-      }
-      spacer.style.horizontally_stretchable = true
-      
-      -- Only delete button - edit is handled by clicking anywhere on the frame
-      local delete_btn = test_frame.add{
-        type = "sprite-button", 
-        name = "mlc-delete-test-case-" .. i,
-        sprite = "utility/trash",
-        tooltip = "Delete test case",
-        style = "mini_button",
-        tags = {uid = uid, delete_test_case = i}
-      }
-      delete_btn.style.left_margin = 2
-      add_to_map(delete_btn)
-    end
-  else
-    local empty_label = container.add{
-      type = "label",
-      caption = "No test cases defined. Click + to add one or use Auto Generate.",
-      style = "label"
-    }
-    empty_label.style.font_color = {0.6, 0.6, 0.6}
-    empty_label.style.top_margin = 8
-  end
-end
 
 function guis.update_description_ui(uid)
   local mlc = storage.combinators[uid]
@@ -1208,7 +690,7 @@ end
 
 event_handler.add_handler(constants.events.on_code_updated, function(event)
   guis.save_code(event.uid, event.code)
-  
+
   -- raise test case update for every test case
   local mlc = storage.combinators[event.uid]
   if mlc and mlc.test_cases then
@@ -1249,9 +731,6 @@ function guis.handle_task_dialog_click(event)
     return true
   elseif event.element.tags.test_case_cancel then
     dialog_manager.close_dialog(event.player_index)
-    return true
-  elseif event.element.tags.run_test_dialog then
-    guis.run_test_case_in_dialog(uid, event.element.tags.test_index)
     return true
   elseif event.element.tags.advanced_toggle then
     guis.toggle_advanced_section(uid, event.element.tags.test_index, event.element.state)
@@ -1305,13 +784,7 @@ function guis.on_gui_click(event)
       set_description_dialog.show(event.player_index, element.tags.uid)
       return
     end
-    
-    -- Handle test case buttons
-    if element.tags.add_test_case then
-      guis.add_test_case(element.tags.uid)
-      return
-    end
-    
+        
     if element.tags.auto_generate_tests then
       guis.auto_generate_test_cases(element.tags.uid)
       return

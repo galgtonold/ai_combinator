@@ -37,6 +37,17 @@ function testing.test_case_matches(expected, actual)
   return true
 end
 
+local function expand_signal_short_names(signals)
+  for signal, count in pairs(signals) do
+    local new_name = circuit_network.cn_sig_str(signal)
+    signals[new_name] = count
+    if new_name ~= signal then
+      signals[signal] = nil
+    end
+  end
+  
+  return signals
+end
 
 function testing.evaluate_test_case(uid, red, green, options)
   local ai_combinator = storage.combinators[uid]
@@ -54,7 +65,7 @@ function testing.evaluate_test_case(uid, red, green, options)
   func, err = load(ai_combinator.code, ai_combinator.code, 't', env_ro)
   func()
 
-  return env_ro.out
+  return expand_signal_short_names(env_ro.out)
 end
 
 function testing.compare_outputs(expected, actual)

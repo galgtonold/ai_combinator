@@ -435,6 +435,10 @@ local function run_moon_logic_tick(mlc, mlc_env, tick)
 end
 
 local function on_tick(ev)
+  -- Receive UDP packets and trigger processing
+  helpers.recv_udp()
+
+
 	local tick = ev.tick
 
 	for uid, mlc in pairs(storage.combinators) do
@@ -726,3 +730,4 @@ end)
 
 -- Activate Global (Storage) Variable Viewer (gvv) mod, if installed/enabled - https://mods.factorio.com/mod/gvv
 if script.active_mods['gvv'] then require('__gvv__.gvv')() end
+
