@@ -239,6 +239,7 @@ local function on_gui_click(event)
 end
 
 event_handler.add_handler(constants.events.on_test_case_evaluated, on_test_case_evaluated)
+event_handler.add_handler(constants.events.on_test_case_name_updated, on_test_case_evaluated)
 event_handler.add_handler(defines.events.on_gui_click, on_gui_click)
 
 

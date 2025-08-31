@@ -725,13 +725,6 @@ function guis.handle_task_dialog_click(event)
     guis.set_description(uid, description_input.text)
     dialog_manager.close_dialog(event.player_index)
     return true
-  elseif event.element.tags.test_case_save then
-    guis.save_test_case_from_dialog(uid, event.element.tags.test_index, event.player_index)
-    dialog_manager.close_dialog(event.player_index)
-    return true
-  elseif event.element.tags.test_case_cancel then
-    dialog_manager.close_dialog(event.player_index)
-    return true
   elseif event.element.tags.advanced_toggle then
     guis.toggle_advanced_section(uid, event.element.tags.test_index, event.element.state)
     return true

@@ -1,7 +1,9 @@
 local dialog_manager = require("src/gui/dialogs/dialog_manager")
+
 local titlebar = require('src/gui/components/titlebar')
 local variable_row = require("src/gui/components/variable_row")
 local compact_signal_panel = require("src/gui/components/compact_signal_panel")
+local test_case_header = require("src/gui/components/test_case_header")
 
 local dialog = {}
 
@@ -38,48 +40,6 @@ function dialog.show(player_index, uid, test_index)
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
   
-  -- Test case name
-  local name_flow = content_flow.add{
-    type = "flow",
-    direction = "horizontal",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
-  }
-  name_flow.add{type = "label", caption = "Name:", style = "caption_label"}
-  
-  local name_input = name_flow.add{
-    type = "textfield",
-    name = "mlc-test-case-name",
-    text = test_case.name or "",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index}
-  }
-  name_input.style.width = 300
-  name_input.style.left_margin = 8
-  gui_t.test_case_name_input = name_input
-  
-  -- Status indicator
-  local status_flow = name_flow.add{
-    type = "flow",
-    direction = "horizontal",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
-  }
-  status_flow.style.left_margin = 16
-  
-  local status_sprite = status_flow.add{
-    type = "sprite", 
-    sprite = "utility/status_yellow",
-    name = "test-status-sprite"
-  }
-  
-  local status_label = status_flow.add{
-    type = "label",
-    caption = "No output defined",
-    name = "test-status-label",
-    style = "label"
-  }
-  status_label.style.left_margin = 4
-  gui_t.test_status_sprite = status_sprite
-  gui_t.test_status_label = status_label
-  
   -- Main content frame with light gray background
   local main_content_frame = content_flow.add{
     type = "frame",
@@ -89,7 +49,9 @@ function dialog.show(player_index, uid, test_index)
   }
   main_content_frame.style.padding = 12
   main_content_frame.style.top_margin = 8
-  
+
+  test_case_header.show(main_content_frame, uid, test_index)
+
   -- Status indicator and cleaner layout
   local status_flow = main_content_frame.add{
     type = "flow",
@@ -353,39 +315,7 @@ function dialog.show(player_index, uid, test_index)
   actual_print_label.style.left_margin = 8
   actual_print_label.style.width = 300
   actual_print_label.style.single_line = false
-  
-  -- Initialize dialog state
-  --guis.run_test_case(mlc, test_index)
-  
-  -- Button row
-  local button_flow = content_flow.add{
-    type = "flow",
-    direction = "horizontal",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
-  }
-  button_flow.style.top_margin = 12
-  
-  local spacer = button_flow.add{type = "empty-widget"}
-  spacer.style.horizontally_stretchable = true
-  
-  local cancel_btn = button_flow.add{
-    type = "button",
-    caption = "Cancel",
-    style = "back_button",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index, test_case_cancel = true}
-  }
-  
-  local save_btn = button_flow.add{
-    type = "button",
-    caption = "Save",
-    style = "confirm_button",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index, test_case_save = true}
-  }
-  save_btn.style.left_margin = 8
-  
-  -- Auto-run test when dialog opens and update status
-  --guis.run_test_case_in_dialog(uid, test_index)
-  --guis.update_test_status_in_dialog(uid, test_index)
+
 end
 
 return dialog
