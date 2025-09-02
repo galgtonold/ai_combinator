@@ -131,7 +131,8 @@ function on_gui_click(event)
     dialog_manager.close_dialog(event.player_index)
   elseif event.element.tags.edit_code_apply then
     local code_input = gui.edit_code_textbox
-    event_handler.raise_event(constants.events.on_code_updated, {player_index = event.player_index, uid = uid, code = code_input.text})
+    local code_text = code_error_highlight(code_input.text)
+    event_handler.raise_event(constants.events.on_code_updated, {player_index = event.player_index, uid = uid, code = code_text})
     dialog_manager.close_dialog(event.player_index)
   elseif event.element.tags.show_help_button then
     help_dialog.show(event.player_index)
