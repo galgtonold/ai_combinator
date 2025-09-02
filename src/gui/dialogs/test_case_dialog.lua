@@ -1,11 +1,35 @@
 local dialog_manager = require("src/gui/dialogs/dialog_manager")
+local constants = require("src/core/constants")
+local event_handler = require("src/events/event_handler")
 
 local titlebar = require('src/gui/components/titlebar')
 local variable_row = require("src/gui/components/variable_row")
 local compact_signal_panel = require("src/gui/components/compact_signal_panel")
 local test_case_header = require("src/gui/components/test_case_header")
+local status_indicator = require("src/gui/components/status_indicator")
 
 local dialog = {}
+
+
+local function update_status(uid, test_index)
+  local gui_t = storage.guis[uid]
+  if not (gui_t and gui_t.test_case_dialog and gui_t.test_case_status_flow) then
+    return
+  end
+
+  local mlc = storage.combinators[uid]
+  if not (mlc and mlc.test_cases and mlc.test_cases[test_index]) then
+    return
+  end
+
+  local test_case = mlc.test_cases[test_index]
+  local status_flow = gui_t.test_case_status_flow
+  if test_case.success then
+    status_indicator.update(status_flow, status_indicator.status.GREEN, "Passed")
+  else
+    status_indicator.update(status_flow, status_indicator.status.RED, "Failed")
+  end
+end
 
 function dialog.show(player_index, uid, test_index)
   local player = game.players[player_index]
@@ -52,27 +76,11 @@ function dialog.show(player_index, uid, test_index)
 
   test_case_header.show(main_content_frame, uid, test_index)
 
-  -- Status indicator and cleaner layout
-  local status_flow = main_content_frame.add{
-    type = "flow",
-    direction = "horizontal",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
-  }
-  
-  local status_sprite = status_flow.add{
-    type = "sprite",
-    sprite = "utility/status_yellow",
-    name = "test-status-sprite"
-  }
-  
-  local status_label = status_flow.add{
-    type = "label",
-    caption = "No expected output defined",
-    name = "test-status-label",
-    style = "label"
-  }
-  status_label.style.left_margin = 8
-  
+
+  local status_flow = status_indicator.show(main_content_frame, "utility/status_working", "Working")
+  gui_t.test_case_status_flow = status_flow
+  update_status(uid, test_index)
+
   -- Input section with minimal borders
   local input_section = main_content_frame.add{
     type = "flow",
@@ -317,5 +325,11 @@ function dialog.show(player_index, uid, test_index)
   actual_print_label.style.single_line = false
 
 end
+
+local function on_test_case_evaluated(event)
+  update_status(event.uid, event.test_index)
+end
+
+event_handler.add_handler(constants.events.on_test_case_evaluated, on_test_case_evaluated)
 
 return dialog
