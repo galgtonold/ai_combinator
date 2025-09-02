@@ -12,6 +12,7 @@ local sandbox = require('src/sandbox/base')
 
 
 local guis = require('src/gui/gui')
+local dialog_manager = require('src/gui/dialogs/dialog_manager')
 
 local ai_bridge_warning_dialog = require('src/gui/dialogs/ai_bridge_warning_dialog')
 local help_dialog = require('src/gui/dialogs/help_dialog')
@@ -726,6 +727,11 @@ end)
 -- Check bridge availability when players join
 event_handler.add_handler(defines.events.on_player_joined_game, function(event)
   bridge.check_bridge_availability()
+end)
+
+-- Clean up dialog stacks when players are removed
+event_handler.add_handler(defines.events.on_player_removed, function(event)
+  dialog_manager.cleanup_player(event.player_index)
 end)
 
 -- Activate Global (Storage) Variable Viewer (gvv) mod, if installed/enabled - https://mods.factorio.com/mod/gvv
