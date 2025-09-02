@@ -5,6 +5,7 @@ local signal_table = require('src/gui/components/signal_table')
 local titlebar = require('src/gui/components/titlebar')
 local ai_combinator_header = require('src/gui/components/ai_combinator_header')
 local test_cases_section = require('src/gui/components/test_cases_section')
+local status_indicator = require('src/gui/components/status_indicator')
 
 local dialog = {}
 
@@ -68,8 +69,6 @@ local function update_status(uid)
   if not status_flow then
     return
   end
-  -- Clear previous status elements
-  status_flow.clear()
   
   -- Get entity status code
   local status_code = mlc.e.status
@@ -106,11 +105,13 @@ local function update_status(uid)
     sprite = "utility/status_yellow"
   end
 
-  -- Add status elements
-  local status_sprite = status_flow.add{type = 'sprite', style = 'status_image', sprite = sprite}
-  status_sprite.style.stretch_image_to_widget_size = true
-  status_flow.add{type = 'label', name='mlc-status-text', caption=status_text}
+  if mlc.state == "error" then
+    status_text = "Error: " .. (mlc.err_parse or mlc.errun or "unknown error")
+    sprite = "utility/status_not_working"
+  end
 
+  -- Update status using the status_indicator component
+  status_indicator.update(status_flow, sprite, status_text)
 
   -- Update task request progress_bar
   local progress_bar = gui_t.mlc_progressbar
@@ -163,8 +164,8 @@ function dialog.show(player, entity)
   elc(connections_frame, {type='flow', name='mlc-connections-flow', direction='horizontal', style = "player_input_horizontal_flow"})
 
   -- Status light and text
-
-  local status_flow = elc(entity_frame, {type='flow', name='mlc-status-flow', direction='horizontal'}, {vertical_align='center'})
+  local status_flow = status_indicator.show(entity_frame, "utility/status_working", "Working")
+  gui_t.mlc_status_flow = status_flow
   
   -- Entity preview
   local entity_frame_border = elc(entity_frame, {type='frame', name='mlc-entity-frame-border', style='deep_frame_in_shallow_frame'})

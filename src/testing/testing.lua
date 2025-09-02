@@ -63,7 +63,15 @@ function testing.evaluate_test_case(uid, red, green, options)
   testing.env.game.tick = options and options.game_tick or 1
 	setmetatable(env_ro, {__index=testing.env})
   func, err = load(ai_combinator.code, ai_combinator.code, 't', env_ro)
-  func()
+  
+  if func then
+    local success, result = pcall(func)
+    if not success then
+      env_ro.out = {}
+    end
+  else
+    env_ro.out = {}
+  end
 
   return expand_signal_short_names(env_ro.out)
 end
