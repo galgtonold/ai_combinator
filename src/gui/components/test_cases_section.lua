@@ -116,9 +116,11 @@ function component.update(uid)
     local test_scroll = container.add{
       type = "scroll-pane",
       name = "mlc-test-cases-scroll",
-      direction = "vertical"
+      direction = "vertical",
+      horizontal_scroll_policy = "never",
+      style = "shallow_scroll_pane"
     }
-    test_scroll.style.maximal_height = 200
+    test_scroll.style.maximal_height = 350
     test_scroll.style.horizontally_stretchable = true
     add_to_map(test_scroll)
     
@@ -155,7 +157,7 @@ function component.update(uid)
         style = "label",
         tags = {uid = uid, edit_test_case = i}
       }
-      name_label.style.left_margin = 8
+      name_label.style.left_margin = 4
       
       local spacer = test_frame.add{
         type = "empty-widget",
@@ -172,7 +174,8 @@ function component.update(uid)
         style = "tool_button_red",
         tags = {uid = uid, delete_test_case = i}
       }
-      delete_btn.style.left_margin = 2
+      delete_btn.style.top_margin = 2
+      delete_btn.style.right_margin = 1
       add_to_map(delete_btn)
     end
   else
