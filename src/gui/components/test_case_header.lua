@@ -38,6 +38,7 @@ function component.show(parent, uid, test_index)
 end
 
 function component.update(parent, uid, test_index)
+
 end
 
 local function on_gui_click(event)
@@ -46,7 +47,7 @@ local function on_gui_click(event)
   if not element.valid or not element.tags then return end
 
   if element.tags.edit_test_case_name then
-    local location = gui_utils.get_position_relative_to_window(element, 20, 50)
+    local location = gui_utils.get_position_relative_to_window(element, 25, 100)
     set_test_case_name_dialog.show(event.player_index, element.tags.uid, location, element.tags.edit_signal_quantity_count, {uid = element.tags.uid, test_index = element.tags.test_index})
   end
 end

@@ -57,22 +57,16 @@ function dialog.show(player_index, uid, test_index)
   
   local test_case = mlc.test_cases[test_index]
   titlebar.show(popup_frame, "Test Case", {test_case_dialog_close = true}, {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index})
-
-  local content_flow = popup_frame.add{
-    type = "flow",
-    direction = "vertical",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
-  }
   
   -- Main content frame with light gray background
-  local main_content_frame = content_flow.add{
+  local main_content_frame = popup_frame.add{
     type = "frame",
     direction = "vertical",
-    style = "inside_shallow_frame",
+    style = "entity_frame",
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
   main_content_frame.style.padding = 12
-  main_content_frame.style.top_margin = 8
+  main_content_frame.style.top_margin = 0
 
   test_case_header.show(main_content_frame, uid, test_index)
 

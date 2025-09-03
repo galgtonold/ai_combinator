@@ -202,39 +202,17 @@ function dialog.show(player, entity)
 
   update_signals(uid)
 
+  elc(entity_frame, {type='line', direction='horizontal'}, {horizontally_stretchable=true})
+
+  -- Test cases section
+  test_cases_section.show(entity_frame, uid)
+
   -- Horizontal line and description section
 
   elc(entity_frame, {type='line', direction='horizontal'}, {horizontally_stretchable=true})
 
   local desc_container = elc(entity_frame, {type='flow', name='mlc-description-container', direction='vertical'})
   gui_t.mlc_description_container = desc_container
-
-  -- Initialize the description UI (will be called after gui_t is stored in storage.guis)
-
-  elc(entity_frame, {type='line', direction='horizontal'}, {horizontally_stretchable=true})
-
-  -- Test cases section
-  test_cases_section.show(entity_frame, uid)
-
-  local error_label = elc(entity_frame, {type='label', name='mlc-errors', direction='horizontal'}, {horizontally_stretchable=true})
-  error_label.visible = false
-
-  if 1 ==1 then
-    return gui_t
-  end
-
-	-- Main table
-	local mt = elc(entity_frame, {type='table', column_count=2, name='mt', direction='vertical'})
-
-	-- MT column-1
-	local mt_left = elc(mt, {type='flow', name='mt-left', direction='vertical'})
-
-	-- MT column-1: action button bar at the top
-	local top_btns = elc( mt_left,
-		{type='flow', name='mt-top-btns', direction='horizontal'}, {width=400} )
-
-	-- MT column-1: error bar at the bottom
-	elc(mt_left, {type='label', name='mlc-errors', direction='horizontal'}, {horizontally_stretchable=true})
 
 	return gui_t
 end
