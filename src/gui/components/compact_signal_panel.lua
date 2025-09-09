@@ -158,7 +158,7 @@ end
 
 local function on_test_case_evaluated(event)
   local gui_t = storage.guis[event.uid]
-  if gui_t and gui_t.compact_actual_signal_panel then
+  if gui_t and gui_t.compact_actual_signal_panel and gui_t.compact_actual_signal_panel.valid then
     local panel = gui_t.compact_actual_signal_panel
     if gui_t.compact_actual_signal_panel.tags.uid ~= event.uid then return end
     if gui_t.compact_actual_signal_panel.tags.test_index ~= event.test_index then return end

@@ -15,6 +15,8 @@ function component.show(parent, sprite, status_text)
 end
 
 function component.update(parent, sprite, status_text)
+  if not parent or not parent.valid then return end
+
   parent.clear()
 
   -- Add status elements

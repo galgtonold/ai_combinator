@@ -217,6 +217,10 @@ local function add_test_case(uid)
     actual_output = {},
     success = false
   })
+  event_handler.raise_event(constants.events.on_test_case_updated, {
+    uid = uid,
+    test_index = new_test_index
+  })
 end
 
 local function auto_generate_test_cases(uid)
@@ -234,8 +238,9 @@ local function on_gui_click(event)
     delete_test_case(event.element.tags.uid, event.element.tags.delete_test_case)
     component.update(event.element.tags.uid)
   elseif event.element.tags.add_test_case then
-    add_test_case(event.element.tags.uid)
-    component.update(event.element.tags.uid)
+    local uid = event.element.tags.uid
+    add_test_case(uid)
+    component.update(uid)
   elseif event.element.tags.auto_generate_tests then
     auto_generate_test_cases(event.element.tags.uid)
   end

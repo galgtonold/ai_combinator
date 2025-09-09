@@ -37,12 +37,16 @@ function testing.test_case_matches(expected, actual)
   return true
 end
 
-local function expand_signal_short_names(signals)
+local function expand_signal_short_names_and_remove_zeroes(signals)
   for signal, count in pairs(signals) do
-    local new_name = circuit_network.cn_sig_str(signal)
-    signals[new_name] = count
-    if new_name ~= signal then
+    if count == 0 then
       signals[signal] = nil
+    else
+      local new_name = circuit_network.cn_sig_str(signal)
+      signals[new_name] = count
+      if new_name ~= signal then
+        signals[signal] = nil
+      end
     end
   end
   
@@ -73,7 +77,7 @@ function testing.evaluate_test_case(uid, red, green, options)
     env_ro.out = {}
   end
 
-  return expand_signal_short_names(env_ro.out)
+  return expand_signal_short_names_and_remove_zeroes(env_ro.out)
 end
 
 function testing.compare_outputs(expected, actual)
@@ -141,6 +145,8 @@ function testing.on_test_case_updated(event)
   local equal, only_in_expected, only_in_actual = testing.compare_outputs(expected, out)
 
   test_case.success = equal
+  test_case.only_in_expected = only_in_expected
+  test_case.only_in_actual = only_in_actual
 
   event_handler.raise_event(constants.events.on_test_case_evaluated, {uid = event.uid, test_index = event.test_index, success = equal, only_in_expected = only_in_expected, only_in_actual = only_in_actual})
 end

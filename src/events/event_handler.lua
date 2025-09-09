@@ -205,7 +205,7 @@ function event_handler.raise_event(event_name, event_data)
 
     if handlers[event_key] then
         for _, handler_func in pairs(handlers[event_key]) do
-             local success, err = pcall(handler_func, event_data)
+             local success, err = xpcall(handler_func, debug.traceback, event_data)
              if not success then
                  game.print("ERROR in custom event handler '" .. tostring(event_key) .. "': " .. tostring(err))
                  log(string.format("ERROR in custom event handler '%s': %s", event_key, tostring(err)))
