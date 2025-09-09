@@ -10,6 +10,51 @@ local status_indicator = require("src/gui/components/status_indicator")
 
 local dialog = {}
 
+local function signals_to_lookup(signal_array)
+  local lookup = {}
+  if not signal_array then return lookup end
+  
+  for _, signal in ipairs(signal_array) do
+    if signal and signal.signal then
+      lookup[signal.signal.name] = signal.count or 0
+    end
+  end
+  return lookup
+end
+
+local function find_value_mismatch(expected_signals, actual_signals)
+  for signal_name, expected_count in pairs(expected_signals) do
+    local actual_count = actual_signals[signal_name] or 0
+    if actual_count ~= expected_count and actual_count > 0 then
+      return signal_name, actual_count, expected_count
+    end
+  end
+  return nil
+end
+
+local function generate_failure_message(test_case)
+  local failure_message = "Failed"
+  
+  if test_case.expected_output and test_case.actual_output then
+    local expected_signals = signals_to_lookup(test_case.expected_output)
+    local actual_signals = signals_to_lookup(test_case.actual_output)
+    
+    -- Check for value mismatches first
+    local signal_name, actual_count, expected_count = find_value_mismatch(expected_signals, actual_signals)
+    if signal_name then
+      return "Failed: " .. signal_name .. " = " .. actual_count .. " (expected " .. expected_count .. ")"
+    end
+  end
+  
+  -- Check for missing/unexpected signals
+  if test_case.only_in_expected and #test_case.only_in_expected > 0 then
+    return "Failed: Missing " .. test_case.only_in_expected[1]
+  elseif test_case.only_in_actual and #test_case.only_in_actual > 0 then
+    return "Failed: Unexpected " .. test_case.only_in_actual[1]
+  end
+  
+  return failure_message
+end
 
 local function update_status(uid, test_index)
   local gui_t = storage.guis[uid]
@@ -24,10 +69,12 @@ local function update_status(uid, test_index)
 
   local test_case = mlc.test_cases[test_index]
   local status_flow = gui_t.test_case_status_flow
+  
   if test_case.success then
     status_indicator.update(status_flow, status_indicator.status.GREEN, "Passed")
   else
-    status_indicator.update(status_flow, status_indicator.status.RED, "Failed")
+    local failure_message = generate_failure_message(test_case)
+    status_indicator.update(status_flow, status_indicator.status.RED, failure_message)
   end
 end
 
