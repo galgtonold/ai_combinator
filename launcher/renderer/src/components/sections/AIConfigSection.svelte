@@ -39,7 +39,7 @@
     />
   </Row>
   <Row justify="space-between">
-    <Label size="small">Model:</Label>
+    <Label size="small">Model</Label>
     {#key config.aiProvider}
       <Dropdown
         value={config.aiModel}
@@ -50,7 +50,7 @@
     {/key}
   </Row>
   <Row justify="space-between" marginBottom="30px">
-    <Label size="small">API Key:</Label>
+    <Label size="small">API Key</Label>
     <div style="display: flex; gap: 10px;">
       <KeyToggleInput
         bind:value={currentApiKeyInput}

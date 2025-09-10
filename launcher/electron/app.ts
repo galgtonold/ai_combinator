@@ -61,8 +61,8 @@ async function main() {
   }
 
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 800,
+    width: 600,
+    height: 700,
     resizable: false,
     show: false,
     frame: false, // Remove the default frame

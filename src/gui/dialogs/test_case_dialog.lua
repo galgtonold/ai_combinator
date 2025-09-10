@@ -3,10 +3,10 @@ local constants = require("src/core/constants")
 local event_handler = require("src/events/event_handler")
 
 local titlebar = require('src/gui/components/titlebar')
-local variable_row = require("src/gui/components/variable_row")
 local compact_signal_panel = require("src/gui/components/compact_signal_panel")
 local test_case_header = require("src/gui/components/test_case_header")
 local status_indicator = require("src/gui/components/status_indicator")
+local test_case_advanced_section = require("src/gui/components/test_case_advanced_section")
 
 local dialog = {}
 
@@ -220,150 +220,8 @@ function dialog.show(player_index, uid, test_index)
   
   compact_signal_panel.show(actual_signal_panel, test_case.actual_output or {}, uid, test_index, "actual")
   
-  -- Advanced section
-  local advanced_section = main_content_frame.add{
-    type = "flow",
-    direction = "vertical",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
-  }
-  advanced_section.style.top_margin = 16
-  
-  local advanced_header = advanced_section.add{
-    type = "flow",
-    direction = "horizontal",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
-  }
-  
-  advanced_header.add{type = "label", caption = "Advanced", style = "semibold_label"}
-  
-  local advanced_toggle = advanced_header.add{
-    type = "checkbox",
-    state = test_case.show_advanced or false,
-    name = "advanced-toggle",
-    tags = {uid = uid, test_index = test_index, advanced_toggle = true}
-  }
-  advanced_toggle.style.left_margin = 8
-  
-  -- Advanced content (only show if toggled)
-  local advanced_content = advanced_section.add{
-    type = "flow",
-    direction = "vertical",
-    name = "advanced-content",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
-  }
-  advanced_content.visible = test_case.show_advanced or false
-  advanced_content.style.top_margin = 8
-  
-  -- Game tick input
-  local tick_flow = advanced_content.add{
-    type = "flow",
-    direction = "horizontal",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
-  }
-  tick_flow.add{type = "label", caption = "Game Tick:", style = "caption_label"}
-  tick_flow.children[1].style.width = 120
-  
-  local tick_input = tick_flow.add{
-    type = "textfield",
-    text = tostring(test_case.game_tick or 0),
-    numeric = true,
-    allow_negative = false,
-    name = "tick-input",
-    tags = {uid = uid, test_index = test_index, test_tick_input = true}
-  }
-  tick_input.style.width = 100
-  tick_input.style.left_margin = 8
-  
-  -- Variables section
-  local vars_header = advanced_content.add{
-    type = "flow",
-    direction = "horizontal",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
-  }
-  vars_header.style.top_margin = 12
-  
-  vars_header.add{type = "label", caption = "Variables:", style = "caption_label"}
-  
-  local add_var_btn = vars_header.add{
-    type = "button",
-    caption = "+",
-    style = "mini_button",
-    tooltip = "Add variable",
-    tags = {uid = uid, test_index = test_index, add_variable = true}
-  }
-  add_var_btn.style.left_margin = 8
-  add_var_btn.style.width = 24
-  add_var_btn.style.height = 24
-  
-  -- Variables table enclosed in filter_slot_table style
-  local vars_scroll = advanced_content.add{
-    type = "scroll-pane",
-    name = "variables-scroll",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
-  }
-  vars_scroll.style.top_margin = 4
-  vars_scroll.style.maximal_height = 120
-  vars_scroll.style.width = 520
-  
-  local vars_table = vars_scroll.add{
-    type = "table",
-    column_count = 3,
-    style = "filter_slot_table",
-    name = "variables-table",
-    tags = {uid = uid, test_index = test_index}
-  }
-  
-  -- Add existing variables
-  local variables = test_case.variables or {}
-  for i, var in ipairs(variables) do
-    variable_row.show(vars_table, uid, test_index, i, var.name or "", var.value or 0)
-  end
-  
-  -- Always have one empty row
-  if #variables == 0 then
-    variable_row.show(vars_table, uid, test_index, 1, "", 0)
-  end
-  
-  -- Expected print output section
-  local print_flow = advanced_content.add{
-    type = "flow",
-    direction = "horizontal",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
-  }
-  print_flow.style.top_margin = 12
-  
-  print_flow.add{type = "label", caption = "Expected Print:", style = "caption_label"}
-  print_flow.children[1].style.width = 120
-  
-  local print_input = print_flow.add{
-    type = "textfield",
-    text = test_case.expected_print or "",
-    name = "print-input",
-    tags = {uid = uid, test_index = test_index, test_print_input = true}
-  }
-  print_input.style.width = 300
-  print_input.style.left_margin = 8
-  
-  -- Actual print output (read-only)
-  local actual_print_flow = advanced_content.add{
-    type = "flow",
-    direction = "horizontal",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
-  }
-  actual_print_flow.style.top_margin = 8
-  
-  actual_print_flow.add{type = "label", caption = "Actual Print:", style = "caption_label"}
-  actual_print_flow.children[1].style.width = 120
-  
-  local actual_print_label = actual_print_flow.add{
-    type = "label",
-    caption = test_case.actual_print or "(none)",
-    name = "actual-print-label",
-    tags = {uid = uid, test_index = test_index}
-  }
-  actual_print_label.style.left_margin = 8
-  actual_print_label.style.width = 300
-  actual_print_label.style.single_line = false
+  -- Advanced section (using component)
+  test_case_advanced_section.show(main_content_frame, uid, test_index)
 
 end
 
