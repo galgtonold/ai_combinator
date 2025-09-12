@@ -540,10 +540,6 @@ script.on_event(defines.events.on_gui_opened, function(ev)
 	end
 end)
 
-if conf.code_history_enabled -- this adds a lot of unpleasant lag to editing text in that textbox
-	then script.on_event(defines.events.on_gui_text_changed, guis.on_gui_text_changed) end
-
-
 -- ----- Keyboard editing hotkeys -----
 -- Most editing hotkeys only work if one window is opened,
 --  as I don't know how to check which one is focused otherwise.

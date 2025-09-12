@@ -307,6 +307,12 @@ local function add_variable(uid, test_index)
     value = 0
   })
   component.update(uid, test_index)
+  
+  -- Trigger test case re-evaluation
+  event_handler.raise_event(constants.events.on_test_case_updated, {
+    uid = uid,
+    test_index = test_index
+  })
 end
 
 local function delete_variable(uid, test_index, var_index)
@@ -319,6 +325,12 @@ local function delete_variable(uid, test_index, var_index)
   if test_case.variables and test_case.variables[var_index] then
     table.remove(test_case.variables, var_index)
     component.update(uid, test_index)
+    
+    -- Trigger test case re-evaluation
+    event_handler.raise_event(constants.events.on_test_case_updated, {
+      uid = uid,
+      test_index = test_index
+    })
   end
 end
 
@@ -334,6 +346,12 @@ local function update_variable_name(uid, test_index, var_index, name)
   end
   
   test_case.variables[var_index].name = name
+  
+  -- Trigger test case re-evaluation
+  event_handler.raise_event(constants.events.on_test_case_updated, {
+    uid = uid,
+    test_index = test_index
+  })
 end
 
 local function update_variable_value(uid, test_index, var_index, value)
@@ -348,6 +366,12 @@ local function update_variable_value(uid, test_index, var_index, value)
   end
   
   test_case.variables[var_index].value = tonumber(value) or 0
+  
+  -- Trigger test case re-evaluation
+  event_handler.raise_event(constants.events.on_test_case_updated, {
+    uid = uid,
+    test_index = test_index
+  })
 end
 
 local function update_game_tick(uid, test_index, tick)
@@ -358,6 +382,12 @@ local function update_game_tick(uid, test_index, tick)
   
   local test_case = mlc.test_cases[test_index]
   test_case.game_tick = tonumber(tick) or 0
+  
+  -- Trigger test case re-evaluation
+  event_handler.raise_event(constants.events.on_test_case_updated, {
+    uid = uid,
+    test_index = test_index
+  })
 end
 
 local function update_expected_print(uid, test_index, expected_print)
@@ -368,6 +398,12 @@ local function update_expected_print(uid, test_index, expected_print)
   
   local test_case = mlc.test_cases[test_index]
   test_case.expected_print = expected_print
+  
+  -- Trigger test case re-evaluation
+  event_handler.raise_event(constants.events.on_test_case_updated, {
+    uid = uid,
+    test_index = test_index
+  })
 end
 
 -- Event handlers
@@ -375,11 +411,6 @@ local function on_gui_click(event)
   if not event.element or not event.element.valid or not event.element.tags then return end
   
   local tags = event.element.tags
-  
-  -- Debug logging
-  if tags.uid and (tags.add_variable or tags.delete_variable or tags.advanced_toggle ~= nil) then
-    game.print("Advanced section click detected: " .. (tags.add_variable and "add" or tags.delete_variable and "delete" or "toggle"))
-  end
   
   if tags.advanced_toggle ~= nil then
     toggle_advanced_section(tags.uid, tags.test_index, event.element.state)

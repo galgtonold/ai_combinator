@@ -35,11 +35,16 @@ end
 local function generate_failure_message(test_case)
   local failure_message = "Failed"
   
+  -- Check for print output failure first (most specific)
+  if test_case.expected_print and test_case.expected_print ~= "" and test_case.print_matches == false then
+    return "Failed: Print output mismatch"
+  end
+  
   if test_case.expected_output and test_case.actual_output then
     local expected_signals = signals_to_lookup(test_case.expected_output)
     local actual_signals = signals_to_lookup(test_case.actual_output)
     
-    -- Check for value mismatches first
+    -- Check for value mismatches
     local signal_name, actual_count, expected_count = find_value_mismatch(expected_signals, actual_signals)
     if signal_name then
       return "Failed: " .. signal_name .. " = " .. actual_count .. " (expected " .. expected_count .. ")"

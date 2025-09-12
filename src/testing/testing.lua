@@ -55,16 +55,36 @@ end
 
 function testing.evaluate_test_case(uid, red, green, options)
   local ai_combinator = storage.combinators[uid]
+  local captured_print = ""
 
 	local env_ro = {
 		uid = uid,
 		out = {},
 		red = red,
 		green = green,
-    vars = options.vars or {}
+    var = {},
   }
+  
+  -- Set up variables from options
+  if options and options.vars then
+    for name, value in pairs(options.vars) do
+      env_ro.var[name] = value
+    end
+  end
+  
   testing.env.game = {}
   testing.env.game.tick = options and options.game_tick or 1
+  testing.env.game.print = function(...)
+    local args = {...}
+    local str_args = {}
+    for i, arg in ipairs(args) do
+      str_args[i] = tostring(arg)
+    end
+    if #captured_print > 0 then
+      captured_print = captured_print .. "\n"
+    end
+    captured_print = captured_print .. table.concat(str_args, "\t")
+  end
 	setmetatable(env_ro, {__index=testing.env})
   func, err = load(ai_combinator.code, ai_combinator.code, 't', env_ro)
   
@@ -77,7 +97,37 @@ function testing.evaluate_test_case(uid, red, green, options)
     env_ro.out = {}
   end
 
-  return expand_signal_short_names_and_remove_zeroes(env_ro.out)
+  return expand_signal_short_names_and_remove_zeroes(env_ro.out), captured_print
+end
+
+function testing.strip_factorio_markup(text)
+  if not text then return "" end
+  
+  -- Remove Factorio markup tags like [color=red], [/color], [font=default-bold], etc.
+  local stripped = text
+  
+  -- Remove opening tags like [color=red], [font=default-bold], [item=iron-plate], etc.
+  stripped = stripped:gsub("%[%w+[=%w%-]*%]", "")
+  
+  -- Remove closing tags like [/color], [/font], etc.
+  stripped = stripped:gsub("%[/%w+%]", "")
+  
+  -- Remove locale tags like __ENTITY__iron-chest__
+  stripped = stripped:gsub("__%w+__[%w%-]*__", "")
+  
+  return stripped
+end
+
+function testing.print_output_matches(expected, actual)
+  if not expected or expected == "" then
+    return true -- No expected output means any output is acceptable
+  end
+  
+  local stripped_expected = testing.strip_factorio_markup(expected)
+  local stripped_actual = testing.strip_factorio_markup(actual)
+  
+  -- Check if actual contains expected (partial match)
+  return stripped_actual:find(stripped_expected, 1, true) ~= nil
 end
 
 function testing.compare_outputs(expected, actual)
@@ -131,24 +181,60 @@ local function associative_to_signals(associative_array)
   return result
 end
 
+local function variables_to_associative(variables_array)
+  local result = {}
+  if variables_array then
+    for i, var in ipairs(variables_array) do
+      if var and var.name and var.name ~= "" then
+        result[var.name] = var.value or 0
+      end
+    end
+  end
+  return result
+end
+
 function testing.on_test_case_updated(event)
   local mlc = storage.combinators[event.uid]
   if not mlc or not mlc.test_cases or not mlc.test_cases[event.test_index] then return end
 
   local test_case = mlc.test_cases[event.test_index]
 
-  local out = testing.evaluate_test_case(event.uid, signals_to_associative(test_case.red_input), signals_to_associative(test_case.green_input), {vars = {}})
+  -- Prepare advanced options
+  local options = {
+    vars = variables_to_associative(test_case.variables),
+    game_tick = test_case.game_tick or 1
+  }
+
+  local out, actual_print = testing.evaluate_test_case(
+    event.uid, 
+    signals_to_associative(test_case.red_input), 
+    signals_to_associative(test_case.green_input), 
+    options
+  )
   local expected = signals_to_associative(test_case.expected_output)
 
   test_case.actual_output = associative_to_signals(out)
+  test_case.actual_print = actual_print
 
-  local equal, only_in_expected, only_in_actual = testing.compare_outputs(expected, out)
+  local signals_equal, only_in_expected, only_in_actual = testing.compare_outputs(expected, out)
+  local print_matches = testing.print_output_matches(test_case.expected_print, actual_print)
+  
+  -- Test passes if both signals and print output match
+  local overall_success = signals_equal and print_matches
 
-  test_case.success = equal
+  test_case.success = overall_success
   test_case.only_in_expected = only_in_expected
   test_case.only_in_actual = only_in_actual
+  test_case.print_matches = print_matches
 
-  event_handler.raise_event(constants.events.on_test_case_evaluated, {uid = event.uid, test_index = event.test_index, success = equal, only_in_expected = only_in_expected, only_in_actual = only_in_actual})
+  event_handler.raise_event(constants.events.on_test_case_evaluated, {
+    uid = event.uid, 
+    test_index = event.test_index, 
+    success = overall_success, 
+    only_in_expected = only_in_expected, 
+    only_in_actual = only_in_actual,
+    print_matches = print_matches
+  })
 end
 
 event_handler.add_handler(constants.events.on_test_case_updated, testing.on_test_case_updated)
