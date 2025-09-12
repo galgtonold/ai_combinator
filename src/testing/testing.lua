@@ -206,9 +206,9 @@ function testing.on_test_case_updated(event)
   }
 
   local out, actual_print = testing.evaluate_test_case(
-    event.uid, 
-    signals_to_associative(test_case.red_input), 
-    signals_to_associative(test_case.green_input), 
+    event.uid,
+    signals_to_associative(test_case.red_input),
+    signals_to_associative(test_case.green_input),
     options
   )
   local expected = signals_to_associative(test_case.expected_output)
@@ -229,9 +229,9 @@ function testing.on_test_case_updated(event)
 
   event_handler.raise_event(constants.events.on_test_case_evaluated, {
     uid = event.uid, 
-    test_index = event.test_index, 
+    test_index = event.test_index,
     success = overall_success, 
-    only_in_expected = only_in_expected, 
+    only_in_expected = only_in_expected,
     only_in_actual = only_in_actual,
     print_matches = print_matches
   })

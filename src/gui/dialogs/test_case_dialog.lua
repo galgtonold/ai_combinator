@@ -16,7 +16,7 @@ local function signals_to_lookup(signal_array)
   
   for _, signal in ipairs(signal_array) do
     if signal and signal.signal then
-      lookup[signal.signal.name] = signal.count or 0
+      lookup[signal.signal.name or signal.signal] = signal.count or 0
     end
   end
   return lookup

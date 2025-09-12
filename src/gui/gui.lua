@@ -10,7 +10,6 @@ local vars_dialog = require('src/gui/dialogs/vars_dialog')
 local set_task_dialog = require('src/gui/dialogs/set_task_dialog')
 local set_description_dialog = require('src/gui/dialogs/set_description_dialog')
 local edit_code_dialog = require('src/gui/dialogs/edit_code_dialog')
-local test_case_dialog = require('src/gui/dialogs/test_case_dialog')
 local ai_combinator_dialog = require('src/gui/dialogs/ai_combinator_dialog')
 
 
@@ -302,21 +301,6 @@ function guis.on_gui_click(event)
   if element.tags and element.tags.uid then
     if element.tags.description_add or element.tags.description_edit then
       set_description_dialog.show(event.player_index, element.tags.uid)
-      return
-    end
-        
-    if element.tags.auto_generate_tests then
-      guis.auto_generate_test_cases(element.tags.uid)
-      return
-    end
-    
-    if element.tags.edit_test_case then
-      test_case_dialog.show(event.player_index, element.tags.uid, element.tags.edit_test_case)
-      return
-    end
-    
-    if element.tags.delete_test_case then
-      guis.delete_test_case(element.tags.uid, element.tags.delete_test_case)
       return
     end
   end

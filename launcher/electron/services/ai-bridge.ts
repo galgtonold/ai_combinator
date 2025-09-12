@@ -61,6 +61,70 @@ FUNCTION DECLARATIONS ARE ALSO ANONYMOUS FUNCTIONS; YOU CANNOT USE THEM DUE TO T
 Now process this user request:
 `;
 
+const TEST_GENERATION_PROMPT = `
+You are an expert Factorio Moon Logic combinator AI. Your task is to generate comprehensive test cases for a given combinator implementation.
+
+CONTEXT:
+The Moon Logic combinator runs Lua code in a sandboxed environment with these features:
+- Inputs: \`red\`/\`green\` (read-only signal tables, e.g., \`red['iron-ore'] = 50\`)
+- Output: \`out\` (write signals, e.g., \`out['signal-A'] = 1\`)
+- Persistence: \`var\` (stores values between runs, e.g., \`var.counter = 5\`)
+- Timing: \`delay\` (ticks until next run, e.g., \`delay = 60\` means run again in 1 second)
+- Available: \`game.tick\`, math/bit32/table functions, game.print() with Factorio Rich Text
+- All signals are integer numbers
+- Signal names: 'signal-A' through 'signal-Z', 'iron-ore', 'copper-ore', etc.
+
+TESTING SYSTEM:
+Test cases evaluate the code by providing input signals and comparing expected vs actual outputs.
+Each test case can specify:
+- red_input: Array of {signal: "signal-name", count: number}
+- green_input: Array of {signal: "signal-name", count: number}  
+- expected_output: Array of {signal: "signal-name", count: number}
+- variables: Array of {name: "var_name", value: number} for pre-setting var.name
+- game_tick: Number (optional, defaults to 1)
+- expected_print: String (optional, for testing game.print output)
+
+OUTPUT FORMAT:
+Generate ONLY a JSON array of test case objects. NO explanations, markdown, or extra text.
+
+Example format:
+[
+  {
+    "name": "Basic threshold test",
+    "red_input": [{"signal": "iron-ore", "count": 150}],
+    "green_input": [],
+    "expected_output": [{"signal": "signal-A", "count": 1}],
+    "variables": [],
+    "game_tick": 1
+  },
+  {
+    "name": "Below threshold test", 
+    "red_input": [{"signal": "iron-ore", "count": 50}],
+    "green_input": [],
+    "expected_output": [],
+    "variables": [],
+    "game_tick": 1
+  }
+]
+
+REQUIREMENTS:
+1. Generate 3-8 test cases based on code complexity
+2. Cover edge cases: zero values, boundary conditions, state transitions
+3. Test different input combinations (red vs green wires)
+4. Test persistence with var if used in code
+5. Test timing with different game_tick values if delay is used
+6. Test print output if game.print is used
+7. Use realistic Factorio signal names
+8. Ensure test names are descriptive
+
+TASK DESCRIPTION: {task_description}
+
+SOURCE CODE TO TEST:
+{source_code}
+
+Generate comprehensive test cases for this implementation:
+`;
+
 export class AIBridge {
   private listenPort: number;
   private responsePort: number;
@@ -146,6 +210,31 @@ export class AIBridge {
     }
   }
 
+  private async callAIForTestGeneration(prompt: string): Promise<string> {
+    try {
+      console.log(`Calling ${this.provider} API for test generation with model ${this.model}...`);
+      const startTime = Date.now();
+      
+      // Get the appropriate provider
+      const provider = this.getAIProvider();
+      
+      // Make API call using the generateText function
+      const { text } = await generateText({
+        model: provider(this.model),
+        prompt: prompt,
+        temperature: 0.3 // Slightly higher temperature for more diverse test cases
+      });
+      
+      const endTime = Date.now();
+      console.log(`AI Test Generation Response (took ${(endTime - startTime) / 1000}s)`);
+      
+      return text;
+    } catch (error) {
+      console.error('AI API Error during test generation:', error);
+      return `ERROR: ${error.message}`;
+    }
+  }
+
   private sendResponse(message: string | object) {
     if (typeof message === 'object') {
       message = JSON.stringify(message);
@@ -182,6 +271,8 @@ export class AIBridge {
       
       if (payload.type === 'task_request') {
         await this.handleTaskRequest(payload.uid, payload.task_text);
+      } else if (payload.type === 'test_generation_request') {
+        await this.handleTestGenerationRequest(payload.uid, payload.task_description, payload.source_code);
       } else if (payload.type === 'ping_request') {
         this.handlePingRequest(payload.uid || 0);
       }
@@ -206,6 +297,30 @@ export class AIBridge {
       type: 'task_request_completed',
       uid: uid,
       response: apiResponse
+    });
+  }
+
+  private async handleTestGenerationRequest(uid: number, taskDescription: string, sourceCode: string) {
+    console.log('Handling test generation request for task:', taskDescription);
+    
+    // Build the test generation prompt
+    const prompt = TEST_GENERATION_PROMPT
+      .replace('{task_description}', taskDescription || 'No task description provided')
+      .replace('{source_code}', sourceCode || 'No source code provided');
+    
+    // Call AI API for test generation
+    const startTime = Date.now();
+    const apiResponse = await this.callAIForTestGeneration(prompt);
+    const endTime = Date.now();
+    
+    console.log(`AI Test Generation Response (took ${(endTime - startTime) / 1000}s):`);
+    console.log(apiResponse);
+    
+    // Send response back via UDP
+    this.sendResponse({
+      type: 'test_generation_completed',
+      uid: uid,
+      test_cases: apiResponse
     });
   }
 

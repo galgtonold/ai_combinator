@@ -1,6 +1,9 @@
 local event_handler = require("src/events/event_handler")
 local constants = require("src/core/constants")
-local testing = require("src/testing/testing")
+local circuit_network = require('src/core/circuit_network')
+local test_case_dialog = require('src/gui/dialogs/test_case_dialog')
+local bridge = require("src/services/bridge")
+
 
 local component = {}
 
@@ -193,6 +196,70 @@ local function on_test_case_evaluated(event)
   component.update(event.uid)
 end
 
+local function on_test_generation_completed(event)
+  local mlc = storage.combinators[event.uid]
+  if not mlc then return end
+  
+  -- Parse the AI response
+  local test_cases_json = event.test_cases
+  
+  -- Try to parse JSON
+  local success, parsed_test_cases = pcall(helpers.json_to_table, test_cases_json)
+  
+  if not success or not parsed_test_cases or type(parsed_test_cases) ~= "table" then
+    game.print("[color=red]Failed to generate test cases: Invalid AI response format[/color]")
+    return
+  end
+  
+  -- Initialize test cases if needed
+  if not mlc.test_cases then
+    mlc.test_cases = {}
+  end
+  
+  -- Append generated test cases
+  local added_count = 0
+  for _, generated_test in ipairs(parsed_test_cases) do
+    for _, signal in ipairs(generated_test.red_input or {}) do
+      signal.signal = circuit_network.cn_sig(signal.signal)
+    end
+    for _, signal in ipairs(generated_test.green_input or {}) do
+      signal.signal = circuit_network.cn_sig(signal.signal)
+    end
+    for _, signal in ipairs(generated_test.expected_output or {}) do
+      signal.signal = circuit_network.cn_sig(signal.signal)
+    end
+
+    if type(generated_test) == "table" and generated_test.name then
+      table.insert(mlc.test_cases, {
+        name = generated_test.name or ("Generated Test " .. (#mlc.test_cases + 1)),
+        red_input = generated_test.red_input or {},
+        green_input = generated_test.green_input or {},
+        expected_output = generated_test.expected_output or {},
+        actual_output = {},
+        variables = generated_test.variables or {},
+        game_tick = generated_test.game_tick or 1,
+        expected_print = generated_test.expected_print or "",
+        success = false
+      })
+      added_count = added_count + 1
+      
+      -- Evaluate the new test case
+      local test_index = #mlc.test_cases
+      event_handler.raise_event(constants.events.on_test_case_updated, {
+        uid = event.uid,
+        test_index = test_index
+      })
+    end
+  end
+  
+  if added_count > 0 then
+    game.print(string.format("[color=green]Successfully generated and added %d test cases[/color]", added_count))
+    component.update(event.uid)
+  else
+    game.print("[color=yellow]No valid test cases could be extracted from AI response[/color]")
+  end
+end
+
 local function delete_test_case(uid, test_index)
   local mlc = storage.combinators[uid]
   if not mlc or not mlc.test_cases then return end
@@ -224,11 +291,18 @@ local function add_test_case(uid)
 end
 
 local function auto_generate_test_cases(uid)
-  -- Placeholder for auto-generation logic
   local mlc = storage.combinators[uid]
   if not mlc then return end
   
-  -- TODO: Implement auto-generation based on current inputs/outputs
+  -- Get task description and source code
+  local task_description = mlc.task or "No task description available"
+  local source_code = mlc.code or "No source code available"
+  
+  -- Send test generation request via bridge
+  bridge.send_test_generation_request(uid, task_description, source_code)
+  
+  -- Show feedback to user
+  game.print("[color=yellow]Generating test cases with AI...[/color]")
 end
 
 local function on_gui_click(event)
@@ -243,11 +317,14 @@ local function on_gui_click(event)
     component.update(uid)
   elseif event.element.tags.auto_generate_tests then
     auto_generate_test_cases(event.element.tags.uid)
+  elseif event.element.tags.edit_test_case then
+    test_case_dialog.show(event.player_index, event.element.tags.uid, event.element.tags.edit_test_case)
   end
 end
 
 event_handler.add_handler(constants.events.on_test_case_evaluated, on_test_case_evaluated)
 event_handler.add_handler(constants.events.on_test_case_name_updated, on_test_case_evaluated)
+event_handler.add_handler(constants.events.on_test_generation_completed, on_test_generation_completed)
 event_handler.add_handler(defines.events.on_gui_click, on_gui_click)
 
 

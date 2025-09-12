@@ -26,6 +26,16 @@ function bridge.send_task_request(uid, task_text)
   send_message(payload)
 end
 
+function bridge.send_test_generation_request(uid, task_description, source_code)
+  local payload = {
+    type = "test_generation_request",
+    uid = uid,
+    task_description = task_description,
+    source_code = source_code
+  }
+  send_message(payload)
+end
+
 function bridge.send_ping_request(uid)
   local payload = {
     type = "ping_request",
@@ -79,6 +89,8 @@ local function handle_message(event)
   end
   if payload.type == "task_request_completed" then
     event_handler.raise_event(constants.events.on_task_request_completed, payload)
+  elseif payload.type == "test_generation_completed" then
+    event_handler.raise_event(constants.events.on_test_generation_completed, payload)
   elseif payload.type == "ping_response" then
     -- Check if this is a response to our bridge availability check
     if payload.uid == bridge_check_state.check_uid and bridge_check_state.active then

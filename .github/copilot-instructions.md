@@ -113,3 +113,7 @@ For terminal commands always use powershell syntax. Especially use ; instead of 
 When trying to run npm always navigate to the launcher directory.
 Especially if you want to launch the electron app, this is what you should do:
 cd "c:\Users\...\AppData\Roaming\Factorio\mods\ai_combinator\launcher"; npm run dev
+
+
+
+In factorio lua all imports need to happen at a top level. Do not put them into functions or conditionals.
