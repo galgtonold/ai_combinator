@@ -267,6 +267,41 @@ function component.update(uid, test_index)
   if not gui_t or not gui_t.test_case_advanced_content then
     return
   end
+
+  local mlc = storage.combinators[uid]
+  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then
+    return
+  end
+
+  local test_case = mlc.test_cases[test_index]
+  local advanced_content = gui_t.test_case_advanced_content
+  
+  if advanced_content and advanced_content.valid then
+    -- Try to find and update only the actual print label to avoid focus loss
+    local actual_print_element = nil
+    for _, element in pairs(gui_t.el_map) do
+      if element.valid and element.name == "actual-print-label" and element.tags and element.tags.test_index == test_index then
+        actual_print_element = element
+        break
+      end
+    end
+    
+    if actual_print_element then
+      -- Only update the actual print output, preserving all other UI state
+      actual_print_element.caption = test_case.actual_print or "(none)"
+    else
+      -- Fallback to full rebuild only if we can't find the element
+      -- This preserves the old behavior as a safety net
+      component.update_content(advanced_content, uid, test_index)
+    end
+  end
+end
+
+function component.rebuild(uid, test_index)
+  local gui_t = storage.guis[uid]
+  if not gui_t or not gui_t.test_case_advanced_content then
+    return
+  end
   
   local advanced_content = gui_t.test_case_advanced_content
   if advanced_content and advanced_content.valid then
@@ -306,7 +341,7 @@ local function add_variable(uid, test_index)
     name = "var" .. new_var_index,
     value = 0
   })
-  component.update(uid, test_index)
+  component.rebuild(uid, test_index)
   
   -- Trigger test case re-evaluation
   event_handler.raise_event(constants.events.on_test_case_updated, {
@@ -324,7 +359,7 @@ local function delete_variable(uid, test_index, var_index)
   local test_case = mlc.test_cases[test_index]
   if test_case.variables and test_case.variables[var_index] then
     table.remove(test_case.variables, var_index)
-    component.update(uid, test_index)
+    component.rebuild(uid, test_index)
     
     -- Trigger test case re-evaluation
     event_handler.raise_event(constants.events.on_test_case_updated, {
