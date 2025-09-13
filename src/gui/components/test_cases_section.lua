@@ -187,7 +187,7 @@ function component.update(uid)
       caption = "No test cases defined. Click + to add one or use Auto Generate.",
       style = "label"
     }
-    empty_label.style.font_color = {0.6, 0.6, 0.6}
+    empty_label.style.font_color = {0.5, 0.5, 0.5}
     empty_label.style.top_margin = 8
   end
 end

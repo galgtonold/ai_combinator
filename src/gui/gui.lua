@@ -222,20 +222,26 @@ function guis.update_description_ui(uid)
   end
 end
 
+local function update_all_test_cases(uid)
+  local mlc = storage.combinators[uid]
+  if not mlc or not mlc.test_cases then return end
+  for i, _ in ipairs(mlc.test_cases) do
+    event_handler.raise_event(constants.events.on_test_case_updated, {
+      uid = uid,
+      test_index = i,
+    })
+  end
+end
+
 
 event_handler.add_handler(constants.events.on_code_updated, function(event)
   guis.save_code(event.uid, event.code)
 
-  -- raise test case update for every test case
-  local mlc = storage.combinators[event.uid]
-  if mlc and mlc.test_cases then
-    for i, _ in ipairs(mlc.test_cases) do
-      event_handler.raise_event(constants.events.on_test_case_updated, {
-        uid = event.uid,
-        test_index = i,
-      })
-    end
-  end
+  update_all_test_cases(event.uid)
+end)
+
+event_handler.add_handler(constants.events.on_task_request_completed, function(event)
+  update_all_test_cases(event.uid)
 end)
 
 function guis.handle_task_dialog_click(event)

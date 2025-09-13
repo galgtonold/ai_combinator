@@ -28,25 +28,16 @@ function component.show(parent, uid, test_index)
     name = "test-case-advanced-section",
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
-  advanced_section.style.top_margin = 16
+  advanced_section.style.top_margin = 8
   
-  local advanced_header = advanced_section.add{
-    type = "flow",
-    direction = "horizontal",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
-  }
-  advanced_header.style.vertical_align = "center"
-  
-  advanced_header.add{type = "label", caption = "Advanced", style = "semibold_label"}
-  
-  local advanced_toggle = advanced_header.add{
+  local advanced_toggle = advanced_section.add{
     type = "checkbox",
+    style = "caption_checkbox",
+    caption = "Advanced options",
     state = test_case.show_advanced or false,
     name = "advanced-toggle",
     tags = {uid = uid, test_index = test_index, advanced_toggle = true}
   }
-  advanced_toggle.style.left_margin = 8
-  advanced_toggle.style.vertical_align = "center"
   add_to_map(advanced_toggle)
   
   -- Advanced content (only show if toggled)
@@ -54,10 +45,10 @@ function component.show(parent, uid, test_index)
     type = "flow",
     direction = "vertical",
     name = "advanced-content",
+    style = "packed_vertical_flow",
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
   advanced_content.visible = test_case.show_advanced or false
-  advanced_content.style.top_margin = 8
   
   -- Store reference for updates
   gui_t.test_case_advanced_content = advanced_content
@@ -88,36 +79,14 @@ function component.update_content(advanced_content, uid, test_index)
   -- Clear existing content
   advanced_content.clear()
   
-  -- Game tick input
-  local tick_flow = advanced_content.add{
-    type = "flow",
-    direction = "horizontal",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
-  }
-  tick_flow.add{type = "label", caption = "Game Tick:", style = "caption_label"}
-  tick_flow.children[1].style.width = 120
-  
-  local tick_input = tick_flow.add{
-    type = "textfield",
-    text = tostring(test_case.game_tick or 0),
-    numeric = true,
-    allow_negative = false,
-    name = "tick-input",
-    tags = {uid = uid, test_index = test_index, test_tick_input = true}
-  }
-  tick_input.style.width = 100
-  tick_input.style.left_margin = 8
-  add_to_map(tick_input)
-  
   -- Variables section
   local vars_header = advanced_content.add{
     type = "flow",
     direction = "horizontal",
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
-  vars_header.style.top_margin = 12
   
-  vars_header.add{type = "label", caption = "Variables:", style = "caption_label"}
+  vars_header.add{type = "label", caption = "Variables [img=info]", style = "label", tooltip = "Internal variables that can be used to keep state. Look at the implementation for available variables."}
   
   local add_var_btn = vars_header.add{
     type = "sprite-button",
@@ -142,6 +111,7 @@ function component.update_content(advanced_content, uid, test_index)
       tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
     }
     vars_scroll.style.top_margin = 4
+    vars_scroll.style.bottom_margin = 4
     vars_scroll.style.maximal_height = 120
     vars_scroll.style.horizontally_stretchable = true
     
@@ -214,50 +184,75 @@ function component.update_content(advanced_content, uid, test_index)
       style = "label",
       name = "empty-variables-label"
     }
-    empty_label.style.font_color = {0.6, 0.6, 0.6}
-    empty_label.style.top_margin = 8
+    empty_label.style.font_color = {0.5, 0.5, 0.5}
+    empty_label.style.top_margin = 4
+    empty_label.style.bottom_margin = 4
   end
   
-  -- Expected print output section
-  local print_flow = advanced_content.add{
-    type = "flow",
-    direction = "horizontal",
+  -- Create a table for Game Tick, Expected Print, and Actual Print
+  local print_table = advanced_content.add{
+    type = "table",
+    column_count = 3,
+    name = "print-table",
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
-  print_flow.style.top_margin = 12
+  print_table.style.top_margin = 8
+  print_table.style.horizontal_spacing = 4
+  print_table.style.vertical_spacing = 2
   
-  print_flow.add{type = "label", caption = "Expected Print:", style = "caption_label"}
-  print_flow.children[1].style.width = 120
+  -- Row 1: Labels
+  local tick_label = print_table.add{
+    type = "label",
+    caption = "Game Tick [img=info]",
+    style = "label",
+    tooltip = "The game tick at which the test case should be evaluated."
+  }
+  tick_label.style.width = 120
   
-  local print_input = print_flow.add{
+  local expected_label = print_table.add{
+    type = "label",
+    caption = "Expected Print [img=info]",
+    style = "label",
+    tooltip = "Text that is expected to be contained in the print output of the combinator.\nAlways passes when empty."
+  }
+  expected_label.style.width = 200
+  
+  local actual_label = print_table.add{
+    type = "label",
+    caption = "Actual Print [img=info]",
+    style = "label",
+    tooltip = "The actual print output the combinator would produce for this test case."
+  }
+  actual_label.style.width = 200
+  
+  -- Row 2: Inputs/Values
+  local tick_input = print_table.add{
+    type = "textfield",
+    text = tostring(test_case.game_tick or 0),
+    numeric = true,
+    allow_negative = false,
+    name = "tick-input",
+    tags = {uid = uid, test_index = test_index, test_tick_input = true}
+  }
+  tick_input.style.width = 120
+  add_to_map(tick_input)
+  
+  local print_input = print_table.add{
     type = "textfield",
     text = test_case.expected_print or "",
     name = "print-input",
     tags = {uid = uid, test_index = test_index, test_print_input = true}
   }
-  print_input.style.width = 300
-  print_input.style.left_margin = 8
+  print_input.style.width = 200
   add_to_map(print_input)
   
-  -- Actual print output (read-only)
-  local actual_print_flow = advanced_content.add{
-    type = "flow",
-    direction = "horizontal",
-    tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
-  }
-  actual_print_flow.style.top_margin = 8
-  
-  actual_print_flow.add{type = "label", caption = "Actual Print:", style = "caption_label"}
-  actual_print_flow.children[1].style.width = 120
-  
-  local actual_print_label = actual_print_flow.add{
+  local actual_print_label = print_table.add{
     type = "label",
     caption = test_case.actual_print or "(none)",
     name = "actual-print-label",
     tags = {uid = uid, test_index = test_index}
   }
-  actual_print_label.style.left_margin = 8
-  actual_print_label.style.width = 300
+  actual_print_label.style.width = 200
   actual_print_label.style.single_line = false
   add_to_map(actual_print_label)
 end

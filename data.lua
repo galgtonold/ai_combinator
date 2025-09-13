@@ -7,10 +7,10 @@ styles["ugg_deep_frame"] = {
   parent = "slot_button_deep_frame",
   vertically_stretchable = "on",
   horizontally_stretchable = "on",
-  top_margin = 8,
+  --top_margin = 8,
   --left_margin = 8,
-  right_margin = 8,
-  bottom_margin = 4
+  --right_margin = 8,
+  --bottom_margin = 4
 }
 
 -- ----- Main combinator entity

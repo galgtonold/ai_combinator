@@ -133,16 +133,14 @@ function dialog.show(player_index, uid, test_index)
     direction = "vertical",
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
-  input_section.style.top_margin = 16
   
-  input_section.add{type = "label", caption = "Inputs", style = "semibold_label"}
+  input_section.add{type = "label", caption = "Inputs", style = "caption_label"}
   
   local inputs_flow = input_section.add{
     type = "flow",
     direction = "horizontal",
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
-  inputs_flow.style.top_margin = 8
   
   -- Red input with minimal styling
   local red_section = inputs_flow.add{
@@ -150,9 +148,9 @@ function dialog.show(player_index, uid, test_index)
     direction = "vertical",
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
-  red_section.style.width = 250
+  red_section.style.width = 240
   
-  red_section.add{type = "label", caption = "Red", style = "caption_label"}
+  red_section.add{type = "label", caption = "Red", style = "semibold_label"}
   
   local red_signal_panel = red_section.add{
     type = "flow",
@@ -160,7 +158,6 @@ function dialog.show(player_index, uid, test_index)
     name = "red-signal-panel",
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
-  red_signal_panel.style.top_margin = 4
   
   compact_signal_panel.show(red_signal_panel, test_case.red_input or {}, uid, test_index, "red")
   
@@ -170,10 +167,10 @@ function dialog.show(player_index, uid, test_index)
     direction = "vertical",
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
-  green_section.style.width = 250
-  green_section.style.left_margin = 30
+  green_section.style.width = 240
+  green_section.style.left_margin = 40
   
-  green_section.add{type = "label", caption = "Green", style = "caption_label"}
+  green_section.add{type = "label", caption = "Green", style = "semibold_label"}
   
   local green_signal_panel = green_section.add{
     type = "flow",
@@ -181,7 +178,6 @@ function dialog.show(player_index, uid, test_index)
     name = "green-signal-panel",
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
-  green_signal_panel.style.top_margin = 4
   
   compact_signal_panel.show(green_signal_panel, test_case.green_input or {}, uid, test_index, "green")
   
@@ -191,9 +187,8 @@ function dialog.show(player_index, uid, test_index)
     direction = "vertical",
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
-  expected_section.style.top_margin = 16
   
-  expected_section.add{type = "label", caption = "Expected Output", style = "semibold_label"}
+  expected_section.add{type = "label", caption = "Expected Output", style = "caption_label"}
   
   local expected_signal_panel = expected_section.add{
     type = "flow",
@@ -201,7 +196,6 @@ function dialog.show(player_index, uid, test_index)
     name = "expected-signal-panel",
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
-  expected_signal_panel.style.top_margin = 8
   
   compact_signal_panel.show(expected_signal_panel, test_case.expected_output or {}, uid, test_index, "expected")
   
@@ -211,9 +205,8 @@ function dialog.show(player_index, uid, test_index)
     direction = "vertical",
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
-  actual_section.style.top_margin = 16
   
-  actual_section.add{type = "label", caption = "Actual Output (Live)", style = "semibold_label"}
+  actual_section.add{type = "label", caption = "Actual Output (Live)", style = "caption_label"}
   
   local actual_signal_panel = actual_section.add{
     type = "flow",
@@ -221,7 +214,6 @@ function dialog.show(player_index, uid, test_index)
     name = "actual-signal-panel",
     tags = {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index},
   }
-  actual_signal_panel.style.top_margin = 8
   
   compact_signal_panel.show(actual_signal_panel, test_case.actual_output or {}, uid, test_index, "actual")
   
