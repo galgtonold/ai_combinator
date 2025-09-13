@@ -34,13 +34,15 @@ function component.show(parent, style, signal_with_count, editable, button_tags,
   end
   button.locked = not editable
 
-  if editable and signal_with_count.count and signal_with_count.count ~= 0 then
+  if editable and signal_with_count.count then
       edit_button_tags = edit_button_tags or {}
+      local formatted_count = utils.format_number(signal_with_count.count)
+      local tooltip = "[font=default-bold]Edit quantity[/font]\nCurrent: [color=yellow]" .. formatted_count .. "[/color]"
       local edit_button = flow.add{
         type = "sprite-button",
         sprite = "utility/rename_icon",
         style = "mini_button",
-        tooltip = "Edit quantity",
+        tooltip = tooltip,
         tags = utils.merge(edit_button_tags, {edit_signal_quantity = true, edit_signal_quantity_count = signal_with_count.count})
       }
       edit_button.style.width = 16

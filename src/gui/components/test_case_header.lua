@@ -28,7 +28,7 @@ function component.show(parent, uid, test_index)
 
   gui_t.test_case_name_label = name_label
 
-  local name_edit_button = name_heading.add{
+  name_heading.add{
     type = "sprite-button",
     sprite = "utility/rename_icon",
     style = "mini_button",
@@ -47,8 +47,10 @@ local function on_gui_click(event)
   if not element.valid or not element.tags then return end
 
   if element.tags.edit_test_case_name then
+    local mlc = storage.combinators[element.tags.uid]
+    local current_name = mlc.test_cases[element.tags.test_index].name
     local location = gui_utils.get_position_relative_to_window(element, 25, 100)
-    set_test_case_name_dialog.show(event.player_index, element.tags.uid, location, element.tags.edit_signal_quantity_count, {uid = element.tags.uid, test_index = element.tags.test_index})
+    set_test_case_name_dialog.show(event.player_index, element.tags.uid, location, current_name, {uid = element.tags.uid, test_index = element.tags.test_index})
   end
 end
 
