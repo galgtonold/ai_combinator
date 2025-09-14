@@ -1,5 +1,7 @@
 local event_handler = require('src/events/event_handler')
 local config = require('src/core/config')
+local constants = require('src/core/constants')
+local ai_operation_manager = require('src/core/ai_operation_manager')
 
 local signal_table = require('src/gui/components/signal_table')
 local titlebar = require('src/gui/components/titlebar')
@@ -62,6 +64,22 @@ local function update_signals(uid)
   )
 end
 
+local function update_ai_buttons(uid)
+  local gui_t = storage.guis[uid]
+  
+  if not gui_t then
+    return
+  end
+  
+  -- Check if any AI operation is in progress
+  local ai_operation_in_progress = ai_operation_manager.is_operation_active(uid)
+  
+  -- Update Set Task button if it exists
+  if gui_t.mlc_set_task then
+    gui_t.mlc_set_task.enabled = not ai_operation_in_progress
+  end
+end
+
 local function update_status(uid)
   local gui_t = storage.guis[uid]
   local mlc = storage.combinators[uid]
@@ -100,8 +118,10 @@ local function update_status(uid)
     sprite = "utility/status_yellow"
   end
   
-  if mlc.task_request_time then
-    status_text = "Evaluating task"
+  -- Check for AI operations using the new manager
+  local operation_status = ai_operation_manager.get_operation_status_text(uid)
+  if operation_status then
+    status_text = operation_status
     sprite = "utility/status_yellow"
   end
 
@@ -113,16 +133,14 @@ local function update_status(uid)
   -- Update status using the status_indicator component
   status_indicator.update(status_flow, sprite, status_text)
 
-  -- Update task request progress_bar
+  -- Update task request progress_bar using the new manager
   local progress_bar = gui_t.mlc_progressbar
-  if mlc.task_request_time then
-    local elapsed_seconds = (game.tick - mlc.task_request_time) / 60
-    local half_life_seconds = 7
-    progress_bar.value = 1 - 0.5 ^ (elapsed_seconds / half_life_seconds)
-    progress_bar.visible = true
-  else
-    progress_bar.visible = false
-  end
+  local operation_progress = ai_operation_manager.get_operation_progress(uid)
+  progress_bar.value = operation_progress
+  progress_bar.visible = true
+  
+  -- Update AI operation buttons
+  update_ai_buttons(uid)
 end
 
 function dialog.show(player, entity)
@@ -175,13 +193,13 @@ function dialog.show(player, entity)
   entity_preview.style.natural_height = 152
   entity_preview.style.horizontally_stretchable = true
   
+  elc(entity_frame, {type='progressbar', name='mlc-progressbar', value=0, style='production_progressbar'}, {horizontally_stretchable=true})
+  
   elc(entity_frame, {type='label', name='mlc-task-title-label', caption='Task', style="semibold_label"})
 
   local task_label = elc(entity_frame, {type='label', name='mlc-task-label'}, {horizontally_squashable=true, single_line=false})
   task_label.caption = mlc.task or NO_TASK_SET_DESCRIPTION
   task_label.style.maximal_width = 828
-
-  elc(entity_frame, {type='progressbar', name='mlc-progressbar', value=0, style='production_progressbar'}, {horizontally_stretchable=true})
 
   elc(entity_frame, {type="button", style="green_button", name='mlc-set-task', caption='Set Task'}, {horizontally_stretchable=true})
 
@@ -233,7 +251,13 @@ function dialog.update()
 
 end
 
+-- Event handlers for AI operation state changes
+local function on_ai_operation_state_changed(event)
+  update_ai_buttons(event.uid)
+end
+
 event_handler.add_handler(defines.events.on_tick, dialog.update)
+event_handler.add_handler(constants.events.on_ai_operation_state_changed, on_ai_operation_state_changed)
 
 
 return dialog

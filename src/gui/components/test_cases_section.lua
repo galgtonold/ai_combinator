@@ -3,9 +3,13 @@ local constants = require("src/core/constants")
 local circuit_network = require('src/core/circuit_network')
 local test_case_dialog = require('src/gui/dialogs/test_case_dialog')
 local bridge = require("src/services/bridge")
+local ai_operation_manager = require('src/core/ai_operation_manager')
 
 
 local component = {}
+
+-- Forward declaration
+local update_ai_buttons
 
 function component.show(parent, uid)
   local test_cases_container = parent.add{
@@ -31,6 +35,8 @@ function component.update(uid)
   local function add_to_map(element)
     if element.name then
       gui_t.el_map[element.index] = element
+      -- Also store by name for easy access
+      gui_t[element.name:gsub('%-', '_')] = element
     end
     return element
   end
@@ -103,7 +109,7 @@ function component.update(uid)
   }
   add_to_map(auto_generate_btn)
 
-  local auto_generate_btn = header_flow.add{
+  local fix_tests_btn = header_flow.add{
     type = "button",
     name = "mlc-fix-tests",
     caption = "Fix with AI",
@@ -111,7 +117,7 @@ function component.update(uid)
     style = "green_button",
     tags = {uid = uid, fix_tests = true}
   }
-  add_to_map(auto_generate_btn)
+  add_to_map(fix_tests_btn)
 
   
   -- Condensed test cases list
@@ -190,6 +196,30 @@ function component.update(uid)
     empty_label.style.font_color = {0.5, 0.5, 0.5}
     empty_label.style.top_margin = 8
   end
+  
+  -- Update AI buttons state after creating them
+  update_ai_buttons(uid)
+end
+
+update_ai_buttons = function(uid)
+  local gui_t = storage.guis[uid]
+  
+  if not gui_t then
+    return
+  end
+  
+  -- Check if any AI operation is in progress
+  local ai_operation_in_progress = ai_operation_manager.is_operation_active(uid)
+  
+  -- Update Auto Generate Tests button if it exists
+  if gui_t.mlc_auto_generate_tests then
+    gui_t.mlc_auto_generate_tests.enabled = not ai_operation_in_progress
+  end
+  
+  -- Update Fix Tests button if it exists
+  if gui_t.mlc_fix_tests then
+    gui_t.mlc_fix_tests.enabled = not ai_operation_in_progress
+  end
 end
 
 local function on_test_case_evaluated(event)
@@ -199,6 +229,9 @@ end
 local function on_test_generation_completed(event)
   local mlc = storage.combinators[event.uid]
   if not mlc then return end
+  
+  -- Complete AI operation using the new manager
+  ai_operation_manager.complete_operation(event.uid)
   
   -- Parse the AI response
   local test_cases_json = event.test_cases
@@ -298,6 +331,9 @@ local function auto_generate_test_cases(uid)
   local task_description = mlc.task or "No task description available"
   local source_code = mlc.code or "No source code available"
   
+  -- Start AI operation using the new manager
+  ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TEST_GENERATION)
+  
   -- Send test generation request via bridge
   bridge.send_test_generation_request(uid, task_description, source_code)
   
@@ -317,14 +353,22 @@ local function on_gui_click(event)
     component.update(uid)
   elseif event.element.tags.auto_generate_tests then
     auto_generate_test_cases(event.element.tags.uid)
+  elseif event.element.tags.fix_tests then
+    -- TODO: Implement AI-powered test fixing
+    game.print("[color=yellow]Fix with AI feature coming soon![/color]")
   elseif event.element.tags.edit_test_case then
     test_case_dialog.show(event.player_index, event.element.tags.uid, event.element.tags.edit_test_case)
   end
 end
 
+local function on_ai_operation_state_changed(event)
+  update_ai_buttons(event.uid)
+end
+
 event_handler.add_handler(constants.events.on_test_case_evaluated, on_test_case_evaluated)
 event_handler.add_handler(constants.events.on_test_case_name_updated, on_test_case_evaluated)
 event_handler.add_handler(constants.events.on_test_generation_completed, on_test_generation_completed)
+event_handler.add_handler(constants.events.on_ai_operation_state_changed, on_ai_operation_state_changed)
 event_handler.add_handler(defines.events.on_gui_click, on_gui_click)
 
 

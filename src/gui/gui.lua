@@ -2,6 +2,7 @@ local event_handler = require("src/events/event_handler")
 local bridge = require("src/services/bridge")
 local utils = require("src/core/utils")
 local constants = require("src/core/constants")
+local ai_operation_manager = require('src/core/ai_operation_manager')
 
 local dialog_manager = require('src/gui/dialogs/dialog_manager')
 local variable_row = require('src/gui/components/variable_row')
@@ -68,15 +69,19 @@ function guis.save_code(uid, code)
 	local gui_t, mlc = storage.guis[uid], storage.combinators[uid]
 	if not mlc then return end
 	load_code_from_gui(code, uid)
-  mlc.task_request_time = nil -- reset task request time on code change
+  
+  -- Complete any active AI operation using the new manager
+  ai_operation_manager.complete_operation(uid)
 end
 
 function guis.set_task(uid, task)
   local mlc = storage.combinators[uid]
 	local gui_t = storage.guis[uid]
   mlc.task = task
-  mlc.task_request_time = game.tick
   gui_t.mlc_task_label.caption = task
+  
+  -- Start AI operation using the new manager
+  ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TASK_EVALUATION)
 end
 
 event_handler.add_handler(constants.events.on_description_updated, function(event)

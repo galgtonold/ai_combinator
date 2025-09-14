@@ -36,8 +36,7 @@ function component.show(parent, style, signal_with_count, editable, button_tags,
 
   if editable and signal_with_count.count then
       edit_button_tags = edit_button_tags or {}
-      local formatted_count = utils.format_number(signal_with_count.count)
-      local tooltip = "[font=default-bold]Edit quantity[/font]\nCurrent: [color=yellow]" .. formatted_count .. "[/color]"
+      local tooltip = "[font=default-bold]Edit quantity[/font]\nCurrent: [color=yellow]" .. signal_with_count.count .. "[/color]"
       local edit_button = flow.add{
         type = "sprite-button",
         sprite = "utility/rename_icon",

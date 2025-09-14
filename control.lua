@@ -9,6 +9,7 @@ local update = require('src/ai_combinator/update')
 local circuit_network = require('src/core/circuit_network')
 local memory = require('src/ai_combinator/memory')
 local sandbox = require('src/sandbox/base')
+local ai_operation_manager = require('src/core/ai_operation_manager')
 
 
 local guis = require('src/gui/gui')
@@ -487,7 +488,16 @@ event_handler.add_handler(constants.events.on_task_request_completed, function(e
 --    game.print("Error in task response: " .. event.response)
     --return
   --end
+  
+  -- Complete the AI operation using the new manager
+  ai_operation_manager.complete_operation(event.uid)
+  
   guis.save_code(event.uid, event.response)
+end)
+
+event_handler.add_handler(constants.events.on_test_generation_completed, function(event)
+  -- Complete the AI operation using the new manager
+  ai_operation_manager.complete_operation(event.uid)
 end)
 
 
