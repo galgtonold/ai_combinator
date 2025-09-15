@@ -20,15 +20,17 @@
     },
     "files": [
       "dist/**/*",
+      "assets/**/*",
+      "node_modules/**/*",
       "package.json"
     ],
     "win": {
       "target": "nsis",
-      "icon": "../graphics/mlc-item.png"
+      "icon": "assets/icon.ico"
     },
     "mac": {
       "target": "dmg",
-      "icon": "../graphics/mlc-item.png"
+      "icon": "assets/icon.png"
     },
     "nsis": {
       "oneClick": false,
@@ -71,6 +73,7 @@
     "dgram": "^1.0.1",
     "electron-reload": "^2.0.0-alpha.1",
     "update-electron-app": "^3.1.1",
-    "vite": "^7.1.2"
+    "vite": "^7.1.2",
+    "zod": "^3.25.76"
   }
 }

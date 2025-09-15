@@ -1,11 +1,17 @@
 <script lang="ts">
+  import statusGreen from '/graphics/status_green.png';
+  import statusRed from '/graphics/status_red.png';
+  import statusYellow from '/graphics/status_yellow.png';
+  
   export let status: 'success' | 'warning' | 'error' = 'warning';
   export let text: string;
+  
+  $: statusIcon = status === 'success' ? statusGreen : status === 'error' ? statusRed : statusYellow;
 </script>
 
 <div class="status-indicator">
   <img 
-    src="/graphics/status_{status === 'success' ? 'green' : status === 'error' ? 'red' : 'yellow'}.png" 
+    src={statusIcon} 
     alt="{status}" 
     class="status-icon" 
   />

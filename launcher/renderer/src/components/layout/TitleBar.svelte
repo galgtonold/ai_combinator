@@ -7,6 +7,9 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import FrameButton from '../buttons/FrameButton.svelte';
+  import draggableSpaceTop from '/graphics/draggable_space_top.png';
+  import draggableSpaceCenter from '/graphics/draggable_space_center.png';
+  import draggableSpaceBottom from '/graphics/draggable_space_bottom.png';
 
   const dispatch = createEventDispatcher();
 
@@ -23,7 +26,10 @@
   <div class="title-bar-inner">
     <div class="title-bar-text">AI Combinator Launcher</div>
     <div class="title-bar-draggable">
-      <div class="title-bar-background">
+      <div 
+        class="title-bar-background"
+        style="--draggable-space-top: url({draggableSpaceTop}); --draggable-space-center: url({draggableSpaceCenter}); --draggable-space-bottom: url({draggableSpaceBottom});"
+      >
         <div class="title-bar-top"></div>
         <div class="title-bar-center"></div>
         <div class="title-bar-bottom"></div>
@@ -92,7 +98,7 @@
   }
   
   .title-bar-top {
-    background-image: url('/graphics/draggable_space_top.png');
+    background-image: var(--draggable-space-top);
     background-repeat: repeat-x;
     background-size: auto 5px; /* Half the original height */
     height: 4px; /* Half the original height */
@@ -100,14 +106,14 @@
   }
   
   .title-bar-center {
-    background-image: url('/graphics/draggable_space_center.png');
+    background-image: var(--draggable-space-center);
     background-repeat: repeat;
     background-size: auto 5px; /* Half the original width and height */
     flex-grow: 1;
   }
   
   .title-bar-bottom {
-    background-image: url('/graphics/draggable_space_bottom.png');
+    background-image: var(--draggable-space-bottom);
     background-repeat: repeat-x;
     background-size: auto 5px; /* Half the original height */
     height: 4px; /* Half the original height */

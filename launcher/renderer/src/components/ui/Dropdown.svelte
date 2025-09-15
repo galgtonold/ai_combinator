@@ -3,6 +3,8 @@
   import NormalButton from '../buttons/NormalButton.svelte';
   import ListboxItemButton from '../buttons/ListboxItemButton.svelte';
   import '../../styles/factorio-dropdown.css';
+  import dropdownArrow from '/graphics/dropdown.png';
+  
   export let value: string;
   export let options: { value: string; label: string }[];
   export let onChange: (value: string) => void = () => {};
@@ -34,7 +36,7 @@
     <NormalButton clicked={open} size="medium" fullWidth={true}>
       <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
         <span style="text-align: left;">{options.find(o => o.value === value)?.label ?? ''}</span>
-        <img src="/graphics/dropdown.png" alt="▼" class="factorio-dropdown-arrow" draggable="false" />
+        <img src={dropdownArrow} alt="▼" class="factorio-dropdown-arrow" draggable="false" />
       </div>
     </NormalButton>
   </div>

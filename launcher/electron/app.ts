@@ -28,6 +28,10 @@ app.on("will-quit", () => {
   }
 });
 
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit()
+})
+
 async function main() {
   // Initialize managers
   configManager = new ConfigManager();
@@ -60,6 +64,14 @@ async function main() {
     );
   }
 
+  // Determine the correct icon path for both dev and production
+  const iconPath = app.isPackaged 
+    ? join(__dirname, "..", "assets", "icon.png")
+    : join(__dirname, "..", "..", "assets", "icon.png");
+
+  console.log("Icon path:", iconPath); // Debug log
+  console.log("__dirname:", __dirname); // Debug log
+
   mainWindow = new BrowserWindow({
     width: 600,
     height: 700,
@@ -70,6 +82,7 @@ async function main() {
     transparent: false,
     backgroundColor: "#1e1e1e", // Match Factorio background color
     autoHideMenuBar: true, // Hide the menu bar
+    icon: iconPath, // Custom icon
     webPreferences: {
       devTools: true || !app.isPackaged,
       preload: join(__dirname, "preload.js"),

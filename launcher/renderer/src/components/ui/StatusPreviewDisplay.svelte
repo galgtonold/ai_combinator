@@ -1,12 +1,19 @@
 <script lang="ts">
+  import outerFrameLight from '/graphics/outer_frame_light.png';
+  import assemblingMachine from '/graphics/assembling-machine-1.png';
+  import innerGlow from '/graphics/inner_glow.png';
+  
   export let aiProvider: string = "openai";
   export let status: "success" | "warning" | "error" = "warning";
 </script>
 
-<div class="checkerboard-status-section">
+<div 
+  class="checkerboard-status-section"
+  style="--outer-frame-image: url({outerFrameLight}); --assembling-machine-image: url({assemblingMachine}); --inner-glow-image: url({innerGlow});"
+>
   <div class="checkerboard-pattern">
     <div class="assembling-machine" class:working={status === 'success'}>
-      <div class="provider-logo-overlay" style="background-image: url('/graphics/providers/{aiProvider}.svg');"></div>
+      <div class="provider-logo-overlay" style="background-image: url('./graphics/providers/{aiProvider}.svg');"></div>
     </div>
     <div class="inner-glow-overlay"></div>
   </div>
@@ -20,7 +27,7 @@
     background-color: #414040;
     overflow: hidden;
     border: 5px solid transparent;
-    border-image-source: url('/graphics/outer_frame_light.png');
+    border-image-source: var(--outer-frame-image);
     border-image-slice: 8 8 8 8 fill;
     border-image-width: 5px;
     border-image-repeat: stretch;
@@ -49,7 +56,7 @@
   .assembling-machine {
     width: 108px;
     height: 114px;
-    background-image: url('/graphics/assembling-machine-1.png');
+    background-image: var(--assembling-machine-image);
     background-size: 864px 456px; /* 8 columns × 108px, 4 rows × 114px */
     z-index: 1;
     position: relative;
@@ -116,7 +123,7 @@
     width: 100%;
     height: 100%;
     border: 8px solid transparent;
-    border-image-source: url('/graphics/inner_glow.png');
+    border-image-source: var(--inner-glow-image);
     border-image-slice: 8 8 8 8 fill;
     border-image-width: 5px;
     border-image-repeat: stretch;

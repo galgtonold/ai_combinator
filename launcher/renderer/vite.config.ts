@@ -8,6 +8,7 @@ export default defineConfig({
   build: {
     outDir: "../dist/renderer/",
     sourcemap: true, // Enable source maps for debugging
+    assetsDir: ".", // Put assets in the same directory as index.html
   },
   server: {
     strictPort: true, // Ensure server always uses port 5173

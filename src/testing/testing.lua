@@ -167,7 +167,11 @@ local function signals_to_associative(signal_array)
   local result = {}
   for i, signal in ipairs(signal_array) do
     if signal and signal.signal then
-      result[circuit_network.cn_sig_str(signal.signal)] = signal.count or 0
+      local signal_name = circuit_network.cn_sig_str(signal.signal)
+      result[signal_name] = signal.count or 0
+      if result[signal_name] == 0 then
+        result[signal_name] = nil
+      end
     end
   end
   return result

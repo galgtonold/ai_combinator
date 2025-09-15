@@ -1,5 +1,8 @@
 <script lang="ts">
   import '../../styles/factorio-input-9slice.css';
+  import textboxImage from '/graphics/textbox.png';
+  import textboxActiveImage from '/graphics/textbox_active.png';
+  import textboxDisabledImage from '/graphics/textbox_disabled.png';
   
   export let value: string;
   export let placeholder: string = '';
@@ -15,7 +18,11 @@
 </script>
 
 <div class="key-field" style="width: {width};">
-  <div class="input-container" class:disabled>
+  <div 
+    class="input-container" 
+    class:disabled
+    style="--textbox-image: url({textboxImage}); --textbox-active-image: url({textboxActiveImage}); --textbox-disabled-image: url({textboxDisabledImage});"
+  >
     <input 
       type={showKey ? "text" : "password"}
       class="password-input"
@@ -55,7 +62,7 @@
     
     /* Apply the 9-slice border to the container instead of the input */
     border: 4px solid transparent;
-    border-image-source: url('/graphics/textbox.png');
+    border-image-source: var(--textbox-image);
     border-image-slice: 8 8 8 8 fill;
     border-image-width: 5px;
     border-image-repeat: stretch;
@@ -67,13 +74,13 @@
   }
 
   .input-container:focus-within {
-    border-image-source: url('/graphics/textbox_active.png');
+    border-image-source: var(--textbox-active-image);
     border-image-slice: 8 8 8 8 fill;
     transition: all 0.1s ease-in-out;
   }
 
   .input-container.disabled {
-    border-image-source: url('/graphics/textbox_disabled.png');
+    border-image-source: var(--textbox-disabled-image);
     border-image-slice: 8 8 8 8 fill;
     opacity: 0.9;
   }
