@@ -160,8 +160,7 @@ function guis.set_task(uid, task)
   mlc.task = task
   gui_t.mlc_task_label.caption = task
   
-  -- Start AI operation using the new manager
-  ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TASK_EVALUATION)
+  -- Note: AI operation is started by the caller when sending the request
 end
 
 event_handler.add_handler(constants.events.on_description_updated, function(event)
@@ -344,7 +343,13 @@ function guis.handle_task_dialog_click(event)
     guis.set_task(uid, task_input.text)
     -- Check bridge availability before sending task request
     bridge.check_bridge_availability()
-    bridge.send_task_request(uid, task_input.text)
+    
+    -- Start AI operation and get correlation ID
+    local success, correlation_id = ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TASK_EVALUATION)
+    if success then
+      bridge.send_task_request(uid, task_input.text)
+    end
+    
     dialog_manager.close_dialog(event.player_index)
     return true
   elseif event.element.tags.set_description_button then
@@ -407,6 +412,8 @@ function guis.on_gui_click(event)
 
   if el_id == 'mlc-set-task' then 
     set_task_dialog.show(event.player_index, uid)
+  elseif el_id == 'mlc-cancel-ai' then
+    ai_operation_manager.cancel_operation(uid)
   elseif el_id == 'mlc-desc-btn-flow' then set_description_dialog.show(event.player_index, uid)
   elseif el_id == 'mlc-edit-code' then edit_code_dialog.show(event.player_index, uid)
 	elseif el_id == 'mlc-save' then guis.save_code(uid)

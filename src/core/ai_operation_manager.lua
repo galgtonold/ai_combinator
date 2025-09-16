@@ -12,24 +12,65 @@ local OPERATION_TYPES = {
 
 ai_operation_manager.OPERATION_TYPES = OPERATION_TYPES
 
+-- Canceled operation IDs - store correlation IDs that have been canceled by UID
+local canceled_operations = {}
+
+-- Clean up old canceled operations to prevent memory leaks
+local function cleanup_canceled_operations()
+  -- Remove entries for UIDs that no longer exist or have newer operations
+  for uid, canceled_correlation_id in pairs(canceled_operations) do
+    local mlc = storage.combinators[uid]
+    if not mlc then
+      -- Combinator no longer exists, remove from canceled operations
+      canceled_operations[uid] = nil
+    elseif mlc.ai_operation_correlation_id and mlc.ai_operation_correlation_id > canceled_correlation_id then
+      -- There's a newer operation, remove the old canceled one
+      canceled_operations[uid] = nil
+    end
+  end
+end
+
+-- Generate a unique correlation ID for operations
+local function generate_correlation_id()
+  if not storage.correlation_counter then
+    storage.correlation_counter = 1
+  else
+    storage.correlation_counter = storage.correlation_counter + 1
+  end
+  return storage.correlation_counter
+end
+
 -- Start an AI operation for a combinator
 function ai_operation_manager.start_operation(uid, operation_type)
   local mlc = storage.combinators[uid]
-  if not mlc then return false end
+  if not mlc then return false, nil end
+  
+  -- If there's already an active operation, cancel it first
+  if mlc.ai_operation_start_time then
+    ai_operation_manager.cancel_operation(uid)
+  end
+  
+  -- Generate a unique correlation ID for this operation
+  local correlation_id = generate_correlation_id()
   
   -- Set new operation state
   mlc.ai_operation_start_time = game.tick
   mlc.ai_operation_type = operation_type
+  mlc.ai_operation_correlation_id = correlation_id
+  
+  -- Remove from canceled operations if it was there
+  canceled_operations[uid] = nil
   
   -- Emit state change event
   event_handler.raise_event(constants.events.on_ai_operation_state_changed, {
     uid = uid,
     operation_type = operation_type,
     start_time = game.tick,
+    correlation_id = correlation_id,
     is_active = true
   })
   
-  return true
+  return true, correlation_id
 end
 
 -- Complete an AI operation for a combinator
@@ -39,22 +80,77 @@ function ai_operation_manager.complete_operation(uid)
   
   local was_active = mlc.ai_operation_start_time ~= nil
   local operation_type = mlc.ai_operation_type
+  local correlation_id = mlc.ai_operation_correlation_id
   
   -- Clear operation state
   mlc.ai_operation_start_time = nil
   mlc.ai_operation_type = nil
+  mlc.ai_operation_correlation_id = nil
+  
+  -- Remove from canceled operations
+  canceled_operations[uid] = nil
   
   if was_active then
     -- Emit state change event
     event_handler.raise_event(constants.events.on_ai_operation_state_changed, {
       uid = uid,
       operation_type = operation_type,
+      correlation_id = correlation_id,
       start_time = nil,
       is_active = false
     })
   end
   
   return was_active
+end
+
+-- Cancel an AI operation for a combinator
+function ai_operation_manager.cancel_operation(uid)
+  local mlc = storage.combinators[uid]
+  if not mlc then return false end
+  
+  local was_active = mlc.ai_operation_start_time ~= nil
+  local operation_type = mlc.ai_operation_type
+  local correlation_id = mlc.ai_operation_correlation_id
+  
+  if was_active then
+    -- Mark as canceled
+    canceled_operations[uid] = correlation_id
+    
+    -- Clear operation state
+    mlc.ai_operation_start_time = nil
+    mlc.ai_operation_type = nil
+    mlc.ai_operation_correlation_id = nil
+    
+    -- Emit state change event
+    event_handler.raise_event(constants.events.on_ai_operation_state_changed, {
+      uid = uid,
+      operation_type = operation_type,
+      correlation_id = correlation_id,
+      start_time = nil,
+      is_active = false,
+      canceled = true
+    })
+  end
+  
+  return was_active
+end
+
+-- Check if a response should be ignored due to cancellation or operation mismatch
+function ai_operation_manager.is_response_canceled(uid, correlation_id)
+  -- First check if this specific correlation ID was canceled
+  if canceled_operations[uid] == correlation_id then
+    return true
+  end
+  
+  -- Then check if there's a current active operation with a different correlation ID
+  local mlc = storage.combinators[uid]
+  if mlc and mlc.ai_operation_correlation_id and mlc.ai_operation_correlation_id ~= correlation_id then
+    -- There's a different active operation, so this response is outdated
+    return true
+  end
+  
+  return false
 end
 
 -- Check if a combinator has an active AI operation
@@ -74,6 +170,7 @@ function ai_operation_manager.get_operation_info(uid)
     return {
       type = mlc.ai_operation_type,
       start_time = mlc.ai_operation_start_time,
+      correlation_id = mlc.ai_operation_correlation_id,
       elapsed_seconds = (game.tick - mlc.ai_operation_start_time) / 60
     }
   end
@@ -104,6 +201,11 @@ function ai_operation_manager.get_operation_status_text(uid)
   end
   
   return "AI operation in progress"
+end
+
+-- Clean up old canceled operations (call periodically to prevent memory leaks)
+function ai_operation_manager.cleanup_canceled_operations()
+  cleanup_canceled_operations()
 end
 
 return ai_operation_manager

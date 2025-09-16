@@ -78,6 +78,16 @@ local function update_ai_buttons(uid)
   if gui_t.mlc_set_task then
     gui_t.mlc_set_task.enabled = not ai_operation_in_progress
   end
+  
+  -- Update Cancel AI button if it exists
+  if gui_t.mlc_cancel_ai then
+    gui_t.mlc_cancel_ai.visible = ai_operation_in_progress
+  end
+  
+  -- Update progress flow visibility
+  if gui_t.mlc_progress_flow then
+    gui_t.mlc_progress_flow.visible = ai_operation_in_progress
+  end
 end
 
 local function update_status(uid)
@@ -135,9 +145,12 @@ local function update_status(uid)
 
   -- Update task request progress_bar using the new manager
   local progress_bar = gui_t.mlc_progressbar
-  local operation_progress = ai_operation_manager.get_operation_progress(uid)
-  progress_bar.value = operation_progress
-  progress_bar.visible = true
+  local ai_operation_in_progress = ai_operation_manager.is_operation_active(uid)
+  
+  if ai_operation_in_progress then
+    local operation_progress = ai_operation_manager.get_operation_progress(uid)
+    progress_bar.value = operation_progress
+  end
   
   -- Update AI operation buttons
   update_ai_buttons(uid)
@@ -193,7 +206,11 @@ function dialog.show(player, entity)
   entity_preview.style.natural_height = 152
   entity_preview.style.horizontally_stretchable = true
   
-  elc(entity_frame, {type='progressbar', name='mlc-progressbar', value=0, style='production_progressbar'}, {horizontally_stretchable=true})
+  
+  -- Progress bar with cancel button
+  local progress_flow = elc(entity_frame, {type='flow', name='mlc-progress-flow', direction='horizontal'}, {horizontally_stretchable=true})
+  elc(progress_flow, {type='progressbar', name='mlc-progressbar', value=0, style='production_progressbar'}, {horizontally_stretchable=true})
+  elc(progress_flow, {type='button', name='mlc-cancel-ai', caption='Cancel', style='red_button'}, {width=80, left_margin=4, height=25})
   
   elc(entity_frame, {type='label', name='mlc-task-title-label', caption='Task', style="semibold_label"})
 
@@ -231,6 +248,9 @@ function dialog.show(player, entity)
 
   local desc_container = elc(entity_frame, {type='flow', name='mlc-description-container', direction='vertical'})
   gui_t.mlc_description_container = desc_container
+
+  -- Initialize AI button states
+  update_ai_buttons(uid)
 
 	return gui_t
 end

@@ -383,13 +383,17 @@ local function auto_generate_test_cases(uid)
   local source_code = mlc.code or "No source code available"
   
   -- Start AI operation using the new manager
-  ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TEST_GENERATION)
+  local success, correlation_id = ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TEST_GENERATION)
   
-  -- Send test generation request via bridge
-  bridge.send_test_generation_request(uid, task_description, source_code)
-  
-  -- Show feedback to user
-  game.print("[color=yellow]Generating test cases with AI...[/color]")
+  if success then
+    -- Send test generation request via bridge
+    bridge.send_test_generation_request(uid, task_description, source_code)
+    
+    -- Show feedback to user
+    game.print("[color=yellow]Generating test cases with AI...[/color]")
+  else
+    game.print("[color=red]Failed to start test generation operation[/color]")
+  end
 end
 
 local function fix_failing_tests(uid)
@@ -426,17 +430,22 @@ local function fix_failing_tests(uid)
   mlc.fix_attempt_count = mlc.fix_attempt_count + 1
   
   -- Start AI operation
-  ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TEST_FIXING)
+  local success, correlation_id = ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TEST_FIXING)
   
-  -- Get required data for fix request
-  local task_description = mlc.task or "No task description available"
-  local current_code = mlc.code or ""
-  
-  -- Send fix request via bridge
-  bridge.send_fix_request(uid, task_description, current_code, failed_tests)
-  
-  -- Show feedback to user
-  game.print(string.format("[color=yellow]Fixing failing tests with AI (attempt %d/3)...[/color]", mlc.fix_attempt_count))
+  if success then
+    -- Get required data for fix request
+    local task_description = mlc.task or "No task description available"
+    local current_code = mlc.code or ""
+    
+    -- Send fix request via bridge
+    bridge.send_fix_request(uid, task_description, current_code, failed_tests)
+    
+    -- Show feedback to user
+    game.print(string.format("[color=yellow]Fixing failing tests with AI (attempt %d/3)...[/color]", mlc.fix_attempt_count))
+  else
+    mlc.fix_attempt_count = mlc.fix_attempt_count - 1  -- Rollback the attempt count
+    game.print("[color=red]Failed to start test fixing operation[/color]")
+  end
 end
 
 local function on_gui_click(event)

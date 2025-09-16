@@ -271,11 +271,11 @@ export class AIBridge {
       }
       
       if (payload.type === 'task_request') {
-        await this.handleTaskRequest(payload.uid, payload.task_text);
+        await this.handleTaskRequest(payload.uid, payload.task_text, payload.correlation_id);
       } else if (payload.type === 'fix_request') {
-        await this.handleFixRequest(payload.uid, payload.task_text);
+        await this.handleFixRequest(payload.uid, payload.task_text, payload.correlation_id);
       } else if (payload.type === 'test_generation_request') {
-        await this.handleTestGenerationRequest(payload.uid, payload.task_description, payload.source_code);
+        await this.handleTestGenerationRequest(payload.uid, payload.task_description, payload.source_code, payload.correlation_id);
       } else if (payload.type === 'ping_request') {
         this.handlePingRequest(payload.uid || 0);
       }
@@ -284,25 +284,27 @@ export class AIBridge {
     }
   }
 
-  private async handleTaskRequest(uid: number, taskText: string) {
+  private async handleTaskRequest(uid: number, taskText: string, correlationId?: number) {
     console.log('Handling task request:', taskText);
     this.sendResponse({
       type: 'task_request_completed',
       uid: uid,
+      correlation_id: correlationId,
       response: await this.callAI(taskText)
     });
   }
 
-  private async handleFixRequest(uid: number, taskText: string) {
+  private async handleFixRequest(uid: number, taskText: string, correlationId?: number) {
     console.log('Handling fix request:', taskText);
     this.sendResponse({
       type: 'fix_completed',
       uid: uid,
+      correlation_id: correlationId,
       response: await this.callAI(taskText)
     });
   }  
 
-  private async handleTestGenerationRequest(uid: number, taskDescription: string, sourceCode: string) {
+  private async handleTestGenerationRequest(uid: number, taskDescription: string, sourceCode: string, correlationId?: number) {
     console.log('Handling test generation request for task:', taskDescription);
     
     // Build the test generation prompt
@@ -322,6 +324,7 @@ export class AIBridge {
     this.sendResponse({
       type: 'test_generation_completed',
       uid: uid,
+      correlation_id: correlationId,
       test_cases: apiResponse
     });
   }

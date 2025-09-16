@@ -1,5 +1,6 @@
 local event_handler = require("src/events/event_handler")
 local constants = require("src/core/constants")
+local ai_operation_manager = require("src/core/ai_operation_manager")
 
 local bridge = {}
 
@@ -18,18 +19,28 @@ local function send_message(payload)
 end
 
 function bridge.send_task_request(uid, task_text)
+  -- Get correlation ID from the operation manager
+  local operation_info = ai_operation_manager.get_operation_info(uid)
+  local correlation_id = operation_info and operation_info.correlation_id or uid
+  
   local payload = {
     type = "task_request",
     uid = uid,
+    correlation_id = correlation_id,
     task_text = task_text
   }
   send_message(payload)
 end
 
 function bridge.send_test_generation_request(uid, task_description, source_code)
+  -- Get correlation ID from the operation manager
+  local operation_info = ai_operation_manager.get_operation_info(uid)
+  local correlation_id = operation_info and operation_info.correlation_id or uid
+  
   local payload = {
     type = "test_generation_request",
     uid = uid,
+    correlation_id = correlation_id,
     task_description = task_description,
     source_code = source_code
   }
@@ -37,6 +48,10 @@ function bridge.send_test_generation_request(uid, task_description, source_code)
 end
 
 function bridge.send_fix_request(uid, task_description, current_code, test_failures)
+  -- Get correlation ID from the operation manager
+  local operation_info = ai_operation_manager.get_operation_info(uid)
+  local correlation_id = operation_info and operation_info.correlation_id or uid
+  
   -- Build comprehensive fix prompt using existing task_request type
   local fix_prompt = "FIX REQUEST - Please fix the following Lua code to make all tests pass.\n\n"
   
@@ -112,6 +127,7 @@ function bridge.send_fix_request(uid, task_description, current_code, test_failu
   local payload = {
     type = "fix_request",
     uid = uid,
+    correlation_id = correlation_id,
     task_text = fix_prompt
   }
   send_message(payload)
@@ -168,6 +184,14 @@ local function handle_message(event)
     game.print("Received invalid message: " .. event.payload)
     return
   end
+  
+  -- Check if this response should be ignored due to cancellation
+  if payload.uid and payload.correlation_id then
+    if ai_operation_manager.is_response_canceled(payload.uid, payload.correlation_id) then
+      return
+    end
+  end
+  
   if payload.type == "task_request_completed" then
     event_handler.raise_event(constants.events.on_task_request_completed, payload)
   elseif payload.type == "test_generation_completed" then
