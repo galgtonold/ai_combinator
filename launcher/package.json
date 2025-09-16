@@ -22,19 +22,42 @@
       "dist/**/*",
       "assets/**/*",
       "node_modules/**/*",
-      "package.json"
+      "package.json",
+      "!node_modules/**/*.md",
+      "!node_modules/**/LICENSE*",
+      "!node_modules/**/CHANGELOG*",
+      "!node_modules/**/README*",
+      "!node_modules/**/docs/**",
+      "!node_modules/**/test/**",
+      "!node_modules/**/tests/**",
+      "!node_modules/**/example/**",
+      "!node_modules/**/examples/**"
     ],
+    "electronLanguages": [
+      "en",
+      "en-US"
+    ],
+    "compression": "maximum",
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true,
+      "menuCategory": "Games"
+    },
     "win": {
-      "target": "nsis",
-      "icon": "assets/icon.ico"
+      "target": {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      },
+      "icon": "assets/icon.ico",
+      "publisherName": "AI Combinator"
     },
     "mac": {
       "target": "dmg",
       "icon": "assets/icon.png"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
     }
   },
   "repository": {
@@ -54,12 +77,14 @@
   },
   "homepage": "https://github.com/galgtonold/ai_combinator#readme",
   "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^6.1.2",
     "@tsconfig/svelte": "^5.0.4",
     "concurrently": "^8.2.2",
     "electron": "^28.2.3",
     "electron-builder": "^24.9.1",
     "prettier": "^3.2.5",
     "prettier-plugin-svelte": "^3.2.1",
+    "vite": "^7.1.2",
     "wait-on": "^8.0.4"
   },
   "dependencies": {
@@ -68,12 +93,11 @@
     "@ai-sdk/google": "^2.0.7",
     "@ai-sdk/openai": "^2.0.15",
     "@ai-sdk/xai": "^2.0.10",
-    "@sveltejs/vite-plugin-svelte": "^6.1.2",
+    "@standard-schema/spec": "^1.0.0",
     "ai": "^5.0.15",
     "dgram": "^1.0.1",
     "electron-reload": "^2.0.0-alpha.1",
     "update-electron-app": "^3.1.1",
-    "vite": "^7.1.2",
     "zod": "^3.25.76"
   }
 }

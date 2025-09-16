@@ -3,8 +3,26 @@
   import assemblingMachine from '/graphics/assembling-machine-1.png';
   import innerGlow from '/graphics/inner_glow.png';
   
+  // Import all provider logos
+  import openaiLogo from '/graphics/providers/openai.svg';
+  import anthropicLogo from '/graphics/providers/anthropic.svg';
+  import googleLogo from '/graphics/providers/google.svg';
+  import deepseekLogo from '/graphics/providers/deepseek.svg';
+  import xaiLogo from '/graphics/providers/xai.svg';
+
   export let aiProvider: string = "openai";
   export let status: "success" | "warning" | "error" = "warning";
+  
+  // Map provider names to imported logos
+  const providerLogos: Record<string, string> = {
+    openai: openaiLogo,
+    anthropic: anthropicLogo,
+    google: googleLogo,
+    deepseek: deepseekLogo,
+    xai: xaiLogo
+  };
+  
+  $: currentProviderLogo = providerLogos[aiProvider] || openaiLogo;
 </script>
 
 <div 
@@ -13,7 +31,7 @@
 >
   <div class="checkerboard-pattern">
     <div class="assembling-machine" class:working={status === 'success'}>
-      <div class="provider-logo-overlay" style="background-image: url('./graphics/providers/{aiProvider}.svg');"></div>
+      <div class="provider-logo-overlay" style="background-image: url({currentProviderLogo});"></div>
     </div>
     <div class="inner-glow-overlay"></div>
   </div>

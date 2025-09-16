@@ -2,7 +2,7 @@
   import statusGreen from '/graphics/status_green.png';
   import statusRed from '/graphics/status_red.png';
   import statusYellow from '/graphics/status_yellow.png';
-  
+
   export let status: 'success' | 'warning' | 'error' = 'warning';
   export let text: string;
   
