@@ -73,11 +73,7 @@ function guis.save_code(uid, code, source_type)
 	if not mlc then return end
 	load_code_from_gui(code, uid, source_type)
   
-  -- Only complete AI operation if this is not from an AI fix
-  -- (fix completion handler will handle operation completion)
-  if source_type ~= "ai_fix" then
-    ai_operation_manager.complete_operation(uid)
-  end
+  ai_operation_manager.complete_operation(uid)
 end
 
 function guis.navigate_code_history(uid, direction)
@@ -329,34 +325,7 @@ event_handler.add_handler(constants.events.on_code_updated, function(event)
   update_all_test_cases(event.uid)
 end)
 
-event_handler.add_handler(constants.events.on_task_request_completed, function(event)
-  -- Check if this was a fix request by checking if TEST_FIXING operation is active
-  local mlc = storage.combinators[event.uid]
-  if mlc and ai_operation_manager.is_operation_active(event.uid) then
-    local operation_info = ai_operation_manager.get_operation_info(event.uid)
-    if operation_info and operation_info.type == ai_operation_manager.OPERATION_TYPES.TEST_FIXING then
-      -- This is a fix completion response
-      local success = event.code and not string.match(event.code, "^ERROR:")
-      local error_message = nil
-      
-      if not success and event.code then
-        error_message = string.match(event.code, "^ERROR:%s*(.+)") or "Unknown error"
-      end
-      
-      -- Complete the AI operation
-      ai_operation_manager.complete_operation(event.uid)
-      
-      -- Fire fix completion event
-      event_handler.raise_event(constants.events.on_fix_completion, {
-        uid = event.uid,
-        success = success,
-        code = success and event.code or nil,
-        error_message = error_message
-      })
-      return
-    end
-  end
-  
+event_handler.add_handler(constants.events.on_task_request_completed, function(event) 
   -- Regular task completion - update test cases
   update_all_test_cases(event.uid)
 end)

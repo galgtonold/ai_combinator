@@ -520,8 +520,11 @@ function load_code_from_gui(code, uid, source_type) -- note: in global _ENV, use
 	if new_code ~= (mlc.code or '') then
 		-- Add current code to history before changing it
 		if mlc.code and mlc.code ~= '' then
+      -- Track the source of this code change
+      mlc.last_code_source = source_type or "manual"
+
 			table.insert(mlc.code_history, {
-				code = mlc.code,
+				code = code,
 				timestamp = game.tick,
 				source = mlc.last_code_source or "manual",
 				previous_source = mlc.last_code_source
@@ -536,8 +539,6 @@ function load_code_from_gui(code, uid, source_type) -- note: in global _ENV, use
 		-- Reset history index to current (latest) position
 		mlc.code_history_index = #mlc.code_history + 1
 		
-		-- Track the source of this code change
-		mlc.last_code_source = source_type or "manual"
 	end
 	
 	mlc.code = new_code

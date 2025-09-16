@@ -88,4 +88,30 @@ function utils.exclude(t, ...)
     return result
 end
 
+function utils.time_ago(past_tick, current_tick)
+    -- Convert game ticks to human readable "time ago" format
+    -- Assumes 60 ticks = 1 second
+    if not past_tick or not current_tick or past_tick > current_tick then
+        return "unknown"
+    end
+    
+    local tick_diff = current_tick - past_tick
+    local seconds = math.floor(tick_diff / 60)
+    
+    if seconds < 1 then
+        return "just now"
+    elseif seconds < 60 then
+        return string.format("%d second%s ago", seconds, seconds == 1 and "" or "s")
+    elseif seconds < 3600 then
+        local minutes = math.floor(seconds / 60)
+        return string.format("%d minute%s ago", minutes, minutes == 1 and "" or "s")
+    elseif seconds < 86400 then
+        local hours = math.floor(seconds / 3600)
+        return string.format("%d hour%s ago", hours, hours == 1 and "" or "s")
+    else
+        local days = math.floor(seconds / 86400)
+        return string.format("%d day%s ago", days, days == 1 and "" or "s")
+    end
+end
+
 return utils

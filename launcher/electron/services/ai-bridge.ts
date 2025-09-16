@@ -202,6 +202,7 @@ export class AIBridge {
       
       const endTime = Date.now();
       console.log(`AI Response (took ${(endTime - startTime) / 1000}s)`);
+      console.log(text);
       
       return text;
     } catch (error) {
@@ -271,6 +272,8 @@ export class AIBridge {
       
       if (payload.type === 'task_request') {
         await this.handleTaskRequest(payload.uid, payload.task_text);
+      } else if (payload.type === 'fix_request') {
+        await this.handleFixRequest(payload.uid, payload.task_text);
       } else if (payload.type === 'test_generation_request') {
         await this.handleTestGenerationRequest(payload.uid, payload.task_description, payload.source_code);
       } else if (payload.type === 'ping_request') {
@@ -283,22 +286,21 @@ export class AIBridge {
 
   private async handleTaskRequest(uid: number, taskText: string) {
     console.log('Handling task request:', taskText);
-    
-    // Call AI API
-    const startTime = Date.now();
-    const apiResponse = await this.callAI(taskText);
-    const endTime = Date.now();
-    
-    console.log(`AI Response (took ${(endTime - startTime) / 1000}s):`);
-    console.log(apiResponse);
-    
-    // Send response back via UDP
     this.sendResponse({
       type: 'task_request_completed',
       uid: uid,
-      response: apiResponse
+      response: await this.callAI(taskText)
     });
   }
+
+  private async handleFixRequest(uid: number, taskText: string) {
+    console.log('Handling fix request:', taskText);
+    this.sendResponse({
+      type: 'fix_completed',
+      uid: uid,
+      response: await this.callAI(taskText)
+    });
+  }  
 
   private async handleTestGenerationRequest(uid: number, taskDescription: string, sourceCode: string) {
     console.log('Handling test generation request for task:', taskDescription);

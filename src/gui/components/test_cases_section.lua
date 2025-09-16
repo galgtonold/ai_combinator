@@ -397,7 +397,6 @@ local function fix_failing_tests(uid)
   if not mlc then return end
   
   -- Check if any tests are failing
-  local total_tests = #(mlc.test_cases or {})
   local failed_tests = {}
   local passed_tests = 0
   
@@ -432,10 +431,9 @@ local function fix_failing_tests(uid)
   -- Get required data for fix request
   local task_description = mlc.task or "No task description available"
   local current_code = mlc.code or ""
-  local previous_attempts = mlc.previous_fix_attempts or {}
   
   -- Send fix request via bridge
-  bridge.send_fix_request(uid, task_description, current_code, failed_tests, previous_attempts)
+  bridge.send_fix_request(uid, task_description, current_code, failed_tests)
   
   -- Show feedback to user
   game.print(string.format("[color=yellow]Fixing failing tests with AI (attempt %d/3)...[/color]", mlc.fix_attempt_count))
@@ -471,9 +469,6 @@ local function on_fix_completion(event)
   if not mlc then return end
   
   if event.success then
-    -- Reset fix attempt counter and clear previous attempts on successful fix
-    mlc.fix_attempt_count = 0
-    mlc.previous_fix_attempts = {}
     game.print("[color=green]Tests fixed successfully![/color]")
     
     -- Update the combinator code with the fixed code and trigger proper re-evaluation
@@ -486,29 +481,9 @@ local function on_fix_completion(event)
       })
     end
   else
-    -- Store this failed attempt for context in future retries
-    if not mlc.previous_fix_attempts then
-      mlc.previous_fix_attempts = {}
-    end
-    
-    table.insert(mlc.previous_fix_attempts, {
-      attempt_number = mlc.fix_attempt_count,
-      error_message = event.error_message or "Fix attempt failed",
-      timestamp = game.tick
-    })
-    
-    -- Increment attempt counter for failed fixes
-    if not mlc.fix_attempt_count then
-      mlc.fix_attempt_count = 0
-    end
-    
-    if mlc.fix_attempt_count >= 3 then
-      game.print("[color=red]Unable to fix tests after 3 attempts. Manual intervention required.[/color]")
-    else
-      game.print(string.format("[color=orange]Fix attempt failed. %d attempts remaining.[/color]", 3 - mlc.fix_attempt_count))
-    end
+    game.print("[color=red]Unable to fix tests. Manual intervention required.[/color]")
   end
-  
+
   -- Update button states
   update_ai_buttons(uid)
   component.update(uid)
@@ -518,7 +493,7 @@ event_handler.add_handler(constants.events.on_test_case_evaluated, on_test_case_
 event_handler.add_handler(constants.events.on_test_case_name_updated, on_test_case_evaluated)
 event_handler.add_handler(constants.events.on_test_generation_completed, on_test_generation_completed)
 event_handler.add_handler(constants.events.on_ai_operation_state_changed, on_ai_operation_state_changed)
-event_handler.add_handler(constants.events.on_fix_completion, on_fix_completion)
+event_handler.add_handler(constants.events.on_fix_completed, on_fix_completion)
 event_handler.add_handler(defines.events.on_gui_click, on_gui_click)
 
 

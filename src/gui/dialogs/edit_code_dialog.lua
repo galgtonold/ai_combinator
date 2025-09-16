@@ -2,6 +2,7 @@ local dialog_manager = require("src/gui/dialogs/dialog_manager")
 local titlebar = require('src/gui/components/titlebar')
 local event_handler = require("src/events/event_handler")
 local constants = require("src/core/constants")
+local utils = require("src/core/utils")
 
 local help_dialog = require("src/gui/dialogs/help_dialog")
 
@@ -207,7 +208,13 @@ function dialog.update_history_navigation(uid)
     -- Update version info
     local current_version = history[current_index]
     if current_version then
-      local timestamp = current_version.timestamp or ""
+      local timestamp_text = ""
+      if current_version.timestamp and type(current_version.timestamp) == "number" then
+        timestamp_text = utils.time_ago(current_version.timestamp, game.tick)
+      else
+        timestamp_text = "unknown time"
+      end
+      
       local source_text = ""
       if current_version.source == "manual" then
         source_text = "Manual edit"
@@ -219,7 +226,7 @@ function dialog.update_history_navigation(uid)
         source_text = "Unknown source"
       end
       
-      gui_t.edit_code_version_info.caption = string.format("%s - %s", source_text, timestamp)
+      gui_t.edit_code_version_info.caption = string.format("%s - %s", source_text, timestamp_text)
     end
   else
     gui_t.edit_code_history_info.caption = "0/0"
