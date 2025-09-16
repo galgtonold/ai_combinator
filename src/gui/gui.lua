@@ -4,6 +4,9 @@ local utils = require("src/core/utils")
 local constants = require("src/core/constants")
 local ai_operation_manager = require('src/core/ai_operation_manager')
 
+local memory = require('src/ai_combinator/memory')
+local update = require('src/ai_combinator/update')
+
 local dialog_manager = require('src/gui/dialogs/dialog_manager')
 local variable_row = require('src/gui/components/variable_row')
 
@@ -65,13 +68,94 @@ function guis.close(uid)
 end
 
 
-function guis.save_code(uid, code)
+function guis.save_code(uid, code, source_type)
 	local gui_t, mlc = storage.guis[uid], storage.combinators[uid]
 	if not mlc then return end
-	load_code_from_gui(code, uid)
+	load_code_from_gui(code, uid, source_type)
   
-  -- Complete any active AI operation using the new manager
-  ai_operation_manager.complete_operation(uid)
+  -- Only complete AI operation if this is not from an AI fix
+  -- (fix completion handler will handle operation completion)
+  if source_type ~= "ai_fix" then
+    ai_operation_manager.complete_operation(uid)
+  end
+end
+
+function guis.navigate_code_history(uid, direction)
+  local mlc = storage.combinators[uid]
+  if not mlc or not mlc.code_history or #mlc.code_history == 0 then
+    return false
+  end
+  
+  local current_index = mlc.code_history_index or (#mlc.code_history + 1)
+  local new_index
+  
+  if direction == "previous" then
+    new_index = math.max(1, current_index - 1)
+  elseif direction == "next" then
+    new_index = math.min(#mlc.code_history + 1, current_index + 1)
+  else
+    return false
+  end
+  
+  if new_index == current_index then
+    return false -- No change possible
+  end
+  
+  mlc.code_history_index = new_index
+  
+  -- If we're at the latest position (beyond history), use current code
+  if new_index > #mlc.code_history then
+    -- This is the current version, no need to change anything
+    return true
+  else
+    -- Load historical version
+    local historical_entry = mlc.code_history[new_index]
+    if historical_entry then
+      -- Temporarily save current code if we're moving away from latest
+      if current_index > #mlc.code_history and mlc.code and mlc.code ~= '' then
+        mlc.current_code_backup = mlc.code
+      end
+      
+      -- Set code without adding to history
+      mlc.code = historical_entry.code
+      local mlc_env = memory.combinators[uid]
+      if mlc_env then
+        update.mlc_update_code(mlc, mlc_env, memory.combinator_env[mlc_env._uid])
+      end
+      return true
+    end
+  end
+  
+  return false
+end
+
+function guis.get_code_history_info(uid)
+  local mlc = storage.combinators[uid]
+  if not mlc then
+    return nil
+  end
+  
+  if not mlc.code_history then
+    mlc.code_history = {}
+    mlc.code_history_index = 0
+  end
+  
+  local current_index = mlc.code_history_index or (#mlc.code_history + 1)
+  local total_versions = #mlc.code_history + 1 -- +1 for current version
+  
+  local current_entry = nil
+  if current_index <= #mlc.code_history then
+    current_entry = mlc.code_history[current_index]
+  end
+  
+  return {
+    current_index = current_index,
+    total_versions = total_versions,
+    can_go_back = current_index > 1,
+    can_go_forward = current_index < total_versions,
+    current_entry = current_entry,
+    is_latest = current_index > #mlc.code_history
+  }
 end
 
 function guis.set_task(uid, task)
@@ -240,12 +324,40 @@ end
 
 
 event_handler.add_handler(constants.events.on_code_updated, function(event)
-  guis.save_code(event.uid, event.code)
+  guis.save_code(event.uid, event.code, event.source_type)
 
   update_all_test_cases(event.uid)
 end)
 
 event_handler.add_handler(constants.events.on_task_request_completed, function(event)
+  -- Check if this was a fix request by checking if TEST_FIXING operation is active
+  local mlc = storage.combinators[event.uid]
+  if mlc and ai_operation_manager.is_operation_active(event.uid) then
+    local operation_info = ai_operation_manager.get_operation_info(event.uid)
+    if operation_info and operation_info.type == ai_operation_manager.OPERATION_TYPES.TEST_FIXING then
+      -- This is a fix completion response
+      local success = event.code and not string.match(event.code, "^ERROR:")
+      local error_message = nil
+      
+      if not success and event.code then
+        error_message = string.match(event.code, "^ERROR:%s*(.+)") or "Unknown error"
+      end
+      
+      -- Complete the AI operation
+      ai_operation_manager.complete_operation(event.uid)
+      
+      -- Fire fix completion event
+      event_handler.raise_event(constants.events.on_fix_completion, {
+        uid = event.uid,
+        success = success,
+        code = success and event.code or nil,
+        error_message = error_message
+      })
+      return
+    end
+  end
+  
+  -- Regular task completion - update test cases
   update_all_test_cases(event.uid)
 end)
 
@@ -324,22 +436,12 @@ function guis.on_gui_click(event)
 	local el_id = element.name
 	local rmb = defines.mouse_button_type.right
 
-	if el_id == 'mlc-code' then
-		if not gui_t.code_focused then
-			-- Removing rich-text tags also screws with the cursor position, so try to avoid it
-			local clean_code = code_error_highlight(gui_t.mlc_code.text)
-			if clean_code ~= gui_t.mlc_code.text then gui_t.mlc_code.text = clean_code end
-		end
-		gui_t.code_focused = true -- disables hotkeys and repeating cleanup above
-  elseif el_id == 'mlc-set-task' then 
+  if el_id == 'mlc-set-task' then 
     set_task_dialog.show(event.player_index, uid)
   elseif el_id == 'mlc-desc-btn-flow' then set_description_dialog.show(event.player_index, uid)
   elseif el_id == 'mlc-edit-code' then edit_code_dialog.show(event.player_index, uid)
 	elseif el_id == 'mlc-save' then guis.save_code(uid)
 	elseif el_id == 'mlc-commit' then guis.save_code(uid); guis.close(uid)
-	elseif el_id == 'mlc-clear' then
-		guis.save_code(uid, '')
-		guis.on_gui_text_changed{element=gui_t.mlc_code}
 	elseif el_id == 'mlc-close' then guis.close(uid)
 	elseif el_id == 'mlc-vars' then
 		if event.button == rmb then
@@ -362,10 +464,7 @@ function guis.on_gui_close(ev)
 	local uid, gui_t = find_gui(ev)
 	if not uid then return end
 	local p = game.players[ev.player_index]
-	if p.valid and gui_t.code_focused then
-		gui_t.mlc_gui.focus()
-		p.opened, gui_t.code_focused = gui_t.mlc_gui
-	else guis.close(uid) end
+	guis.close(uid)
 end
 
 function guis.vars_window_toggle(pn, toggle_on)

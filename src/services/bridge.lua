@@ -36,6 +36,97 @@ function bridge.send_test_generation_request(uid, task_description, source_code)
   send_message(payload)
 end
 
+function bridge.send_fix_request(uid, task_description, current_code, test_failures, fix_attempts)
+  -- Build comprehensive fix prompt using existing task_request type
+  local fix_prompt = "FIX REQUEST - Please fix the following Lua code to make all tests pass.\n\n"
+  
+  fix_prompt = fix_prompt .. "ORIGINAL TASK:\n" .. (task_description or "No task description available") .. "\n\n"
+  
+  fix_prompt = fix_prompt .. "CURRENT CODE TO FIX:\n" .. (current_code or "No code available") .. "\n\n"
+  
+  if test_failures and #test_failures > 0 then
+    fix_prompt = fix_prompt .. "FAILING TESTS:\n"
+    for i, failure in ipairs(test_failures) do
+      failure = failure.test_case
+      fix_prompt = fix_prompt .. string.format("Test %d: %s\n", i, failure.name or "Unnamed Test")
+      
+      if failure.red_input and #failure.red_input > 0 then
+        fix_prompt = fix_prompt .. "  Red inputs: "
+        for _, signal in ipairs(failure.red_input) do
+          fix_prompt = fix_prompt .. string.format("%s=%d ", signal.signal.name or signal.signal, signal.count)
+        end
+        fix_prompt = fix_prompt .. "\n"
+      end
+      
+      if failure.green_input and #failure.green_input > 0 then
+        fix_prompt = fix_prompt .. "  Green inputs: "
+        for _, signal in ipairs(failure.green_input) do
+          fix_prompt = fix_prompt .. string.format("%s=%d ", signal.signal.name or signal.signal, signal.count)
+        end
+        fix_prompt = fix_prompt .. "\n"
+      end
+      
+      if failure.expected_output and #failure.expected_output > 0 then
+        fix_prompt = fix_prompt .. "  Expected outputs: "
+        for _, signal in ipairs(failure.expected_output) do
+          fix_prompt = fix_prompt .. string.format("%s=%d ", signal.signal.name or signal.signal, signal.count)
+        end
+        fix_prompt = fix_prompt .. "\n"
+      end
+      
+      if failure.actual_output and #failure.actual_output > 0 then
+        fix_prompt = fix_prompt .. "  Actual outputs: "
+        for _, signal in ipairs(failure.actual_output) do
+          fix_prompt = fix_prompt .. string.format("%s=%d ", signal.signal.name or signal.signal, signal.count)
+        end
+        fix_prompt = fix_prompt .. "\n"
+      end
+      
+      if failure.expected_print and failure.expected_print ~= "" then
+        fix_prompt = fix_prompt .. "  Expected print: " .. failure.expected_print .. "\n"
+      end
+      
+      if failure.actual_print and failure.actual_print ~= "" then
+        fix_prompt = fix_prompt .. "  Actual print: " .. failure.actual_print .. "\n"
+      end
+      
+      if failure.variables and #failure.variables > 0 then
+        fix_prompt = fix_prompt .. "  Variables: "
+        for _, var in ipairs(failure.variables) do
+          fix_prompt = fix_prompt .. string.format("%s=%s ", var.name, tostring(var.value))
+        end
+        fix_prompt = fix_prompt .. "\n"
+      end
+      
+      if failure.game_tick then
+        fix_prompt = fix_prompt .. "  Game tick: " .. failure.game_tick .. "\n"
+      end
+      
+      fix_prompt = fix_prompt .. "\n"
+    end
+  end
+  
+  if fix_attempts and #fix_attempts > 0 then
+    fix_prompt = fix_prompt .. string.format("PREVIOUS FIX ATTEMPTS (%d):\n", #fix_attempts)
+    for i, attempt in ipairs(fix_attempts) do
+      fix_prompt = fix_prompt .. string.format("Attempt %d:\n%s\n\n", i, attempt.code or "No code")
+      if attempt.still_failed then
+        fix_prompt = fix_prompt .. "Result: Still had failing tests\n\n"
+      end
+    end
+  end
+  
+  fix_prompt = fix_prompt .. "Please provide ONLY the corrected Lua code that will make all tests pass. "
+  fix_prompt = fix_prompt .. "If the tests are incompatible with the task description, respond with ERROR: <explanation of the issue>."
+  
+  local payload = {
+    type = "task_request",
+    uid = uid,
+    task_text = fix_prompt
+  }
+  send_message(payload)
+end
+
 function bridge.send_ping_request(uid)
   local payload = {
     type = "ping_request",
@@ -91,6 +182,8 @@ local function handle_message(event)
     event_handler.raise_event(constants.events.on_task_request_completed, payload)
   elseif payload.type == "test_generation_completed" then
     event_handler.raise_event(constants.events.on_test_generation_completed, payload)
+  elseif payload.type == "fix_completion" then
+    event_handler.raise_event(constants.events.on_fix_completion, payload)
   elseif payload.type == "ping_response" then
     -- Check if this is a response to our bridge availability check
     if payload.uid == bridge_check_state.check_uid and bridge_check_state.active then

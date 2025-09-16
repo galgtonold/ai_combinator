@@ -69,6 +69,10 @@ function dialog.show(player_index, uid)
 
   -- Get current code from the combinator
   local current_code = mlc.code or ""
+  
+  -- Set current history index to the latest version
+  local history = mlc.code_history or {}
+  mlc.current_history_index = #history
 
   local code_textbox = content_flow.add{
     type = "text-box",
@@ -84,6 +88,68 @@ function dialog.show(player_index, uid)
   code_textbox.style.height = 400
   code_textbox.style.bottom_margin = 8
   gui_t.edit_code_textbox = code_textbox
+
+  -- Code history navigation section
+  local history_flow = content_flow.add{
+    type = "flow",
+    direction = "horizontal",
+    tags = {uid = uid, dialog = true, edit_code_dialog = true},
+  }
+  history_flow.style.bottom_margin = 8
+  
+  local history_label = history_flow.add{
+    type = "label",
+    caption = "Code History:",
+    style = "semibold_label",
+    tags = {uid = uid, dialog = true, edit_code_dialog = true},
+  }
+  history_label.style.right_margin = 8
+  
+  local prev_button = history_flow.add{
+    type = "sprite-button",
+    name = "mlc-history-prev",
+    sprite = "utility/left_arrow",
+    tooltip = "Previous version",
+    style = "tool_button",
+    tags = {uid = uid, history_prev = true, dialog = true, edit_code_dialog = true},
+  }
+  prev_button.style.right_margin = 4
+  gui_t.edit_code_prev_button = prev_button
+  
+  local history_info_label = history_flow.add{
+    type = "label",
+    name = "mlc-history-info",
+    caption = "1/1",
+    style = "label",
+    tags = {uid = uid, dialog = true, edit_code_dialog = true},
+  }
+  history_info_label.style.right_margin = 4
+  gui_t.edit_code_history_info = history_info_label
+  
+  local next_button = history_flow.add{
+    type = "sprite-button",
+    name = "mlc-history-next",
+    sprite = "utility/right_arrow",
+    tooltip = "Next version",
+    style = "tool_button",
+    tags = {uid = uid, history_next = true, dialog = true, edit_code_dialog = true},
+  }
+  next_button.style.right_margin = 8
+  gui_t.edit_code_next_button = next_button
+  
+  -- Version info
+  local version_info = history_flow.add{
+    type = "label",
+    name = "mlc-version-info",
+    caption = "",
+    style = "label",
+    tags = {uid = uid, dialog = true, edit_code_dialog = true},
+  }
+  version_info.style.font_color = {0.7, 0.7, 0.7}
+  gui_t.edit_code_version_info = version_info
+  
+  -- Update history navigation state
+  dialog.update_history_navigation(uid)
 
   local button_flow = content_flow.add{
     type = "flow",
@@ -119,6 +185,79 @@ function dialog.show(player_index, uid)
   code_textbox.focus()
 end
 
+function dialog.update_history_navigation(uid)
+  local gui_t = storage.guis[uid]
+  local mlc = storage.combinators[uid]
+  
+  if not gui_t or not mlc or not gui_t.edit_code_prev_button then
+    return
+  end
+  
+  local history = mlc.code_history or {}
+  local current_index = mlc.current_history_index or #history
+  
+  -- Update navigation buttons
+  gui_t.edit_code_prev_button.enabled = current_index > 1
+  gui_t.edit_code_next_button.enabled = current_index < #history
+  
+  -- Update history info
+  if #history > 0 then
+    gui_t.edit_code_history_info.caption = string.format("%d/%d", current_index, #history)
+    
+    -- Update version info
+    local current_version = history[current_index]
+    if current_version then
+      local timestamp = current_version.timestamp or ""
+      local source_text = ""
+      if current_version.source == "manual" then
+        source_text = "Manual edit"
+      elseif current_version.source == "ai_generation" then
+        source_text = "AI generated"
+      elseif current_version.source == "ai_fix" then
+        source_text = "AI fix"
+      else
+        source_text = "Unknown source"
+      end
+      
+      gui_t.edit_code_version_info.caption = string.format("%s - %s", source_text, timestamp)
+    end
+  else
+    gui_t.edit_code_history_info.caption = "0/0"
+    gui_t.edit_code_version_info.caption = "No history"
+  end
+end
+
+function dialog.navigate_history(uid, direction)
+  local mlc = storage.combinators[uid]
+  local gui_t = storage.guis[uid]
+  
+  if not mlc or not gui_t or not gui_t.edit_code_textbox then
+    return
+  end
+  
+  local history = mlc.code_history or {}
+  local current_index = mlc.current_history_index or #history
+  
+  if direction == "prev" and current_index > 1 then
+    current_index = current_index - 1
+  elseif direction == "next" and current_index < #history then
+    current_index = current_index + 1
+  else
+    return -- No change
+  end
+  
+  mlc.current_history_index = current_index
+  
+  -- Update textbox with the selected version
+  local selected_version = history[current_index]
+  if selected_version then
+    gui_t.edit_code_textbox.text = selected_version.code or ""
+  end
+  
+  -- Update navigation state
+  dialog.update_history_navigation(uid)
+end
+
 function on_gui_click(event)
 	local el = event.element
 
@@ -134,6 +273,10 @@ function on_gui_click(event)
     local code_text = code_error_highlight(code_input.text)
     event_handler.raise_event(constants.events.on_code_updated, {player_index = event.player_index, uid = uid, code = code_text})
     dialog_manager.close_dialog(event.player_index)
+  elseif event.element.tags.history_prev then
+    dialog.navigate_history(uid, "prev")
+  elseif event.element.tags.history_next then
+    dialog.navigate_history(uid, "next")
   elseif event.element.tags.show_help_button then
     help_dialog.show(event.player_index)
   end

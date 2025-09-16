@@ -11,6 +11,57 @@ local component = {}
 -- Forward declaration
 local update_ai_buttons
 
+function update_ai_buttons(uid)
+  local mlc = storage.combinators[uid]
+  local gui_t = storage.guis[uid]
+  
+  if not mlc or not gui_t then return end
+  
+  -- Update Fix with AI button state
+  local fix_button = gui_t.mlc_fix_tests
+  if fix_button and fix_button.valid then
+    local total_tests = #(mlc.test_cases or {})
+    local passed_tests = 0
+    
+    for _, test_case in ipairs(mlc.test_cases or {}) do
+      if test_case.success then
+        passed_tests = passed_tests + 1
+      end
+    end
+    
+    local all_tests_pass = total_tests > 0 and passed_tests == total_tests
+    local ai_operation_running = ai_operation_manager.is_operation_active(uid)
+    local max_attempts_reached = mlc.fix_attempt_count and mlc.fix_attempt_count >= 3
+    
+    -- Disable button if all tests pass, AI is running, or max attempts reached
+    fix_button.enabled = not (all_tests_pass or ai_operation_running or max_attempts_reached)
+    
+    -- Update tooltip based on state
+    if all_tests_pass then
+      fix_button.tooltip = "All tests are passing - no fixes needed"
+    elseif ai_operation_running then
+      fix_button.tooltip = "AI operation in progress..."
+    elseif max_attempts_reached then
+      fix_button.tooltip = "Maximum fix attempts (3) reached"
+    else
+      fix_button.tooltip = "Automatically fix implementation to make all tests pass"
+    end
+  end
+  
+  -- Update Auto Generate button state
+  local auto_gen_button = gui_t.mlc_auto_generate_tests
+  if auto_gen_button and auto_gen_button.valid then
+    local ai_operation_running = ai_operation_manager.is_operation_active(uid)
+    auto_gen_button.enabled = not ai_operation_running
+    
+    if ai_operation_running then
+      auto_gen_button.tooltip = "AI operation in progress..."
+    else
+      auto_gen_button.tooltip = "Automatically generate test cases based on current inputs"
+    end
+  end
+end
+
 function component.show(parent, uid)
   local test_cases_container = parent.add{
     type='flow', name='mlc_test_cases_container', direction='vertical'
@@ -341,6 +392,55 @@ local function auto_generate_test_cases(uid)
   game.print("[color=yellow]Generating test cases with AI...[/color]")
 end
 
+local function fix_failing_tests(uid)
+  local mlc = storage.combinators[uid]
+  if not mlc then return end
+  
+  -- Check if any tests are failing
+  local total_tests = #(mlc.test_cases or {})
+  local failed_tests = {}
+  local passed_tests = 0
+  
+  for i, test_case in ipairs(mlc.test_cases or {}) do
+    if test_case.success then
+      passed_tests = passed_tests + 1
+    else
+      table.insert(failed_tests, {index = i, test_case = test_case})
+    end
+  end
+  
+  if #failed_tests == 0 then
+    game.print("[color=green]All tests are already passing![/color]")
+    return
+  end
+  
+  -- Initialize fix attempt counter if not present
+  if not mlc.fix_attempt_count then
+    mlc.fix_attempt_count = 0
+  end
+  
+  if mlc.fix_attempt_count >= 3 then
+    game.print("[color=red]Maximum fix attempts (3) reached. Cannot fix tests automatically.[/color]")
+    return
+  end
+  
+  mlc.fix_attempt_count = mlc.fix_attempt_count + 1
+  
+  -- Start AI operation
+  ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TEST_FIXING)
+  
+  -- Get required data for fix request
+  local task_description = mlc.task or "No task description available"
+  local current_code = mlc.code or ""
+  local previous_attempts = mlc.previous_fix_attempts or {}
+  
+  -- Send fix request via bridge
+  bridge.send_fix_request(uid, task_description, current_code, failed_tests, previous_attempts)
+  
+  -- Show feedback to user
+  game.print(string.format("[color=yellow]Fixing failing tests with AI (attempt %d/3)...[/color]", mlc.fix_attempt_count))
+end
+
 local function on_gui_click(event)
   if not event.element or not event.element.valid or not event.element.tags then return end
 
@@ -354,8 +454,7 @@ local function on_gui_click(event)
   elseif event.element.tags.auto_generate_tests then
     auto_generate_test_cases(event.element.tags.uid)
   elseif event.element.tags.fix_tests then
-    -- TODO: Implement AI-powered test fixing
-    game.print("[color=yellow]Fix with AI feature coming soon![/color]")
+    fix_failing_tests(event.element.tags.uid)
   elseif event.element.tags.edit_test_case then
     test_case_dialog.show(event.player_index, event.element.tags.uid, event.element.tags.edit_test_case)
   end
@@ -365,10 +464,61 @@ local function on_ai_operation_state_changed(event)
   update_ai_buttons(event.uid)
 end
 
+local function on_fix_completion(event)
+  local uid = event.uid
+  local mlc = storage.combinators[uid]
+  
+  if not mlc then return end
+  
+  if event.success then
+    -- Reset fix attempt counter and clear previous attempts on successful fix
+    mlc.fix_attempt_count = 0
+    mlc.previous_fix_attempts = {}
+    game.print("[color=green]Tests fixed successfully![/color]")
+    
+    -- Update the combinator code with the fixed code and trigger proper re-evaluation
+    if event.code then
+      -- Trigger code update event to properly re-evaluate all test cases
+      event_handler.raise_event(constants.events.on_code_updated, {
+        uid = uid,
+        code = event.code,
+        source_type = "ai_fix"
+      })
+    end
+  else
+    -- Store this failed attempt for context in future retries
+    if not mlc.previous_fix_attempts then
+      mlc.previous_fix_attempts = {}
+    end
+    
+    table.insert(mlc.previous_fix_attempts, {
+      attempt_number = mlc.fix_attempt_count,
+      error_message = event.error_message or "Fix attempt failed",
+      timestamp = game.tick
+    })
+    
+    -- Increment attempt counter for failed fixes
+    if not mlc.fix_attempt_count then
+      mlc.fix_attempt_count = 0
+    end
+    
+    if mlc.fix_attempt_count >= 3 then
+      game.print("[color=red]Unable to fix tests after 3 attempts. Manual intervention required.[/color]")
+    else
+      game.print(string.format("[color=orange]Fix attempt failed. %d attempts remaining.[/color]", 3 - mlc.fix_attempt_count))
+    end
+  end
+  
+  -- Update button states
+  update_ai_buttons(uid)
+  component.update(uid)
+end
+
 event_handler.add_handler(constants.events.on_test_case_evaluated, on_test_case_evaluated)
 event_handler.add_handler(constants.events.on_test_case_name_updated, on_test_case_evaluated)
 event_handler.add_handler(constants.events.on_test_generation_completed, on_test_generation_completed)
 event_handler.add_handler(constants.events.on_ai_operation_state_changed, on_ai_operation_state_changed)
+event_handler.add_handler(constants.events.on_fix_completion, on_fix_completion)
 event_handler.add_handler(defines.events.on_gui_click, on_gui_click)
 
 

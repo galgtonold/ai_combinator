@@ -503,12 +503,44 @@ end)
 
 -- ----- GUI events and entity interactions -----
 
-function load_code_from_gui(code, uid) -- note: in global _ENV, used from gui.lua
+function load_code_from_gui(code, uid, source_type) -- note: in global _ENV, used from gui.lua
 	local mlc, mlc_env = storage.combinators[uid], memory.combinators[uid]
 	if not ( mlc and mlc.e.valid
 			and mlc.out_red.valid and mlc.out_green.valid )
 		then return init.mlc_remove(uid) end
-	mlc.code = code or ''
+	
+	-- Initialize code history if not present
+	if not mlc.code_history then
+		mlc.code_history = {}
+		mlc.code_history_index = 0
+	end
+	
+	-- Only add to history if code is different from current
+	local new_code = code or ''
+	if new_code ~= (mlc.code or '') then
+		-- Add current code to history before changing it
+		if mlc.code and mlc.code ~= '' then
+			table.insert(mlc.code_history, {
+				code = mlc.code,
+				timestamp = game.tick,
+				source = mlc.last_code_source or "manual",
+				previous_source = mlc.last_code_source
+			})
+		end
+		
+		-- Limit history size to last 20 versions
+		if #mlc.code_history > 20 then
+			table.remove(mlc.code_history, 1)
+		end
+		
+		-- Reset history index to current (latest) position
+		mlc.code_history_index = #mlc.code_history + 1
+		
+		-- Track the source of this code change
+		mlc.last_code_source = source_type or "manual"
+	end
+	
+	mlc.code = new_code
 	if not mlc_env then return init.mlc_init(mlc.e) end
 	update.mlc_update_code(mlc, mlc_env, memory.combinator_env[mlc_env._uid])
 	if not mlc.err_parse then
@@ -536,13 +568,6 @@ script.on_event(defines.events.on_gui_opened, function(ev)
 	end
 	local gui_t = storage.guis[e.unit_number]
 	if not gui_t then guis.open(player, e)
-	elseif player.index == gui_t.mlc_gui.player_index then
-		-- This can happen when clicking same mlc again with code box focused
-		-- "return" here will open regular combinator gui, so do something else
-		-- Not sure how to handle this better - setting anything to player.opened closes stuff
-		local code = gui_t.mlc_code.text
-		gui_t = guis.open(player, e)
-		gui_t.mlc_code.text = code -- restore currently-edited code
 	else
 		e = game.players[gui_t.mlc_gui.player_index or 0]
 		e = e and e.name or 'Another player'
