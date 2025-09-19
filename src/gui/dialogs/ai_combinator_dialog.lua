@@ -8,6 +8,7 @@ local titlebar = require('src/gui/components/titlebar')
 local ai_combinator_header = require('src/gui/components/ai_combinator_header')
 local test_cases_section = require('src/gui/components/test_cases_section')
 local status_indicator = require('src/gui/components/status_indicator')
+local help_dialog = require('src/gui/dialogs/help_dialog')
 
 local dialog = {}
 
@@ -81,12 +82,7 @@ local function update_ai_buttons(uid)
   
   -- Update Cancel AI button if it exists
   if gui_t.mlc_cancel_ai then
-    gui_t.mlc_cancel_ai.visible = ai_operation_in_progress
-  end
-  
-  -- Update progress flow visibility
-  if gui_t.mlc_progress_flow then
-    gui_t.mlc_progress_flow.visible = ai_operation_in_progress
+    gui_t.mlc_cancel_ai.enabled = ai_operation_in_progress
   end
 end
 
@@ -150,6 +146,8 @@ local function update_status(uid)
   if ai_operation_in_progress then
     local operation_progress = ai_operation_manager.get_operation_progress(uid)
     progress_bar.value = operation_progress
+  else
+    progress_bar.value = 0
   end
   
   -- Update AI operation buttons
@@ -184,7 +182,15 @@ function dialog.show(player, entity)
 		{ type='frame', name='mlc-gui', direction='vertical'})
 	gui.location = {20 * dsf, 150 * dsf} -- doesn't work from initial props
 
-  titlebar.show(gui, "AI combinator", {uid = uid, close_combinator_ui = true})
+  local extra_buttons = {{
+      type = "sprite-button",
+      style = "frame_action_button",
+      sprite = "mlc-help",
+      tooltip = "Show help",
+      tags = {show_ai_combinator_help_button = true}
+    }
+  }
+  titlebar.show(gui, "AI combinator", {uid = uid, close_combinator_ui = true}, nil, extra_buttons)
 
   local entity_frame = elc(gui, {type='frame', name='mlc-entity-frame', style='entity_frame', direction='vertical'})
 
@@ -208,9 +214,9 @@ function dialog.show(player, entity)
   
   
   -- Progress bar with cancel button
-  local progress_flow = elc(entity_frame, {type='flow', name='mlc-progress-flow', direction='horizontal'}, {horizontally_stretchable=true})
+  local progress_flow = elc(entity_frame, {type='flow', name='mlc-progress-flow', direction='horizontal'}, {horizontally_stretchable=true, height=30})
   elc(progress_flow, {type='progressbar', name='mlc-progressbar', value=0, style='production_progressbar'}, {horizontally_stretchable=true})
-  elc(progress_flow, {type='button', name='mlc-cancel-ai', caption='Cancel', style='red_button'}, {width=80, left_margin=4, height=25})
+  elc(progress_flow, {type='button', name='mlc-cancel-ai', caption='Cancel', style='red_button', tooltip='Cancel the current AI operation'}, {width=80, left_margin=4, height=25})
   
   elc(entity_frame, {type='label', name='mlc-task-title-label', caption='Task', style="semibold_label"})
 

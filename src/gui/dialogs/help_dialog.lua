@@ -1,73 +1,112 @@
 local event_handler = require("src/events/event_handler")
-local config = require('src/core/config')
-
+local titlebar = require('src/gui/components/titlebar')
+local dialog_manager = require('src/gui/dialogs/dialog_manager')
+local collapsible_section = require('src/gui/components/collapsible_section')
 
 local dialog = {}
 
-function dialog.show(pn, toggle_on)
+-- Help dialog constants for external use
+dialog.HELP_TYPES = {
+	EDIT_CODE = 'edit_code',
+	AI_COMBINATOR = 'ai_combinator',
+	TEST_CASE = 'test_case',
+	-- Add more types here as needed:
+	-- VARIABLES = 'variables'
+}
+
+-- Predefined help configurations
+local help_configs = {
+	edit_code = {
+		title = "Source Code Help",
+		dialog_name = 'mlc-help',
+		width = 500,
+		height = 900,
+		content = require('src/gui/dialogs/help/edit_code_help_content')
+	},
+	ai_combinator = {
+		title = "AI Combinator Help",
+		dialog_name = 'ai-combinator-help',
+		width = 550,
+		height = 900,
+		content = require('src/gui/dialogs/help/ai_combinator_help_content')
+	},
+	test_case = {
+		title = "Test Case Help",
+		dialog_name = 'test-case-help',
+		width = 550,
+		height = 900,
+		content = require('src/gui/dialogs/help/test_case_help_content')
+	}
+}
+
+function dialog.show(pn, config_name_or_table, toggle_on)
+	-- Default to ai_combinator if no config specified
+	config_name_or_table = config_name_or_table or 'ai_combinator'
+	
+	-- Get config from predefined configs or use provided table
+	local config
+	if type(config_name_or_table) == "string" then
+		config = help_configs[config_name_or_table]
+		if not config then
+			error("Unknown help config: " .. config_name_or_table)
+		end
+	else
+		config = config_name_or_table
+	end
+	
 	local player = game.players[pn]
-	local gui_exists = player.gui.screen['mlc-help']
+	local gui_exists = player.gui.screen[config.dialog_name]
 	if gui_exists and not toggle_on then return gui_exists.destroy()
 	elseif toggle_on == false then return end
+	
 	local dw, dh, dsf = player.display_resolution.width,
 		player.display_resolution.height, 1 / player.display_scale
 
+	local dialog_width = config.width or 500
+	local dialog_height = math.min(config.height or 900, dh - 100)
+
 	local gui = player.gui.screen.add{ type='frame',
-		name='mlc-help', caption='Source Code help', direction='vertical' }
-	gui.location = {math.max(50, (dw - 800) * dsf), 20 * dsf}
-	local scroll = gui.add{type='scroll-pane',  name='mlc-help-scroll', direction='vertical'}
-	scroll.style.maximal_height = (dh - 200) * dsf
-	local lines = {
-		'Combinator has separate input and output leads, but note that you can connect them.',
-		' ',
-		'Special variables available/handled in Lua environment:',
-		'  [color=#ffe6c0]uid[/color] (uint) -- globally-unique number of this combinator.',
-		'  [color=#ffe6c0]red[/color] {signal-name=value, ...} -- signals on the red input wire (read-only).',
-		'    Any keys queried there are always numbers, returns 0 for missing signal.',
-		'  [color=#ffe6c0]green[/color] {signal-name=value, ...} -- same as above for green input network.',
-		'  [color=#ffe6c0]out[/color] {signal-name=value, ...} -- table with all signals sent to networks.',
-		'    They are persistent, so to remove a signal you need to set its entry',
-		'      to nil or 0, or flush all signals by entering "[color=#ffe6c0]out = {}[/color]" (creates a fresh table).',
-		'    Signal name can be prefixed by "red/" or "green/" to only output it on that specific wire,',
-		'      and will override non-prefixed signal value there, if that is used as well, until unset.',
-		'  [color=#ffe6c0]var[/color] {} -- table to easily store values between code runs (per-mlc globals work too).',
-		'  [color=#ffe6c0]delay[/color] (number) -- delay in ticks until next run - use for intervals or performance.',
-		'    Defaults to 1 (run again on next tick), and gets reset to it before each run,',
-		'      so must be set on every individual run if you want to delay the next one.',
-		'  [color=#ffe6c0]irq[/color] (signal-name) -- input signal name to interrupt any delay on.',
-		'    If any [color=#ffe6c0]delay[/color] value is set and this signal is non-zero on any input wire, delay gets interrupted.',
-		'    Same as [color=#ffe6c0]delay[/color], gets reset before each code run, and must be set if still needed.',
-		'  [color=#ffe6c0]irq_min_interval[/color] (number) -- min ticks between triggering code runs on any [color=#ffe6c0]irq[/color] signal.',
-		'    To avoid complicated logic when that signal is not a pulse. Use nil or <=1 to disable (default).',
-		'  [color=#ffe6c0]debug[/color] (bool) -- set to true to print debug info about next code run to factorio log.',
-		' ',
-		'Factorio APIs available, aside from general Lua stuff:',
-		'  [color=#ffe6c0]game.tick[/color] -- read-only int for factorio game tick, to measure time intervals.',
-		'  [color=#ffe6c0]game.log(...)[/color] -- prints passed value(s) to factorio log.',
-		'  [color=#ffe6c0]game.print(...)[/color] -- prints values to an in-game console output.',
-		'  [color=#ffe6c0]game.print_color(msg, c)[/color] -- for a more [color=#08c2ca]co[/color]'..
-				'[color=#ed7a7e]lor[/color][color=#5cd568]ful[/color] console output, c={r[0-1],g,b}.',
-		'  [color=#ffe6c0]serpent.line(...)[/color] and [color=#ffe6c0]serpent.block(...)[/color] -- dump tables to strings.',
-		' ',
-		'Default UI hotkeys (rebindable, do not work when editing text-box is focused):',
-		'  [color=#ffe6c0]Esc[/color] - unfocus/close code textbox (makes all other hotkeys work again),',
-		'  [color=#ffe6c0]Ctrl-S[/color] - save/apply code changes,'..
-		'  [color=#ffe6c0]Ctrl-Q[/color] - close all UIs,'..
-				' [color=#ffe6c0]Ctrl-Enter[/color] - save/apply and close,'..
-				' [color=#ffe6c0]Ctrl-F[/color] - toggle env window.',
-		' ' }
-	for n, line in ipairs(lines) do scroll.add{
-		type='label', name='line_'..n, direction='horizontal', caption=line } end
-	gui.add{type='button', name='mlc-help-close', caption='Got it'}
+		name=config.dialog_name, caption='', direction='vertical' }
+	gui.location = {math.max(50, (dw - dialog_width) * dsf / 2), 20 * dsf}
+	dialog_manager.set_current_dialog(pn, gui)
+
+	titlebar.show(gui, config.title, {help_dialog_close = true}, {help_dialog = true})
+	
+	-- Content frame with shallow frame style
+	local content_frame = gui.add{type='frame', direction='vertical', style='inside_shallow_frame'}
+	content_frame.style.padding = 0
+	
+	local scroll = content_frame.add{type='scroll-pane', name='help-scroll', direction='vertical'}
+	scroll.style.maximal_height = dialog_height * dsf
+	scroll.style.minimal_height = dialog_height * dsf
+	scroll.style.maximal_width = dialog_width
+	scroll.style.minimal_width = dialog_width - 20
+	scroll.style.padding = 8
+  scroll.vertical_scroll_policy = 'always'
+	
+	-- Render all sections from content data
+	if config.content and config.content.sections then
+		for i, section_data in ipairs(config.content.sections) do
+			local section, content = collapsible_section.show(scroll, section_data.id, section_data.title, section_data.expanded)
+			
+			-- First section gets less top margin
+			if i == 1 then
+				section.style.top_margin = 4
+			end
+			
+			-- Render the content using the content structure
+			collapsible_section.render_content(content, section_data.content)
+		end
+	end
 end
 
 function on_gui_click(event)
 	local el = event.element
 
-  if not el.valid then return end
+  if not el.valid or not el.tags then return end
 
-	if el.name == 'mlc-help-close' then
-    return el.parent.destroy()
+	if el.tags.help_dialog_close then
+    return dialog_manager.close_dialog(event.player_index)
   end
 end
 

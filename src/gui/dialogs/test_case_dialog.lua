@@ -1,6 +1,7 @@
 local dialog_manager = require("src/gui/dialogs/dialog_manager")
 local constants = require("src/core/constants")
 local event_handler = require("src/events/event_handler")
+local help_dialog = require("src/gui/dialogs/help_dialog")
 
 local titlebar = require('src/gui/components/titlebar')
 local compact_signal_panel = require("src/gui/components/compact_signal_panel")
@@ -108,7 +109,16 @@ function dialog.show(player_index, uid, test_index)
   popup_frame.location = popup_location
   
   local test_case = mlc.test_cases[test_index]
-  titlebar.show(popup_frame, "Test Case", {test_case_dialog_close = true}, {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index})
+  local extra_buttons = {
+    {
+      type = "sprite-button",
+      sprite = "mlc-help",
+      style = "frame_action_button",
+      tooltip = "Help",
+      tags = {show_test_case_help_button = true, uid = uid, dialog = true, test_case_dialog = true, test_index = test_index}
+    }
+  }
+  titlebar.show(popup_frame, "Test Case", {test_case_dialog_close = true}, {uid = uid, dialog = true, test_case_dialog = true, test_index = test_index}, extra_buttons)
   
   -- Main content frame with light gray background
   local main_content_frame = popup_frame.add{
@@ -226,6 +236,16 @@ local function on_test_case_evaluated(event)
   update_status(event.uid, event.test_index)
 end
 
+local function on_gui_click(event)
+  if not event.element or not event.element.valid or not event.element.tags then return end
+  
+  -- Handle help button click specifically for test case dialog
+  if event.element.tags.show_test_case_help_button then
+    help_dialog.show(event.player_index, help_dialog.HELP_TYPES.TEST_CASE)
+  end
+end
+
 event_handler.add_handler(constants.events.on_test_case_evaluated, on_test_case_evaluated)
+event_handler.add_handler(defines.events.on_gui_click, on_gui_click)
 
 return dialog

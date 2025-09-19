@@ -285,7 +285,7 @@ function on_gui_click(event)
   elseif event.element.tags.history_next then
     dialog.navigate_history(uid, "next")
   elseif event.element.tags.show_help_button then
-    help_dialog.show(event.player_index)
+    help_dialog.show(event.player_index, help_dialog.HELP_TYPES.EDIT_CODE)
   end
 end
 

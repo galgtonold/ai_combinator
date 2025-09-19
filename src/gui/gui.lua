@@ -15,6 +15,7 @@ local set_task_dialog = require('src/gui/dialogs/set_task_dialog')
 local set_description_dialog = require('src/gui/dialogs/set_description_dialog')
 local edit_code_dialog = require('src/gui/dialogs/edit_code_dialog')
 local ai_combinator_dialog = require('src/gui/dialogs/ai_combinator_dialog')
+local help_dialog = require('src/gui/dialogs/help_dialog')
 
 
 local testing = require('src/testing/testing')
@@ -400,6 +401,14 @@ function guis.on_gui_click(event)
       set_description_dialog.show(event.player_index, element.tags.uid)
       return
     end
+  end
+
+  if element.tags.show_ai_combinator_help_button then
+    help_dialog.show(event.player_index, help_dialog.HELP_TYPES.AI_COMBINATOR)
+    return
+  elseif element.tags.show_test_case_help_button then
+    help_dialog.show(event.player_index, help_dialog.HELP_TYPES.TEST_CASE)
+    return
   end
 
 	local uid, gui_t = find_gui(event)
