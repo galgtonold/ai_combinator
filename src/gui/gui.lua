@@ -403,14 +403,6 @@ function guis.on_gui_click(event)
     end
   end
 
-  if element.tags.show_ai_combinator_help_button then
-    help_dialog.show(event.player_index, help_dialog.HELP_TYPES.AI_COMBINATOR)
-    return
-  elseif element.tags.show_test_case_help_button then
-    help_dialog.show(event.player_index, help_dialog.HELP_TYPES.TEST_CASE)
-    return
-  end
-
 	local uid, gui_t = find_gui(event)
 	if not uid then return end
 

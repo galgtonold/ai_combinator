@@ -124,7 +124,11 @@ function init.mlc_remove(uid, keep_entities, to_be_mined)
 		local mlc = init.out_wire_clear_mlc(storage.combinators[uid] or {})
 		if not to_be_mined and mlc.e and mlc.e.valid then mlc.e.destroy() end
 	end
-	memory.combinators[uid], memory.combinator_env[uid], storage.combinators[uid], storage.guis[uid] = nil, nil, nil, nil
+	memory.combinators[uid], memory.combinator_env[uid], storage.guis[uid] = nil, nil, nil
+
+  if not storage.combinators[uid].removed_by_player then -- Keep combinator data for possible restore on redo
+    storage.combinators[uid] = nil
+  end
 end
 
 return init

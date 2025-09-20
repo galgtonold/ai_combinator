@@ -117,3 +117,5 @@ cd "c:\Users\...\AppData\Roaming\Factorio\mods\ai_combinator\launcher"; npm run 
 
 
 In factorio lua all imports need to happen at a top level. Do not put them into functions or conditionals.
+
+We don't want to overengineer code into an enterprise level fizzbuzz ravioli. Keep it simple and pragmatic. However, make sure that code is clean, modular and when code files become too large, split them up into smaller files.

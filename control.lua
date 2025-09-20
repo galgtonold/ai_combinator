@@ -10,6 +10,8 @@ local circuit_network = require('src/core/circuit_network')
 local memory = require('src/ai_combinator/memory')
 local sandbox = require('src/sandbox/base')
 local ai_operation_manager = require('src/core/ai_operation_manager')
+local blueprint_serialization = require('src/core/blueprint_serialization')
+local util = require('src/core/utils')
 
 
 local guis = require('src/gui/gui')
@@ -127,7 +129,7 @@ local function on_setup_blueprint(ev)
 	local bp = p.blueprint_to_setup
 	if not (bp and bp.valid_for_read) then bp = p.cursor_stack end
 	if not (bp and bp.valid_for_read and bp.is_blueprint)
-		then return console_warn( p, 'BUG: Failed to detect blueprint'..
+		then return util.console_warn( p, 'BUG: Failed to detect blueprint'..
 			' item/info, Moon Logic Combinator code (if any) WILL NOT be stored there' ) end
 
 	local bp_es = bp.get_blueprint_entities()
@@ -139,30 +141,45 @@ local function on_setup_blueprint(ev)
 		local map_es = p.surface.find_entities(ev.area)
 		bp_mlc_uids = blueprint_match_positions(bp_es, map_es)
 	end
-	if not bp_mlc_uids then return console_warn( p, 'BUG: Failed to match blueprint'..
+	if not bp_mlc_uids then return util.console_warn( p, 'BUG: Failed to match blueprint'..
 		' entities to ones on the map, combinator settings WILL NOT be stored in this blueprint!' ) end
 
 	for bp_idx, uid in pairs(bp_mlc_uids) do
-		bp.set_blueprint_entity_tag(bp_idx, 'mlc_code', storage.combinators[uid].code)
-    bp.set_blueprint_entity_tag(bp_idx, 'task', storage.combinators[uid].task)
-    bp.set_blueprint_entity_tag(bp_idx, 'description', storage.combinators[uid].description)
-  end
+		local mlc = storage.combinators[uid]
+		if mlc then
+			local tags = blueprint_serialization.serialize_combinator(mlc)
+			for tag_name, tag_value in pairs(tags) do
+				bp.set_blueprint_entity_tag(bp_idx, tag_name, tag_value)
+			end
+		end
+	end
 end
 
 script.on_event(defines.events.on_player_setup_blueprint, on_setup_blueprint)
+
 
 local function on_built(ev)
 	local e = ev.created_entity or ev.entity -- latter for revive event
 	if not e.valid then return end
 	local mlc = out_wire_connect_mlc{e=e}
+	
+	-- Merge with default combinator structure while preserving existing fields
+	local default_mlc = blueprint_serialization.create_default_combinator(e)
+	mlc = blueprint_serialization.merge_combinator_data(mlc, default_mlc)
+	
 	storage.combinators[e.unit_number] = mlc
 
 	-- Blueprints - try to restore settings from tags stored there on setup,
 	--  or fallback to old method with uid stored in a constant for simple copy-paste if tags fail
-	if ev.tags and ev.tags.mlc_code then
-    mlc.code = ev.tags.mlc_code
-    mlc.task = ev.tags.task
-    mlc.description = ev.tags.description
+	if ev.tags then
+		local deserialized_data = blueprint_serialization.deserialize_combinator(ev.tags)
+		mlc = blueprint_serialization.merge_combinator_data(mlc, deserialized_data)
+		storage.combinators[e.unit_number] = mlc
+		
+		-- Refresh imported test cases to ensure they're properly evaluated
+		if deserialized_data.test_cases and #deserialized_data.test_cases > 0 then
+			blueprint_serialization.refresh_imported_test_cases(mlc)
+		end
 	else
 		local ecc_params = e.get_or_create_control_behavior().parameters
 		local uid_src = ecc_params.first_constant or 0
@@ -170,13 +187,28 @@ local function on_built(ev)
 		if uid_src ~= 0 then
 			local mlc_src = storage.combinators[uid_src]
 			if mlc_src then 
-				mlc.code = mlc_src.code
-				mlc.task = mlc_src.task
-				mlc.description = mlc_src.description
+				local copied_data = {
+					code = mlc_src.code,
+					task = mlc_src.task,
+					description = mlc_src.description,
+					test_cases = mlc_src.test_cases,
+					code_history = mlc_src.code_history,
+					code_history_index = mlc_src.code_history_index,
+					vars = mlc_src.vars
+				}
+				mlc = blueprint_serialization.merge_combinator_data(mlc, copied_data)
+				storage.combinators[e.unit_number] = mlc
+				
+				-- Also refresh test cases when copying from another combinator
+				if copied_data.test_cases and #copied_data.test_cases > 0 then
+					blueprint_serialization.refresh_imported_test_cases(mlc)
+				end
 			else
 				mlc.code = ('-- No code was stored in blueprint and'..
-					' Moon Logic [%s] is unavailable for OTA code update'):format(uid_src) end
-	end end
+					' Moon Logic [%s] is unavailable for OTA code update'):format(uid_src) 
+			end
+		end
+	end
 end
 
 script.on_event(defines.events.on_built_entity, on_built, mlc_filter)
@@ -207,8 +239,13 @@ script.on_event(
 	{{filter='name', name='mlc'}, {filter='name', name='mlc-core'}} )
 script.on_event(defines.events.on_entity_settings_pasted, on_entity_copy)
 
-local function on_destroyed(ev) init.mlc_remove(ev.entity.unit_number) end
-local function on_mined(ev) init.mlc_remove(ev.entity.unit_number, nil, true) end
+local function on_destroyed(ev)
+  init.mlc_remove(ev.entity.unit_number)
+end
+local function on_mined(ev)
+  storage.combinators[ev.entity.unit_number].removed_by_player = true
+  init.mlc_remove(ev.entity.unit_number, nil, true)
+end
 
 script.on_event(defines.events.on_pre_player_mined_item, on_mined, mlc_filter)
 script.on_event(defines.events.on_robot_pre_mined, on_mined, mlc_filter)
@@ -445,10 +482,16 @@ local function on_tick(ev)
 
 	for uid, mlc in pairs(storage.combinators) do
 		local mlc_env = memory.combinators[uid]
-		if not mlc_env then mlc_env = init.mlc_init(mlc.e) end
-		if not ( mlc_env and mlc.e.valid
-				and mlc.out_red.valid and mlc.out_green.valid )
-			then init.mlc_remove(uid); goto skip end
+		if not mlc_env then
+      mlc_env = init.mlc_init(mlc.e)
+    end
+    if mlc.removed_by_player then -- if it was removed by the user, keep it so it can be restored from undo
+      goto skip
+    end
+		if not (mlc_env and mlc.e.valid and mlc.out_red.valid and mlc.out_green.valid) then
+        init.mlc_remove(uid)
+        goto skip
+    end
 
 		local err_msg = format_mlc_err_msg(mlc)
 		if err_msg then
@@ -565,7 +608,7 @@ script.on_event(defines.events.on_gui_opened, function(ev)
 	if not (e and e.name == 'mlc') then return end
 	if not storage.combinators[e.unit_number] then
 		player.opened = nil
-		return console_warn(player, 'BUG: Combinator #'..e.unit_number..' is not registered with mod code')
+		return util.console_warn(player, 'BUG: Combinator #'..e.unit_number..' is not registered with mod code')
 	end
 	local gui_t = storage.guis[e.unit_number]
 	if not gui_t then guis.open(player, e)
