@@ -8,10 +8,8 @@ local init = require('src/ai_combinator/init')
 local update = require('src/ai_combinator/update')
 local circuit_network = require('src/core/circuit_network')
 local memory = require('src/ai_combinator/memory')
-local sandbox = require('src/sandbox/base')
 local ai_operation_manager = require('src/core/ai_operation_manager')
 local blueprint_serialization = require('src/core/blueprint_serialization')
-local util = require('src/core/utils')
 
 
 local guis = require('src/gui/gui')

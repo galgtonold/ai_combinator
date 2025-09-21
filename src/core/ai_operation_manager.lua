@@ -1,5 +1,6 @@
 local event_handler = require("src/events/event_handler")
 local constants = require("src/core/constants")
+local progress_messages = require("src/core/progress_messages")
 
 local ai_operation_manager = {}
 
@@ -187,7 +188,7 @@ function ai_operation_manager.get_operation_progress(uid)
   return 1 - 0.5 ^ (info.elapsed_seconds / half_life_seconds)
 end
 
--- Get status text for current operation
+-- Get status text for current operation (simple, for status indicator)
 function ai_operation_manager.get_operation_status_text(uid)
   local info = ai_operation_manager.get_operation_info(uid)
   if not info then return nil end
@@ -201,6 +202,32 @@ function ai_operation_manager.get_operation_status_text(uid)
   end
   
   return "AI operation in progress"
+end
+
+-- Get progress bar text for current operation (entertaining messages)
+function ai_operation_manager.get_operation_progress_text(uid)
+  local info = ai_operation_manager.get_operation_info(uid)
+  if not info then return nil end
+  
+  -- Get messages for the operation type
+  local messages = nil
+  if info.type == OPERATION_TYPES.TASK_EVALUATION then
+    messages = progress_messages.TASK_EVALUATION
+  elseif info.type == OPERATION_TYPES.TEST_GENERATION then
+    messages = progress_messages.TEST_GENERATION
+  elseif info.type == OPERATION_TYPES.TEST_FIXING then
+    messages = progress_messages.TEST_FIXING
+  end
+  
+  if messages and #messages > 0 then
+    -- Use correlation_id combined with current game tick for dynamic but consistent selection
+    -- Divide by 180 so message changes every 3 seconds (60 ticks/second * 3)
+    local seed = (info.correlation_id or 1) + math.floor(game.tick / 180)
+    local index = (seed % #messages) + 1
+    return messages[index]
+  end
+  
+  return "Processing..."
 end
 
 -- Clean up old canceled operations (call periodically to prevent memory leaks)

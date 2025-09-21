@@ -145,9 +145,12 @@ local function update_status(uid)
   
   if ai_operation_in_progress then
     local operation_progress = ai_operation_manager.get_operation_progress(uid)
+    local operation_text = ai_operation_manager.get_operation_progress_text(uid) or "Processing..."
     progress_bar.value = operation_progress
+    progress_bar.caption = operation_text
   else
     progress_bar.value = 0
+    progress_bar.caption = ""
   end
   
   -- Update AI operation buttons
@@ -215,7 +218,8 @@ function dialog.show(player, entity)
   
   -- Progress bar with cancel button
   local progress_flow = elc(entity_frame, {type='flow', name='mlc-progress-flow', direction='horizontal'}, {horizontally_stretchable=true, height=30})
-  elc(progress_flow, {type='progressbar', name='mlc-progressbar', value=0, style='production_progressbar'}, {horizontally_stretchable=true})
+  local progress_bar = elc(progress_flow, {type='progressbar', name='mlc-progressbar', value=0, style='production_progressbar', caption=''}, {horizontally_stretchable=true})
+  progress_bar.style.horizontal_align = "center"
   elc(progress_flow, {type='button', name='mlc-cancel-ai', caption='Cancel', style='red_button', tooltip='Cancel the current AI operation'}, {width=80, left_margin=4, height=25})
   
   elc(entity_frame, {type='label', name='mlc-task-title-label', caption='Task', style="semibold_label"})
