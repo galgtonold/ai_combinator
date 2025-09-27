@@ -1,60 +1,78 @@
 # AI Combinator for Factorio
 
-🤖 **Transform your circuit networks with the power of AI!**
+🤖 **Finally, a combinator that speaks human!**
 
-The AI Combinator is a revolutionary Factorio mod that adds an intelligent combinator to your circuit networks. Like any combinator, it reads input signals and produces output signals - but instead of manually configuring complex logic, you simply describe what you want in plain English and AI figures out the rest!
+Tired of building spaghetti circuits that even you can't understand? Meet the AI Combinator - it reads signals and outputs results just like any other combinator, except you tell it what to do in plain English instead of drowning in a sea of arithmetic and decider combinators.
+
+It's like having a personal circuit engineer who never sleeps, never complains about your blueprint organization, and somehow makes sense of your "temporary" factory sections.
 
 ![AI Combinator Interface](images/ai-combinator-ui.png)
-*The AI Combinator interface with natural language input*
+*Just tell it what you want - no combinatorics degree required*
 
-## ✨ Features
+## 🌟 Why This Changes Everything
 
-- **Smart Circuit Logic**: Describe complex combinator behavior in natural language
-- **Signal Processing**: Read input signals from red/green wires and output calculated results
-- **Persistent Memory**: Remember values between game ticks for advanced logic
-- **Game Integration**: Can print messages and information to the game console
-- **Visual Signal Display**: See all circuit signals with helpful visual indicators
-- **Error Handling**: Clear error messages and debugging information
+**Finally, circuit networks for everyone!** Whether you're a complete beginner intimidated by combinator logic or an experienced player who just wants to build cooler stuff faster, the AI Combinator opens doors that were previously locked behind circuit complexity.
+
+**For Circuit Beginners:** Jump straight into building smart factories without getting lost in arithmetic combinator hell. Want train automation? Smart production balancing? Resource monitoring? Just describe what you want and watch it work - then peek under the hood to learn how it's done.
+
+**For Circuit Veterans:** Stop spending hours on tedious signal processing and focus on the creative challenges. Let AI handle the boring math while you design the interesting systems. Think of it as having a junior engineer who handles the grunt work.
+
+**The Learning Bridge:** Start with simple AI-generated circuits, then gradually build your own components as you understand the patterns. The built-in testing system helps you experiment safely - no more wondering if your logic actually works!
+
+## ✨ What's in the Box
+
+**🗣️ Natural Language Programming**  
+Type "make the lights rainbow" and watch it happen. No more counting ticks or debugging why your simple "if iron < 1000" took 47 combinators.
+
+**🧪 Built-in Testing**  
+Create test cases like a proper engineer! Set up inputs, define expected outputs, and let the system tell you when your logic actually works (revolutionary concept, we know).
+
+**🔧 Smart Signal Wizardry**  
+Handles all the signal types Factorio throws at it - items, fluids, virtuals, you name it. Even remembers things between ticks, which is more than we can say for most of our blueprints.
+
+**🎨 Real Factory Examples**  
+We've got rainbow lights, production achievement tracking, and smart asteroid processing. Because apparently teaching a computer to play Factorio was easier than organizing our own spaghetti.
 
 ![AI Code Generation](images/code-generation-demo.gif)
-*Watch the AI create circuit logic from your description*
+*AI doing the combinatorics so you don't have to*
 
-## 🚀 Quick Start
+## 🚀 Getting Started
 
-### Prerequisites
-- Factorio 2.0 or later
-- API key for a supported AI service (configured through the launcher)
+### What You'll Need
+- Factorio 2.0+ (because who's still running 1.1?)
+- An API key from any supported AI service (we'll help you set this up)
+- Basic understanding that belts go in straight lines (optional)
 
-### Installation
+### Installation - Easier Than Balancing Your Smelter Setup
 
-1. **Download the AI Combinator Launcher** from the [releases page](https://github.com/galgtonold/ai_combinator/releases)
+1. **Grab the AI Combinator Launcher** from our [releases page](https://github.com/galgtonold/ai_combinator/releases)
    
-   ⚠️ **Important**: This mod requires the launcher application to work! The launcher handles AI communication and configuration.
+   ⚠️ **Important**: This isn't just a regular mod - you need the launcher! It's like the main bus for AI communication.
 
-2. **Install the launcher** by running the downloaded executable
+2. **Run the installer** - it's more reliable than your train signals, we promise
 
-3. **Launch the application** and configure your settings:
-   - Enter your AI service API key
-   - Select your Factorio installation (auto-detected in most cases)
-   - Choose your preferred AI model and provider
+3. **Launch the app** and tell it about your AI service:
+   - Pick your AI provider (OpenAI, Anthropic, Google, xAI, or DeepSeek)
+   - Enter your API key (costs less than researching everything)
+   - Choose a model (they're all smarter than your first spaghetti factory)
 
-4. **Start Factorio** through the launcher - it will automatically enable the AI Combinator mod
+4. **Start Factorio through the launcher** - it'll handle the mod installation automatically
 
 ![Launcher Interface](images/launcher-setup.png)
-*The launcher configuration screen*
+*The launcher - cleaner than your circuit networks*
 
-### First Steps
+### Your First AI Combinator
 
-1. **Research the AI Combinator technology** in your Factorio game
-2. **Craft an AI Combinator** using the recipe (requires advanced circuits)
-3. **Place the combinator** in your circuit network like any other combinator
-4. **Connect red/green wires** to provide input signals and receive outputs
-5. **Click on the combinator** to open the AI interface
-6. **Describe the logic you want** (e.g., "Output signal A when iron plates < 1000")
-7. **Click Generate** and watch the combinator process signals intelligently!
+1. **Enable the mod** for your specific save file (check your mod settings in-game)
+2. **Research the AI Combinator technology** (it's in the circuit network tree, naturally)
+3. **Craft one** - requires advanced circuits, because of course it does
+4. **Plop it down** and wire it up like any other combinator
+5. **Click on it** to open the magic window
+6. **Tell it what you want** in actual English: "Turn on the lights when iron is low"
+7. **Hit Generate** and watch it work better than your hand-crafted mess
 
 ![In-Game Usage](images/combinator-placement.gif)
-*Placing and configuring an AI Combinator*
+*Placing your new favorite combinator*
 
 ## 🔧 How It Works
 
@@ -73,69 +91,107 @@ The AI Combinator functions like any other combinator in Factorio, but with inte
 - Output is limited to circuit signals that other devices can interpret
 - Cannot perform actions outside the circuit network system
 
-Under the hood, the AI generates Lua code that processes your input signals and produces the desired output, but you don't need to know any programming!
+Under the hood, the AI writes Lua code that handles all the signal processing - but you don't need to understand any of that mess!
 
-### Example Prompts & What They Do
+## 🎮 What Can This Thing Actually Do?
 
-**Basic Signal Logic**:
-- *"Output signal A when iron plates signal is greater than 1000"*
-  → Reads iron plate count from input, outputs signal A when threshold met
+### 🌈 RGB Rainbow Lights
+*"Create a rainbow pattern that cycles through colors on connected lamps"*
 
-- *"Count inserters and output the total on signal C"* 
-  → Adds up all inserter signals from input, outputs sum on signal C
+Finally, decorative lighting that doesn't require a PhD in shift registers! The AI builds a proper color-cycling system that makes your factory look like a disco (in a good way).
 
-**Smart Processing**:
-- *"Set red signal to 1 when any green input exceeds 5000, but only every 60 seconds"*
-  → Time-based signal switching with persistent memory
+![Rainbow Lights Demo](images/rainbow-lights-demo.gif)
+*Your factory, but make it fabulous*
 
-- *"Output the highest value among all input signals on signal MAX"*
-  → Signal comparison and maximum value detection
+### 📊 Production Achievement Tracker  
+*"Track items passing through this wire and announce milestones in chat"*
 
-**Advanced Logic**:
-- *"Track iron consumption rate and warn when usage exceeds production"*
-  → Calculates consumption trends, outputs warning signal
+Remember when you hit your first million iron plates? Now the game will actually tell you! Set it up on your main bus and get congratulated for your factory's growth spurts.
 
-- *"Create a train request signal when cargo wagon is 80% full"*
-  → Processes cargo signals to determine fullness percentage
+"🎉 Milestone reached: 10,000 copper cables produced!"
+"🏆 Achievement unlocked: 1,000,000 iron plates processed!"
 
-![Complex Circuit Example](images/complex-circuit.png)
-*An AI-generated inventory monitoring system*
+![Production Tracking](images/production-tracking.png)
+*Finally, recognition for your hard work*
 
-## ⚙️ Technical Details
+### 🚀 Smart Asteroid Processing (Space Age)
+*"Reprocess asteroids when stockpile exceeds threshold"*
 
-For those interested in the technical implementation: the AI Combinator works by generating Lua code that processes circuit signals. The AI creates safe, sandboxed code that:
+Tired of manually managing your space platform's asteroid processing? This combinator watches your storage and automatically triggers reprocessing when you've got too much of the chunky stuff floating around.
 
-- Reads input signals from `red` and `green` wire networks
-- Performs calculations and logic operations
-- Outputs results to the `out` signal table
-- Maintains persistent state in `var` for complex behaviors
-- Can access `game.tick` for timing-based logic
+![Asteroid Processing](images/asteroid-processing.png)
+*Space logistics, but actually intelligent*
 
-This code generation happens behind the scenes - you just describe what you want, and the AI handles the programming complexity!
+## 🧪 Test Your Circuits Like a Pro
 
-## 🛠️ Troubleshooting
+One of the coolest features nobody talks about enough: **built-in testing!** Set up test cases with specific inputs and expected outputs, then watch the AI validate everything automatically.
 
-### Common Issues
+- Define input signal scenarios
+- Set expected output results  
+- Run tests and get pass/fail reports
+- AI can even auto-fix broken implementations
 
-**"AI Bridge not connected"**
-- Make sure you launched Factorio through the AI Combinator Launcher
-- Check that your AI service API key is valid and properly configured
-- Verify the launcher is still running in the background
+It's like unit testing, but for factory automation. Your circuits will actually work correctly on the first try (revolutionary concept, we know).
 
-**Code not updating**
-- The combinator updates every few ticks - wait a moment
-- Check for error messages in the combinator interface
-- Try rephrasing your prompt more clearly
+![Test Case Interface](images/test-case-ui.png)
+*Testing circuits like the responsible engineer you pretend to be*
 
-**Performance issues**
-- Avoid creating too many AI combinators in a single factory
-- Use simpler logic when possible - the AI is very capable!
+## 💡 Prompt Writing Tips
 
-### Getting Help
+**Keep it simple and specific:**
+```
+"Output signal A when iron plates > 1000"
+"Sum all input signals and put the result on signal TOTAL"
+"Flash the warning light every 2 seconds when any resource is low"
+```
 
-- Check the [GitHub Issues](https://github.com/galgtonold/ai_combinator/issues) for known problems
-- Join our [Discord community](https://discord.gg/factorio-ai-combinator) for support
-- Submit bug reports with your mod version and error logs
+**For time-based stuff:**
+```
+"Toggle signal every 60 seconds"
+"Remember the highest value seen in the last 5 minutes"
+"Only check inventory levels once per second to save UPS"
+```
+
+**Get creative with complex logic:**
+```
+"Calculate how many items per minute are flowing through"
+"Alert when production rate drops below consumption"
+"Create a smart train dispatcher that prevents deadlocks"
+```
+
+The AI is surprisingly good at understanding factory terminology and Factorio concepts!
+
+## ⚙️ The Nerdy Bits (Optional Reading)
+
+**What signals can it handle?** Everything a normal combinator can! Items, fluids, virtual signals - if it goes through a wire, this thing can process it.
+
+**Performance impact?** It's definitely heavier than your average combinator (AI isn't free), but way lighter than building the same logic by hand. Think 10s to 100s of combinators per factory, not 1000s. If your UPS starts looking sad, maybe don't update every tick - once per second is often plenty.
+
+**AI Providers:** OpenAI, Anthropic, Google, xAI, and DeepSeek are all supported. They're all paid services, but we're talking pennies here - cheaper than your daily coffee habit.
+
+**Under the hood:** The AI writes Lua code that handles all the signal processing, but you don't need to understand any of that mess! It reads from `red` and `green` wires, remembers stuff between ticks, and outputs whatever you asked for.
+
+## 🛠️ When Things Go Wrong
+
+**"No AI Bridge Connection"**
+- Did you launch Factorio through the launcher? (Not Steam directly!)
+- Is your API key still valid? (Check the launcher settings)
+- Is the launcher still running? (Check your system tray)
+
+**Combinator seems brain-dead**
+- Give it a moment - AI combinators think a bit slower than normal ones
+- Check for error messages in the combinator interface  
+- Try rephrasing your request - maybe be more specific?
+
+**Factory turning into a slideshow**
+- Too many AI combinators doing complex stuff every tick
+- Try making some update less frequently ("only check this once per second")
+- Monitor your UPS and dial it back if needed
+
+**Still stuck?**
+- Join our [Discord community](https://discord.gg/HYVuqC8kdP) for help, examples, and general factory chat
+- Check [GitHub Issues](https://github.com/galgtonold/ai_combinator/issues) for known bugs
+- The Discord has a gallery of working examples - great for inspiration!
 
 ## 🤝 Contributing
 
