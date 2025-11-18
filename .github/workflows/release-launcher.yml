@@ -24,7 +24,9 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: launcher/package-lock.json
+          cache-dependency-path: |
+            launcher/package-lock.json
+            launcher/renderer/package-lock.json
       
       - name: Install launcher dependencies
         working-directory: launcher
