@@ -38,6 +38,7 @@
       "en-US"
     ],
     "compression": "maximum",
+    "publish": null,
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
