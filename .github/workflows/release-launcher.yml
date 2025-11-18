@@ -1,0 +1,82 @@
+name: Build and Release Launcher
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v0.1.0, v1.2.3, etc.
+  workflow_dispatch:  # Allows manual triggering from GitHub UI
+    inputs:
+      version:
+        description: 'Version number (e.g., 0.1.0)'
+        required: true
+        default: '0.1.0'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: launcher/package-lock.json
+      
+      - name: Install launcher dependencies
+        working-directory: launcher
+        run: npm ci
+      
+      - name: Install renderer dependencies
+        working-directory: launcher/renderer
+        run: npm ci
+      
+      - name: Build renderer
+        working-directory: launcher
+        run: npm run build:renderer
+      
+      - name: Build electron
+        working-directory: launcher
+        run: npm run build:electron
+      
+      - name: Package application
+        working-directory: launcher
+        run: npm run package
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: List build artifacts
+        working-directory: launcher/build
+        run: dir
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-combinator-launcher-windows
+          path: |
+            launcher/build/*.exe
+            launcher/build/*.exe.blockmap
+            launcher/build/latest.yml
+          retention-days: 7
+      
+      - name: Get version from tag
+        if: startsWith(github.ref, 'refs/tags/')
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        shell: bash
+      
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: false
+          prerelease: false
+          files: |
+            launcher/build/*.exe
+            launcher/build/latest.yml
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
