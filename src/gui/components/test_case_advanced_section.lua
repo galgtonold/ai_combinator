@@ -1,5 +1,6 @@
 local event_handler = require("src/events/event_handler")
 local constants = require("src/core/constants")
+local value_parser = require("src/core/value_parser")
 
 local component = {}
 
@@ -146,17 +147,18 @@ function component.update_content(advanced_content, uid, test_index)
       }
       equals_label.style.right_margin = 8
       
-      -- Variable value input
+      -- Variable value input - use value_parser to format the value
+      local formatted_value = value_parser.format_value(var.value)
       local value_input = var_frame.add{
         type = "textfield",
-        text = tostring(var.value or 0),
-        numeric = true,
+        text = formatted_value,
+        numeric = false, -- Allow non-numeric input (lists, tables, etc.)
         allow_negative = true,
         name = "var-value-" .. i,
-        tooltip = "Variable value",
+        tooltip = "Variable value (number, string, list, or table)",
         tags = {uid = uid, test_index = test_index, var_row = i, var_value_input = true}
       }
-      value_input.style.width = 100
+      value_input.style.width = 200
       add_to_map(value_input)
       
       local spacer = var_frame.add{
@@ -384,7 +386,7 @@ local function update_variable_name(uid, test_index, var_index, name)
   })
 end
 
-local function update_variable_value(uid, test_index, var_index, value)
+local function update_variable_value(uid, test_index, var_index, value_str)
   local mlc = storage.combinators[uid]
   if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then
     return
@@ -395,7 +397,20 @@ local function update_variable_value(uid, test_index, var_index, value)
     return
   end
   
-  test_case.variables[var_index].value = tonumber(value) or 0
+  -- Try to parse the value as a Lua literal
+  local success, parsed_value = value_parser.parse_value(value_str)
+  if success then
+    test_case.variables[var_index].value = parsed_value
+  else
+    -- If parsing fails, try as a plain number for backwards compatibility
+    local num = tonumber(value_str)
+    if num then
+      test_case.variables[var_index].value = num
+    else
+      -- If still fails, set to 0 as default
+      test_case.variables[var_index].value = 0
+    end
+  end
   
   -- Trigger test case re-evaluation
   event_handler.raise_event(constants.events.on_test_case_updated, {

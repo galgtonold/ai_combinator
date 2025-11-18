@@ -2,6 +2,7 @@
   // Common props for all button types
   export let onClick: () => void = () => {};
   export let disabled: boolean = false;
+  export let title: string | undefined = undefined;
   
   function handleClick(event: MouseEvent) {
     if (disabled) return;
@@ -16,6 +17,7 @@
   class="button-base {$$props.class || ''}"
   on:click={handleClick}
   {disabled}
+  {title}
 >
     <slot></slot>
 </button>

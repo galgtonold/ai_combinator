@@ -314,6 +314,16 @@ local function on_test_generation_completed(event)
     end
 
     if type(generated_test) == "table" and generated_test.name then
+      -- Check if advanced features are being used
+      local uses_advanced = false
+      if generated_test.variables and #generated_test.variables > 0 then
+        uses_advanced = true
+      elseif generated_test.game_tick and generated_test.game_tick ~= 1 then
+        uses_advanced = true
+      elseif generated_test.expected_print and generated_test.expected_print ~= "" then
+        uses_advanced = true
+      end
+      
       table.insert(mlc.test_cases, {
         name = generated_test.name or ("Generated Test " .. (#mlc.test_cases + 1)),
         red_input = generated_test.red_input or {},
@@ -323,6 +333,7 @@ local function on_test_generation_completed(event)
         variables = generated_test.variables or {},
         game_tick = generated_test.game_tick or 1,
         expected_print = generated_test.expected_print or "",
+        show_advanced = uses_advanced,
         success = false
       })
       added_count = added_count + 1
@@ -490,7 +501,13 @@ local function on_fix_completion(event)
       })
     end
   else
-    game.print("[color=red]Unable to fix tests. Manual intervention required.[/color]")
+    -- Display the error message from the AI if available
+    if event.error_message then
+      local error_text = event.error_message:sub(1, 6) == "ERROR:" and event.error_message:sub(8) or event.error_message
+      game.print("[color=red]AI Error: " .. error_text .. "[/color]")
+    else
+      game.print("[color=red]Unable to fix tests. Manual intervention required.[/color]")
+    end
   end
 
   -- Update button states

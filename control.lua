@@ -524,16 +524,27 @@ end
 event_handler.add_handler(defines.events.on_tick, on_tick)
 
 event_handler.add_handler(constants.events.on_task_request_completed, function(event)
-  -- check if response starts with error
-  --if event.response:sub(1, 5) == "ERROR" then
---    game.print("Error in task response: " .. event.response)
-    --return
-  --end
-  
   -- Complete the AI operation using the new manager
   ai_operation_manager.complete_operation(event.uid)
   
-  guis.save_code(event.uid, event.response)
+  -- Check if response starts with ERROR:
+  if event.response and event.response:sub(1, 6) == "ERROR:" then
+    local mlc = storage.combinators[event.uid]
+    local mlc_env = memory.combinators[event.uid]
+    if mlc and mlc_env then
+      -- Extract the error message after "ERROR: "
+      local error_message = event.response:sub(8) -- Skip "ERROR: "
+      mlc.state = "error"
+      mlc.err_parse = "AI Error: " .. error_message
+      
+      -- Update the LED to show error state
+      update.mlc_update_led(mlc, mlc_env)
+      
+      game.print("[color=red]AI Error: " .. error_message .. "[/color]")
+    end
+  else
+    guis.save_code(event.uid, event.response)
+  end
 end)
 
 event_handler.add_handler(constants.events.on_test_generation_completed, function(event)

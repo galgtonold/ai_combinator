@@ -190,7 +190,71 @@ local function variables_to_associative(variables_array)
   if variables_array then
     for i, var in ipairs(variables_array) do
       if var and var.name and var.name ~= "" then
-        result[var.name] = var.value or 0
+        local name = var.name
+        local value = var.value or 0
+        
+        -- Parse variable name to extract base variable and keys
+        -- Supports: buf['iron-ore'][1], buf.iron_ore[1], minute_sum.copper_ore, etc.
+        local base_var, rest = name:match("^([%w_]+)(.*)$")
+        
+        if not base_var then
+          -- Malformed variable name, skip
+          goto continue
+        end
+        
+        if rest == "" then
+          -- Simple variable without any access
+          result[base_var] = value
+        else
+          -- Initialize base table if it doesn't exist
+          if not result[base_var] then
+            result[base_var] = {}
+          end
+          
+          -- Extract all the keys from both dot and bracket notation
+          local keys = {}
+          local remaining = rest
+          
+          while remaining ~= "" do
+            -- Try to match dot notation: .key
+            local dot_key = remaining:match("^%.([%w_]+)")
+            if dot_key then
+              table.insert(keys, dot_key)
+              remaining = remaining:sub(#dot_key + 2) -- +2 for the dot
+            else
+              -- Try to match bracket notation: ['key'] or [key] or [123]
+              local bracket_key = remaining:match("^%[([^%]]+)%]")
+              if bracket_key then
+                -- Remove quotes if present
+                local cleaned_key = bracket_key:match("^['\"](.+)['\"]$") or bracket_key
+                -- Try to convert to number if it's numeric
+                local numeric_key = tonumber(cleaned_key)
+                table.insert(keys, numeric_key or cleaned_key)
+                remaining = remaining:sub(#bracket_key + 3) -- +3 for [, ], and the key
+              else
+                -- Can't parse further, stop
+                break
+              end
+            end
+          end
+          
+          -- Navigate/create nested structure
+          local current = result[base_var]
+          for j = 1, #keys - 1 do
+            local key = keys[j]
+            if not current[key] then
+              current[key] = {}
+            end
+            current = current[key]
+          end
+          
+          -- Set the final value
+          if #keys > 0 then
+            current[keys[#keys]] = value
+          end
+        end
+        
+        ::continue::
       end
     end
   end
