@@ -1,7 +1,6 @@
 # AI Combinator for Factorio
 
-[![Download Latest Release](https://img.shields.io/github/v/release/galgtonold/ai_combinator?label=Download%20Launcher&style=for-the-badge&color=orange)](https://github.com/galgtonold/ai_combinator/releases/latest)
-[![Latest Release](https://img.shields.io/github/v/release/galgtonold/ai_combinator?label=Latest%20Version&style=for-the-badge)](https://github.com/galgtonold/ai_combinator/releases/latest)
+[![Download Launcher](https://img.shields.io/badge/Download-AI%20Combinator%20Launcher%20v0.1.0-orange?style=for-the-badge&logo=windows)](https://github.com/galgtonold/ai_combinator/releases/download/v0.1.0/AI.Combinator.Launcher.Setup.0.1.0.exe)
 
 🤖 **Finally, a combinator that speaks human!**
 
