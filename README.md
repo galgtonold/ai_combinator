@@ -1,5 +1,8 @@
 # AI Combinator for Factorio
 
+[![Download Latest Release](https://img.shields.io/github/v/release/galgtonold/ai_combinator?label=Download%20Launcher&style=for-the-badge&color=orange)](https://github.com/galgtonold/ai_combinator/releases/latest/download/AI-Combinator-Launcher-Setup-0.1.0.exe)
+[![Latest Release](https://img.shields.io/github/v/release/galgtonold/ai_combinator?label=Latest%20Version&style=for-the-badge)](https://github.com/galgtonold/ai_combinator/releases/latest)
+
 🤖 **Finally, a combinator that speaks human!**
 
 Tired of building spaghetti circuits that even you can't understand? Meet the AI Combinator - it reads signals and outputs results just like any other combinator, except you tell it what to do in plain English instead of drowning in a sea of arithmetic and decider combinators.
@@ -45,7 +48,9 @@ We've got rainbow lights, production achievement tracking, and smart asteroid pr
 
 ### Installation - Easier Than Balancing Your Smelter Setup
 
-1. **Grab the AI Combinator Launcher** from our [releases page](https://github.com/galgtonold/ai_combinator/releases)
+1. **Download the AI Combinator Launcher**
+   
+   👉 **[Download Latest Version](https://github.com/galgtonold/ai_combinator/releases/latest)** 👈
    
    ⚠️ **Important**: This isn't just a regular mod - you need the launcher! It's like the main bus for AI communication.
 
