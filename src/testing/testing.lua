@@ -53,6 +53,27 @@ local function expand_signal_short_names_and_remove_zeroes(signals)
   return signals
 end
 
+-- Wrap a signal table to translate key lookups like the live environment does
+-- Code uses 'signal-A', but table has '@signal-A' keys
+local function wrap_signal_table(signals)
+  return setmetatable({_signals = signals}, {
+    __index = function(tbl, k)
+      -- Convert key to canonical form (e.g., 'signal-A' -> '@signal-A')
+      local sig = circuit_network.cn_sig(k, 4)
+      if sig then
+        local canonical = circuit_network.cn_sig_str(sig)
+        if canonical then
+          return rawget(tbl._signals, canonical) or 0
+        end
+      end
+      return rawget(tbl._signals, k) or 0
+    end,
+    __pairs = function(tbl)
+      return pairs(tbl._signals)
+    end
+  })
+end
+
 function testing.evaluate_test_case(uid, red, green, options)
   local ai_combinator = storage.combinators[uid]
   local captured_print = ""
@@ -62,11 +83,15 @@ function testing.evaluate_test_case(uid, red, green, options)
     return {}, ""
   end
 
+  -- Wrap signal tables to handle key translation (e.g., 'signal-A' -> '@signal-A')
+  local wrapped_red = wrap_signal_table(red)
+  local wrapped_green = wrap_signal_table(green)
+
 	local env_ro = {
 		uid = uid,
 		out = {},
-		red = red,
-		green = green,
+		red = wrapped_red,
+		green = wrapped_green,
     var = {},
   }
   
