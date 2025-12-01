@@ -27,17 +27,17 @@ export const aiProviderOptions: AIProvider[] = [
 // Model options for each provider
 export const modelsByProvider: ModelsByProvider = {
   openai: [
-    { value: "gpt-5", label: "GPT-5" },
-    { value: "gpt-4.1", label: "GPT-4.1" },
-    { value: "o1", label: "o1" },
-    { value: "o4-mini", label: "o4-mini" },
+    { value: "gpt-5.1", label: "GPT-5.1" },
+    { value: "gpt-5.1-codex", label: "GPT-5.1 Codex" },
+    { value: "gpt-5-mini", label: "GPT-5 Mini" },
   ],
   anthropic: [
-    { value: "claude-opus-4-20250514", label: "Claude Opus 4" },
-    { value: "claude-3-7-sonnet-20250219", label: "Claude 3.7 Sonnet" },
-    { value: "claude-3-5-sonnet-20241022", label: "Claude 3.5 Sonnet" },
+    { value: "claude-opus-4-5", label: "Claude Opus 4.5" },
+    { value: "claude-sonnet-4-5", label: "Claude 4.5 Sonnet" },
+    { value: "claude-haiku-4-5", label: "Claude 4.5 Haiku" },
   ],
   google: [
+    { value: "gemini-3-pro-preview", label: "Gemini 3 Pro Preview" },
     { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
     { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
   ],
