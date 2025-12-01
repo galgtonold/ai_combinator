@@ -224,6 +224,7 @@ ai_combinator_help_content.sections = {
         content = {
             {type = "tips", items = {
                 'Be specific in task descriptions - mention exact signal names and conditions',
+                'For better UPS, specify that checks should only run every X seconds (e.g., "check every 5 seconds")',
                 'Use "Auto Generate" for comprehensive test coverage, then customize as needed',
                 'Create tests early - they help catch issues before deploying to your factory',
                 'Monitor the test summary (X/Y passing) to quickly assess combinator health',

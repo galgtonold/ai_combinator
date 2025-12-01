@@ -88,6 +88,7 @@ edit_code_help_content.sections = {
         content = {
             {type = "tips", items = {
                 'Use [color=#ffe6c0]delay[/color] for performance: avoid running every tick when possible',
+                'For UPS-heavy tasks, run checks only every few seconds (e.g., [color=#ffe6c0]delay = 300[/color] for 5 seconds)',
                 'Use [color=#ffe6c0]var[/color] table for data that persists between runs',
                 'Check [color=#ffe6c0]game.tick[/color] for time-based logic and intervals',
                 'Use [color=#ffe6c0]debug = true[/color] to troubleshoot execution issues'
