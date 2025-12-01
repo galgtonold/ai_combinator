@@ -1,5 +1,5 @@
 import ipc from "../utils/ipc";
-import { config, configService, statusService, aiBridgeService, factorioService } from "../stores";
+import { config, configService, status, statusService, aiBridgeService, factorioService } from "../stores";
 import { isModelAvailableForProvider, getDefaultModelForProvider } from "../config/ai-config";
 import { get } from 'svelte/store';
 
@@ -40,10 +40,11 @@ export function useAppEffects() {
         statusService.setFactorioStatus("stopped");
 
         // Only show closure message if Factorio was previously running
-        // We'll need to get wasRunning from the status store
+        const currentStatus = get(status);
         if (data.error) {
           statusService.setStatus("Factorio terminated with an error", "error");
-        } else {
+        } else if (currentStatus.wasRunning) {
+          // Only show "Factorio was closed" if it was actually running before
           statusService.setStatus("Factorio was closed", "success");
         }
         statusService.setWasRunning(false); // Reset the running state

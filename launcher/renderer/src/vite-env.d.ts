@@ -10,7 +10,7 @@ interface Window {
     autoDetectFactorio: () => Promise<string | null>;
     launchFactorio: () => Promise<{success: boolean, message: string}>;
     isFactorioRunning: () => Promise<boolean>;
-    onFactorioStatusUpdate: (callback: (data: {status: string, error?: boolean}) => void) => void;
+    onFactorioStatusUpdate: (callback: (data: {status: string, error?: boolean}) => void) => () => void;
     toggleAIBridge: () => Promise<{success: boolean, message: string}>;
     isAIBridgeRunning: () => Promise<boolean>;
     startAIBridge: () => Promise<{success: boolean, message: string}>;
