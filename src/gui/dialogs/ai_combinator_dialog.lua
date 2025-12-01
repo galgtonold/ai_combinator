@@ -286,8 +286,18 @@ local function on_ai_operation_state_changed(event)
   update_ai_buttons(event.uid)
 end
 
+local function on_gui_click(event)
+  if not event.element or not event.element.valid or not event.element.tags then return end
+  
+  -- Handle help button click for AI combinator dialog
+  if event.element.tags.show_ai_combinator_help_button then
+    help_dialog.show(event.player_index, help_dialog.HELP_TYPES.AI_COMBINATOR)
+  end
+end
+
 event_handler.add_handler(defines.events.on_tick, dialog.update)
 event_handler.add_handler(constants.events.on_ai_operation_state_changed, on_ai_operation_state_changed)
+event_handler.add_handler(defines.events.on_gui_click, on_gui_click)
 
 
 return dialog

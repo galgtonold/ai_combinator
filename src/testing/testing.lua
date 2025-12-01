@@ -57,6 +57,11 @@ function testing.evaluate_test_case(uid, red, green, options)
   local ai_combinator = storage.combinators[uid]
   local captured_print = ""
 
+  -- Handle case where there's no code to run
+  if not ai_combinator or not ai_combinator.code or ai_combinator.code == "" then
+    return {}, ""
+  end
+
 	local env_ro = {
 		uid = uid,
 		out = {},
