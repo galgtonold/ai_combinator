@@ -543,7 +543,7 @@ event_handler.add_handler(constants.events.on_task_request_completed, function(e
       game.print("[color=red]AI Error: " .. error_message .. "[/color]")
     end
   else
-    guis.save_code(event.uid, event.response)
+    guis.save_code(event.uid, event.response, "ai_generation")
   end
 end)
 
@@ -564,33 +564,28 @@ function load_code_from_gui(code, uid, source_type) -- note: in global _ENV, use
 	-- Initialize code history if not present
 	if not mlc.code_history then
 		mlc.code_history = {}
-		mlc.code_history_index = 0
 	end
 	
-	-- Only add to history if code is different from current
+	-- Only add to history if code is different from current and non-empty
 	local new_code = code or ''
-	if new_code ~= (mlc.code or '') then
-		-- Add current code to history before changing it
-		if mlc.code and mlc.code ~= '' then
-      -- Track the source of this code change
-      mlc.last_code_source = source_type or "manual"
+	if new_code ~= '' and new_code ~= (mlc.code or '') then
+		-- Track the source of this code change
+		mlc.last_code_source = source_type or "manual"
 
-			table.insert(mlc.code_history, {
-				code = code,
-				timestamp = game.tick,
-				source = mlc.last_code_source or "manual",
-				previous_source = mlc.last_code_source
-			})
-		end
+		-- Add the new code to history
+		table.insert(mlc.code_history, {
+			code = new_code,
+			timestamp = game.tick,
+			source = mlc.last_code_source or "manual"
+		})
 		
 		-- Limit history size to last 20 versions
 		if #mlc.code_history > 20 then
 			table.remove(mlc.code_history, 1)
 		end
 		
-		-- Reset history index to current (latest) position
-		mlc.code_history_index = #mlc.code_history + 1
-		
+		-- Set history index to the latest entry
+		mlc.code_history_index = #mlc.code_history
 	end
 	
 	mlc.code = new_code

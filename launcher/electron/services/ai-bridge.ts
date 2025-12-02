@@ -37,6 +37,7 @@ Some more things:
 * loops, ifs and calling basic lua functions ARE ALLOWED
 * Use code duplication to avoid function declarations if necessary
 * if just return something is specified then return that thing as it was provided in the input
+* If the user asks to return something, assign that result to out['signal-A']
 * if not specified take the signals from both red and green wire inputs
 * DO NOT INITIALIZE red, green, out and var, they are already initialized and available to use.
 * When you want to use binary notation, use a list of bits instead, e. g {1, 0, 1} instead of 0b101.

@@ -25,7 +25,7 @@ local mlc = table.deepcopy(data.raw['arithmetic-combinator']['arithmetic-combina
 local decider = data.raw['decider-combinator']['decider-combinator']
 
 mlc.name = 'mlc'
-mlc.icon = png('mlc-item')
+mlc.icon = png('ai-combinator-item')
 mlc.icon_mipmaps = 0
 mlc.minable = {mining_time=0.2, result='mlc'}
 mlc.circuit_wire_max_distance = 7 -- 9 in regular combinators
@@ -95,7 +95,7 @@ data:extend{
   { type = 'item',
 		name = 'mlc',
 		icon_size = 64,
-		icon = png('mlc-item'),
+		icon = png('ai-combinator-item'),
 		subgroup = 'circuit-network',
 		order = 'c[combinators]-bb[mlc]',
 		place_result = 'mlc',
@@ -106,12 +106,11 @@ data:extend{
 		name = 'mlc',
 		enabled = false,
 		ingredients = {
-      { type = 'item', name = 'iron-plate', amount = 1 }
-			--{ type = 'item', name = 'arithmetic-combinator', amount = 1 },
-			--{ type = 'item', name = 'decider-combinator', amount = 1 },
-			--{ type = 'item', name = 'advanced-circuit', amount = 5 } },
+            { type = 'item', name = 'selector-combinator', amount = 5 },
+			{ type = 'item', name = 'advanced-circuit', amount = 5 }
+        },
+		results = {{ type = 'item', name = 'mlc', amount = 1 }} 
     },
-		results = {{ type = 'item', name = 'mlc', amount = 1 }} },
 
 	-- Signal
 	{ type = 'virtual-signal',
@@ -125,15 +124,17 @@ data:extend{
 	-- Technology
 	{ type = 'technology',
 		name = 'mlc',
-		icon_size = 144,
-		icon = png('tech'),
+		icon_size = 256,
+		icon = png('ai-combinator-tech'),
 		effects={{type='unlock-recipe', recipe='mlc'}},
-		prerequisites = {'circuit-network', 'advanced-circuit'},
+		prerequisites = {'advanced-combinators', 'advanced-circuit'},
 		unit = {
 		  count = 100,
 		  ingredients = {
 				{'automation-science-pack', 1},
-				{'logistic-science-pack', 1} },
+				{'logistic-science-pack', 1},
+				{'chemical-science-pack', 1}
+			},
 		  time = 15 },
 		order = 'a-d-d-z' },
 

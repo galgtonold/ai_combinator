@@ -83,13 +83,13 @@ function guis.navigate_code_history(uid, direction)
     return false
   end
   
-  local current_index = mlc.code_history_index or (#mlc.code_history + 1)
+  local current_index = mlc.code_history_index or #mlc.code_history
   local new_index
   
   if direction == "previous" then
     new_index = math.max(1, current_index - 1)
   elseif direction == "next" then
-    new_index = math.min(#mlc.code_history + 1, current_index + 1)
+    new_index = math.min(#mlc.code_history, current_index + 1)
   else
     return false
   end
@@ -100,27 +100,15 @@ function guis.navigate_code_history(uid, direction)
   
   mlc.code_history_index = new_index
   
-  -- If we're at the latest position (beyond history), use current code
-  if new_index > #mlc.code_history then
-    -- This is the current version, no need to change anything
-    return true
-  else
-    -- Load historical version
-    local historical_entry = mlc.code_history[new_index]
-    if historical_entry then
-      -- Temporarily save current code if we're moving away from latest
-      if current_index > #mlc.code_history and mlc.code and mlc.code ~= '' then
-        mlc.current_code_backup = mlc.code
-      end
-      
-      -- Set code without adding to history
-      mlc.code = historical_entry.code
-      local mlc_env = memory.combinators[uid]
-      if mlc_env then
-        update.mlc_update_code(mlc, mlc_env, memory.combinator_env[mlc_env._uid])
-      end
-      return true
+  -- Load the selected version
+  local historical_entry = mlc.code_history[new_index]
+  if historical_entry then
+    mlc.code = historical_entry.code
+    local mlc_env = memory.combinators[uid]
+    if mlc_env then
+      update.mlc_update_code(mlc, mlc_env, memory.combinator_env[mlc_env._uid])
     end
+    return true
   end
   
   return false
@@ -134,14 +122,17 @@ function guis.get_code_history_info(uid)
   
   if not mlc.code_history then
     mlc.code_history = {}
-    mlc.code_history_index = 0
   end
   
-  local current_index = mlc.code_history_index or (#mlc.code_history + 1)
-  local total_versions = #mlc.code_history + 1 -- +1 for current version
+  local total_versions = #mlc.code_history
+  local current_index = mlc.code_history_index or total_versions
+  
+  -- Ensure index is valid
+  if current_index < 1 then current_index = total_versions end
+  if current_index > total_versions then current_index = total_versions end
   
   local current_entry = nil
-  if current_index <= #mlc.code_history then
+  if current_index >= 1 and current_index <= total_versions then
     current_entry = mlc.code_history[current_index]
   end
   
@@ -151,7 +142,7 @@ function guis.get_code_history_info(uid)
     can_go_back = current_index > 1,
     can_go_forward = current_index < total_versions,
     current_entry = current_entry,
-    is_latest = current_index > #mlc.code_history
+    is_latest = current_index == total_versions
   }
 end
 

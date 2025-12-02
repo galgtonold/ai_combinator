@@ -399,9 +399,6 @@ local function auto_generate_test_cases(uid)
   if success then
     -- Send test generation request via bridge
     bridge.send_test_generation_request(uid, task_description, source_code)
-    
-    -- Show feedback to user
-    game.print("[color=yellow]Generating test cases with AI...[/color]")
   else
     game.print("[color=red]Failed to start test generation operation[/color]")
   end
@@ -451,8 +448,6 @@ local function fix_failing_tests(uid)
     -- Send fix request via bridge
     bridge.send_fix_request(uid, task_description, current_code, failed_tests)
     
-    -- Show feedback to user
-    game.print(string.format("[color=yellow]Fixing failing tests with AI (attempt %d/3)...[/color]", mlc.fix_attempt_count))
   else
     mlc.fix_attempt_count = mlc.fix_attempt_count - 1  -- Rollback the attempt count
     game.print("[color=red]Failed to start test fixing operation[/color]")
@@ -489,8 +484,6 @@ local function on_fix_completion(event)
   if not mlc then return end
   
   if event.success then
-    game.print("[color=green]Tests fixed successfully![/color]")
-    
     -- Update the combinator code with the fixed code and trigger proper re-evaluation
     if event.code then
       -- Trigger code update event to properly re-evaluate all test cases

@@ -71,9 +71,11 @@ function dialog.show(player_index, uid)
   -- Get current code from the combinator
   local current_code = mlc.code or ""
   
-  -- Set current history index to the latest version
+  -- Set current history index to the latest version if not already set
   local history = mlc.code_history or {}
-  mlc.current_history_index = #history
+  if not mlc.code_history_index or mlc.code_history_index < 1 then
+    mlc.code_history_index = #history
+  end
 
   local code_textbox = content_flow.add{
     type = "text-box",
@@ -195,7 +197,11 @@ function dialog.update_history_navigation(uid)
   end
   
   local history = mlc.code_history or {}
-  local current_index = mlc.current_history_index or #history
+  local current_index = mlc.code_history_index or #history
+  
+  -- Ensure current_index is valid
+  if current_index < 1 then current_index = #history end
+  if current_index > #history then current_index = #history end
   
   -- Update navigation buttons
   gui_t.edit_code_prev_button.enabled = current_index > 1
@@ -227,6 +233,8 @@ function dialog.update_history_navigation(uid)
       end
       
       gui_t.edit_code_version_info.caption = string.format("%s - %s", source_text, timestamp_text)
+    else
+      gui_t.edit_code_version_info.caption = ""
     end
   else
     gui_t.edit_code_history_info.caption = "0/0"
@@ -243,7 +251,7 @@ function dialog.navigate_history(uid, direction)
   end
   
   local history = mlc.code_history or {}
-  local current_index = mlc.current_history_index or #history
+  local current_index = mlc.code_history_index or #history
   
   if direction == "prev" and current_index > 1 then
     current_index = current_index - 1
@@ -253,7 +261,7 @@ function dialog.navigate_history(uid, direction)
     return -- No change
   end
   
-  mlc.current_history_index = current_index
+  mlc.code_history_index = current_index
   
   -- Update textbox with the selected version
   local selected_version = history[current_index]
