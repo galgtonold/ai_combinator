@@ -20,6 +20,8 @@ local vars_dialog = require('src/gui/dialogs/vars_dialog')
 
 
 local util = require('src/core/utils')
+local runtime = require('src/ai_combinator/runtime')
+local gui_updater = require('src/gui/gui_updater')
 
 
 -- ----- MLC update processing -----
@@ -34,224 +36,6 @@ hotkey_events.register()
 
 
 -- ----- on_tick handling - lua code, gui updates -----
-
-local function format_mlc_err_msg(mlc)
-	if not (mlc.err_parse or mlc.err_run or mlc.err_out) then return end
-	local err_msg = ''
-	for prefix, err in pairs{ ParserError=mlc.err_parse,
-			RuntimeError=mlc.err_run, OutputError=mlc.err_out } do
-		if not err then goto skip end
-		if err_msg ~= '' then err_msg = err_msg..' :: ' end
-		err_msg = err_msg..('%s: %s'):format(prefix, err)
-	::skip:: end
-	return err_msg
-end
-
-local function signal_icon_tag(sig)
-	local sig = storage.signals[sig]
-	if not sig then return '' end
-	if sig.type == 'virtual' then return '[virtual-signal='..sig.name..'] ' end
-	if (sig.type == nil)then return ""	end
-	if helpers.is_valid_sprite_path(sig.type..'/'..sig.name)
-		then return '[img='..sig.type..'/'..sig.name..'] ' end
-end
-
-local function quality_icon_tag(qname)
-	if not qname then return '' end
-	if helpers.is_valid_sprite_path('quality/'..qname)
-		then return '[img=quality/'..qname..']' end
-end
-
-local function update_signals_in_guis()
-	local gui_flow, label, mlc, cb, sig, mlc_out, mlc_out_idx, mlc_out_err
-	local colors = {red={1,0.3,0.3}, green={0.3,1,0.3}}
-	for uid, gui_t in pairs(storage.guis) do
-		mlc = storage.combinators[uid]
-		if not (mlc and mlc.e.valid) then init.mlc_remove(uid); goto skip end
-		gui_flow = gui_t.signal_pane
-		if not (gui_flow and gui_flow.valid) then goto skip end
-		gui_flow.clear()
-
-		-- Inputs
-		for k, color in pairs(colors) do
-			cb = circuit_network.cn_wire_signals(mlc.e, defines.wire_type[k])
-			for sig, v in pairs(cb) do
-				if v == 0 then goto skip end
-				if not sig then goto skip end
-				local signame, qname = circuit_network.cn_sig_quality(sig)
-				local icon = signal_icon_tag(circuit_network.cn_sig_str(signame))
-				if qname then
-					icon = quality_icon_tag(qname) .. icon
-				end
-				label = gui_flow.add{
-					type='label', name='mlc-sig-in-'..k..'-'..sig,
-					caption=('[%s] %s%s = %s'):format(
-						constants.get_wire_label(k), icon, sig, v ) }
-				label.style.font_color = color
-				label.tags = {signal=sig}
-		::skip:: end end
-
-		-- Outputs
-		mlc_out, mlc_out_idx, mlc_out_err = {}, {}, util.shallow_copy((memory.combinators[uid] or {})._out or {})
-		for k, cb in pairs{red=mlc.out_red, green=mlc.out_green} do
-			cb = cb.get_control_behavior()
-			for _, cbs in pairs(cb.sections[1].filters or {}) do
-				sig, label = cbs.value.name, constants.get_wire_label(k)
-				if not sig then goto cb_slots_end end
-				if cbs.value.quality ~= nil and cbs.value.quality ~= "normal" then
-					sig = cbs.value.quality.."/"..sig
-				end
-				mlc_out_err[sig], mlc_out_err[('%s/%s'):format(k, sig)] = nil, nil
-				mlc_out_err[('%s/%s'):format(label, sig)] = nil
-				sig = circuit_network.cn_sig_str(cbs.value)
-				mlc_out_err[sig], mlc_out_err[('%s/%s'):format(k, sig)] = nil, nil
-				mlc_out_err[('%s/%s'):format(label, sig)] = nil
-				if cbs.min ~= 0 then
-					if not mlc_out[sig] then mlc_out_idx[#mlc_out_idx+1], mlc_out[sig] = sig, {} end
-					mlc_out[sig][k] = cbs.min
-        end
-		end ::cb_slots_end:: end
-		table.sort(mlc_out_idx)
-		for val, k in pairs(mlc_out_idx) do
-			local signame, qname = circuit_network.cn_sig_quality(k)
-			val, sig, label = mlc_out[k], storage.signals[signame].name, signal_icon_tag(signame)
-			if string.sub(signame,1,1)== '~' then
-				sig = "~"..sig
-			end
-			if qname then
-				label = quality_icon_tag(qname) .. label
-				sig = qname.."/"..sig
-			end
-			if val['red'] == val['green'] then
-				k = gui_flow.add{ type='label', name='mlc-sig-out-'..sig,
-					caption=('[out] %s%s = %s'):format(label, sig, val['red'] or 0) }
-				k.tags = {signal=sig}
-			else for k, color in pairs(colors) do
-				k = gui_flow.add{ type='label', name='mlc-sig-out/'..k..'-'..sig,
-					caption=('[out/%s] %s%s = %s'):format(constants.get_wire_label(k), label, sig, val[k] or 0) }
-				k.style.font_color = color
-				k.tags = {signal=sig}
-		end end end
-
-		-- Remaining invalid signals and errors
-		local n = 0 -- to dedup bogus non-string signal keys that have same string repr
-		for sig, val in pairs(mlc_out_err) do
-			cb, val = pcall(serpent.line, val, {compact=true, nohuge=false})
-			if not cb then val = '<err>' end
-			if val:len() > 8 then val = val:sub(1, 8)..'+' end
-			gui_flow.add{ type='label', name=('mlc-sig-out/err-%d-%s'):format(n, sig),
-				caption=('[color=#ce9f7f][out-invalid] %s = %s[/color]'):format(sig, val) }
-			n = n + 1
-		end
-		gui_t.mlc_errors.caption = format_mlc_err_msg(mlc) or ''
-	::skip:: end
-end
-
-local function alert_about_mlc_error(mlc_env, err_msg)
-	local p = mlc_env._e.last_user
-	if p.valid and p.connected
-		then p = {p} else p = p.force.connected_players end
-	mlc_env._alert = p
-	for _, p in ipairs(p) do
-		p.add_custom_alert( mlc_env._e, mlc_err_sig,
-			'Moon Logic Error ['..mlc_env._uid..']: '..err_msg, true )
-	end
-end
-
-local function alert_clear(mlc_env)
-	local p = mlc_env._alert or {}
-	for _, p in ipairs(p) do
-		if p.valid and p.connected then p.remove_alert{icon=mlc_err_sig} end
-	end
-	mlc_env._alert = nil
-end
-
-local function run_moon_logic_tick(mlc, mlc_env, tick)
-	-- Runs logic of the specified combinator, reading its input and setting outputs
-	local out_tick, out_diff = mlc.next_tick, util.shallow_copy(mlc_env._out)
-	local dbg = mlc.vars.debug and function(fmt, ...)
-		log((' -- moon-logic [%s]: %s'):format(mlc_env._uid, fmt:format(...))) end
-	mlc.vars.delay, mlc.vars.var, mlc.vars.debug, mlc.vars.irq, mlc.irq = 1, mlc.vars.var or {}
-
-	if mlc.e.energy < constants.ENERGY_FAIL_LEVEL then
-		mlc.state = 'no-power'
-		update.mlc_update_led(mlc, mlc_env)
-		mlc.next_tick = game.tick + constants.ENERGY_FAIL_DELAY
-		return
-	end
-
-	if dbg then -- debug
-		dbg('--- debug-run start [tick=%s] ---', tick)
-		mlc_env.debug_wires_set({})
-		dbg('env-before :: %s', serpent.line(mlc.vars))
-		dbg('out-before :: %s', serpent.line(mlc_env._out)) end
-	mlc_env._out['mlc-error'] = nil -- for internal use
-
-	do
-    -- Clear out output table before running code
-    for k, _ in pairs(mlc_env._out) do
-      mlc_env._out[k] = nil
-    end
-		local st, err = pcall(mlc_env._func)
-		if not st then mlc.err_run = err or '[unspecified lua error]'
-		else
-			mlc.state, mlc.err_run = 'run'
-			if mlc_env._out['mlc-error'] ~= 0 then -- can be used to stop combinator
-				mlc.err_run = 'Internal mlc-error signal set'
-				mlc_env._out['mlc-error'] = nil -- signal will be emitted via mlc.state
-			end
-		end
-	end
-
-	if dbg then -- debug
-		dbg('used-inputs :: %s', serpent.line(mlc_env.debug_wires_set()))
-		dbg('env-after :: %s', serpent.line(mlc.vars))
-		dbg('out-after :: %s', serpent.line(mlc_env._out)) end
-
-	local delay = tonumber(mlc.vars.delay) or 1
-	if delay > constants.LED_SLEEP_MIN then mlc.state = 'sleep' end
-	mlc.next_tick = tick + delay
-
-	local sig = mlc.vars.irq
-	if sig then
-		sig = circuit_network.cn_sig(sig)
-		if sig then mlc.irq, mlc.irq_delay = sig, tonumber(mlc.vars.irq_min_interval) else
-			mlc.err_run = ('Unknown/ambiguous "irq" signal: %s'):format(serpent.line(mlc.vars.irq)) end
-	end
-
-	for sig, v in pairs(mlc_env._out) do
-		if out_diff[sig] ~= v then out_diff[sig] = v
-		else out_diff[sig] = nil end
-	end
-	local out_sync = next(out_diff) or out_tick == 0 -- force sync after reset
-
-	if dbg then -- debug
-		for sig, v in pairs(out_diff) do
-			if not mlc_env._out[sig] then out_diff[sig] = '-'
-		end end
-		dbg('out-sync=%s out-diff :: %s', out_sync and true, serpent.line(out_diff)) end
-
-	if out_sync then update.mlc_update_output(mlc, mlc_env._out) end
-
-	local err_msg = format_mlc_err_msg(mlc)
-	if err_msg then
-		mlc.state = 'error'
-		if dbg then dbg('error :: %s', err_msg) end -- debug
-		alert_about_mlc_error(mlc_env, err_msg)
-	end
-
-	if dbg then dbg('--- debug-run end [tick=%s] ---', tick) end -- debug
-	update.mlc_update_led(mlc, mlc_env)
-
-	if mlc.vars.ota_update_from_uid then
-		local mlc_src = mlc.vars.ota_update_from_uid
-		mlc_src = mlc_src ~= mlc_env._uid and
-			storage.combinators[mlc.vars.ota_update_from_uid]
-		if mlc_src and mlc_src.code ~= mlc.code
-			then guis.save_code(mlc_env._uid, mlc_src.code) end
-		mlc.vars.ota_update_from_uid = nil
-	end
-end
 
 local function on_tick(ev)
   -- Receive UDP packets and trigger processing
@@ -273,12 +57,12 @@ local function on_tick(ev)
         goto skip
     end
 
-		local err_msg = format_mlc_err_msg(mlc)
+		local err_msg = runtime.format_mlc_err_msg(mlc)
 		if err_msg then
 			if tick % constants.LOGIC_ALERT_INTERVAL == 0
-				then alert_about_mlc_error(mlc_env, err_msg) end
+				then runtime.alert_about_mlc_error(mlc_env, err_msg) end
 			goto skip -- suspend combinator logic until errors are addressed
-		elseif mlc_env._alert then alert_clear(mlc_env) end
+		elseif mlc_env._alert then runtime.alert_clear(mlc_env) end
 
 		if mlc.irq and (mlc.irq_tick or 0) < tick - (mlc.irq_delay or 0)
 				and mlc.e.get_signal(mlc.irq, defines.wire_connector_id.combinator_input_green, defines.wire_connector_id.combinator_input_red) ~= 0 then
@@ -286,7 +70,7 @@ local function on_tick(ev)
       mlc.next_tick = nil
     end
 		if tick >= (mlc.next_tick or 0) and mlc_env._func then
-			run_moon_logic_tick(mlc, mlc_env, tick)
+			runtime.run_moon_logic_tick(mlc, mlc_env, tick)
 			for _, p in ipairs(game.connected_players) do
         local player, vars_uid = game.players[p.index], storage.guis_player['vars.'..p.index]
         if not player or vars_uid ~= uid then
@@ -299,7 +83,7 @@ local function on_tick(ev)
 	::skip:: end
 
 	if next(storage.guis) then 
-        update_signals_in_guis() 
+        gui_updater.update_signals_in_guis(runtime.format_mlc_err_msg) 
     end
 end
 

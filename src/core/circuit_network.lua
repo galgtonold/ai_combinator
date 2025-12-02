@@ -74,47 +74,7 @@ function circuit_network.cn_sig(k, err_level)
 	error('Unknown signal: '..k, err_level)
 end
 
-
-local function cn_sig_quality(sig_str)
-	-- removes quality prefix from signal string, returns signal name and quality
-	if not sig_str then return end
-	local q_name = ""
-	for _, q in pairs(storage.quality) do
-		if string.match(sig_str, "^"..q) then
-			q_name = q
-			break
-		end
-	end
-	if q_name == "" then return sig_str end
-	return string.gsub(sig_str, q_name.."/", ''), q_name
-end
-
-local cn_sig_str_prefix = {item='#', fluid='=', virtual='@', recipe='~'}
-local function cn_sig_str(t, name)
-	-- Translates name or type/name or signal to its type-prefixed string-id
-	if not name then
-		if type(t) == 'string' then
-			name = storage.signals_short[t]
-			if name == false then return end -- ambiguous name
-			return name or t
-		else
-			if t.type == nil then
-        t.type = 'item'
-      end
-			name = t.name
-
-		end
-	end
-	if not t then
-		return storage.signals_short[name]
-	end
-	if t.quality ~= "normal" and t.quality ~= nil then
-		return t.quality.."/"..cn_sig_str_prefix[t.type]..name
-	end
-	return cn_sig_str_prefix[t.type or t]..name
-end
-
-local function cn_wire_signals(e, wire_type, canon)
+function circuit_network.cn_wire_signals(e, wire_type, canon)
 	-- Returns signal=count table, with signal names abbreviated where possible
 	local ccid
 	if wire_type == defines.wire_type.green then
@@ -127,16 +87,16 @@ local function cn_wire_signals(e, wire_type, canon)
 	for _, sig in pairs(cn and cn.signals or {}) do
 		-- Check for name=nil SignalIDs (dunno what these are), and items w/ flag=hidden
 		if storage.signals_short[sig.signal.name] == nil then goto skip end
-		if canon then k = cn_sig_str(sig.signal)
+		if canon then k = circuit_network.cn_sig_str(sig.signal)
 		elseif sig.signal.quality ~= nil and sig.signal.type == 'recipe' then
-			k = sig.signal.quality.."/~"..storage.signals_short[sig.signal.name] and sig.signal.quality.."/~"..sig.signal.name or "~"..cn_sig_str(sig.signal)
+			k = sig.signal.quality.."/~"..storage.signals_short[sig.signal.name] and sig.signal.quality.."/~"..sig.signal.name or "~"..circuit_network.cn_sig_str(sig.signal)
 		elseif sig.signal.type == 'recipe' then
-			k = "~"..storage.signals_short[sig.signal.name] and "~"..sig.signal.name or "~"..cn_sig_str(sig.signal)
+			k = "~"..storage.signals_short[sig.signal.name] and "~"..sig.signal.name or "~"..circuit_network.cn_sig_str(sig.signal)
 		elseif sig.signal.quality ~= nil then
-			k = sig.signal.quality.."/"..storage.signals_short[sig.signal.name] and sig.signal.quality.."/"..sig.signal.name or cn_sig_str(sig.signal)
+			k = sig.signal.quality.."/"..storage.signals_short[sig.signal.name] and sig.signal.quality.."/"..sig.signal.name or circuit_network.cn_sig_str(sig.signal)
 		else k = storage.signals_short[sig.signal.name]
-			and sig.signal.name or cn_sig_str(sig.signal) end
-		res[k] = sig.count
+			and sig.signal.name or circuit_network.cn_sig_str(sig.signal) end
+		if k then res[k] = sig.count end
 	::skip:: end
 	return res
 end
@@ -144,19 +104,19 @@ end
 function circuit_network.cn_input_signal(wenv, wire_type, k)
 	local signals = wenv._cache
 	if wenv._cache_tick ~= game.tick then
-		signals = cn_wire_signals(wenv._e, wire_type, true)
+		signals = circuit_network.cn_wire_signals(wenv._e, wire_type, true)
 		wenv._cache, wenv._cache_tick = signals, game.tick
 	end
 	if k and #storage.quality ~= 0 then
-		local signame, q_name = cn_sig_quality(k)
+		local signame, q_name = circuit_network.cn_sig_quality(k)
 		if q_name == nil or q_name == "normal" then
-			signals = signals[cn_sig_str(circuit_network.cn_sig(signame, 4))]
+			signals = signals[circuit_network.cn_sig_str(circuit_network.cn_sig(signame, 4))]
 			return signals
 		end
-		signals = signals[q_name.."/"..cn_sig_str(circuit_network.cn_sig(signame, 4))]
+		signals = signals[q_name.."/"..circuit_network.cn_sig_str(circuit_network.cn_sig(signame, 4))]
 		return signals
 	end
-	if k then signals = signals[cn_sig_str(circuit_network.cn_sig(k, 4))] end
+	if k then signals = signals[circuit_network.cn_sig_str(circuit_network.cn_sig(k, 4))] end
 	return signals
 end
 
