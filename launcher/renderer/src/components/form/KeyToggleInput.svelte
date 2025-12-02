@@ -4,13 +4,23 @@
   import textboxActiveImage from '/graphics/textbox_active.png';
   import textboxDisabledImage from '/graphics/textbox_disabled.png';
   
-  export let value: string;
-  export let placeholder: string = '';
-  export let onChange: () => void = () => {};
-  export let disabled: boolean = false;
-  export let width: string = '100%';
+  interface Props {
+    value: string;
+    placeholder?: string;
+    onChange?: () => void;
+    disabled?: boolean;
+    width?: string;
+  }
+
+  let { 
+    value = $bindable(),
+    placeholder = '',
+    onChange = () => {},
+    disabled = false,
+    width = '100%'
+  }: Props = $props();
   
-  let showKey: boolean = false;
+  let showKey = $state(false);
 
   function toggleVisibility() {
     showKey = !showKey;
@@ -28,10 +38,10 @@
       class="password-input"
       {placeholder}
       bind:value
-      on:change={onChange}
+      onchange={onChange}
       {disabled}
     />
-    <button class="key-toggle" on:click={toggleVisibility} disabled={disabled} aria-label={showKey ? "Hide password" : "Show password"}>
+    <button class="key-toggle" onclick={toggleVisibility} disabled={disabled} aria-label={showKey ? "Hide password" : "Show password"}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         {#if showKey}
           <!-- Eye with slash (hidden) -->

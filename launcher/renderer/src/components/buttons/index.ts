@@ -1,5 +1,6 @@
 // Button component exports
-export { default as Button } from './Button.svelte';
+// NormalButton is exported as Button for convenience
+export { default as Button } from './NormalButton.svelte';
 export { default as ButtonBase } from './ButtonBase.svelte';
 export { default as FrameButton } from './FrameButton.svelte';
 export { default as GreenButton } from './GreenButton.svelte';

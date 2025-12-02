@@ -1,12 +1,23 @@
 <script lang="ts">
   import '../../styles/factorio-input-9slice.css';
   
-  export let value: string;
-  export let placeholder: string = '';
-  export let type: string = 'text';
-  export let onChange: () => void = () => {};
-  export let fullWidth: boolean = true;
-  export let disabled: boolean = false;
+  interface Props {
+    value: string;
+    placeholder?: string;
+    type?: string;
+    onChange?: () => void;
+    fullWidth?: boolean;
+    disabled?: boolean;
+  }
+
+  let { 
+    value = $bindable(),
+    placeholder = '',
+    type = 'text',
+    onChange = () => {},
+    fullWidth = true,
+    disabled = false
+  }: Props = $props();
 </script>
 
 <input 
@@ -14,7 +25,7 @@
   class="factorio-input-9slice {fullWidth ? 'full-width' : ''}"
   {placeholder}
   bind:value
-  on:change={onChange}
+  onchange={onChange}
   {disabled}
 />
 

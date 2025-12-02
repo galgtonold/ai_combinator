@@ -1,6 +1,6 @@
 // Export all components for easier imports
-// Buttons
-export { default as Button } from './buttons/Button.svelte';
+// Buttons - NormalButton is exported as Button for convenience
+export { default as Button } from './buttons/NormalButton.svelte';
 export { default as GreenButton } from './buttons/GreenButton.svelte';
 
 // Form components
