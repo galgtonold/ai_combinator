@@ -12,10 +12,6 @@ import {
   getErrorMessage
 } from "../../shared";
 
-// Re-export types for backward compatibility
-export type { LaunchResult } from "../../shared";
-export type FactorioStatus = FactorioStatusUpdate;
-
 const log = createLogger('FactorioManager');
 const execAsync = promisify(exec);
 

@@ -1,4 +1,5 @@
 import ipc from "../utils/ipc";
+import type { FactorioStatusUpdate } from "@shared";
 import { config, configService, status, statusService, aiBridgeService, factorioService } from "../stores";
 import { isModelAvailableForProvider, getDefaultModelForProvider } from "../config/ai-config";
 import { get } from 'svelte/store';
@@ -33,7 +34,7 @@ export function useAppEffects() {
    * Setup status listener for Factorio updates
    */
   function setupStatusListener(): void {
-    unsubscribeStatusUpdate = ipc.onFactorioStatusUpdate((data: { status: string; error?: boolean }) => {
+    unsubscribeStatusUpdate = ipc.onFactorioStatusUpdate((data: FactorioStatusUpdate) => {
       if (data.status === "running") {
         statusService.setFactorioStatus("running");
       } else if (data.status === "stopped") {
@@ -58,13 +59,8 @@ export function useAppEffects() {
   function handleProviderChange(): void {
     const currentConfig = get(config);
     if (previousProvider !== null && currentConfig.aiProvider !== previousProvider) {
-      console.log(`Provider changed from ${previousProvider} to ${currentConfig.aiProvider}`);
-
       if (!isModelAvailableForProvider(currentConfig.aiProvider, currentConfig.aiModel)) {
         const defaultModel = getDefaultModelForProvider(currentConfig.aiProvider);
-        console.log(
-          `Model ${currentConfig.aiModel} not available for ${currentConfig.aiProvider}, switching to ${defaultModel}`,
-        );
         configService.updateConfig({ aiModel: defaultModel });
         const updatedConfig = get(config);
         configService.saveConfig(updatedConfig);
@@ -82,15 +78,9 @@ export function useAppEffects() {
   function handleModelChange(): void {
     const currentConfig = get(config);
     if (previousModel !== null && currentConfig.aiModel !== previousModel) {
-      console.log(`Model changed from ${previousModel} to ${currentConfig.aiModel}`);
-      console.log(`Provider is: ${currentConfig.aiProvider}, previous provider: ${previousProvider}`);
-      
       // Only do model update if provider didn't change (provider change handles restart)
       if (currentConfig.aiProvider === previousProvider) {
-        console.log("Provider unchanged, using updateAIModel()");
         aiBridgeService.updateAIModel();
-      } else {
-        console.log("Provider also changed, restart will be handled by provider effect");
       }
     }
     previousModel = currentConfig.aiModel;
@@ -103,7 +93,6 @@ export function useAppEffects() {
     const currentConfig = get(config);
     const currentApiKey = configService.getCurrentProviderApiKey(currentConfig);
     if (previousApiKey !== currentApiKey) {
-      console.log(`API key changed for provider ${currentConfig.aiProvider}`);
       previousApiKey = currentApiKey;
 
       // Update AI bridge enabled status

@@ -1,6 +1,7 @@
 // AI Provider and Model Configuration
 
-export interface AIProvider {
+/** UI representation of an AI provider with display info */
+export interface AIProviderOption {
   value: string;
   label: string;
   apiKeyURL: string;
@@ -16,7 +17,7 @@ export interface ModelsByProvider {
 }
 
 // AI Provider options
-export const aiProviderOptions: AIProvider[] = [
+export const aiProviderOptions: AIProviderOption[] = [
   { value: "openai", label: "OpenAI", apiKeyURL: "https://platform.openai.com/api-keys" },
   { value: "anthropic", label: "Anthropic", apiKeyURL: "https://console.anthropic.com/settings/keys" },
   { value: "google", label: "Google", apiKeyURL: "https://aistudio.google.com/apikey" },

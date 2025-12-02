@@ -55,21 +55,9 @@
 
   // Event handlers
   async function handleApiKeyChange(): Promise<void> {
-    console.log(
-      `handleApiKeyChange called. currentApiKeyInput: ${currentApiKeyInput ? "[REDACTED]" : "empty"}`,
-    );
-    console.log(`Current provider: ${$config.aiProvider}`);
-    console.log(`Config providerApiKeys before update:`, Object.keys($config.providerApiKeys || {}));
-
     // Update the provider-specific key with the current input value
     const newConfig = configService.setCurrentProviderApiKey($config, currentApiKeyInput);
     config.set(newConfig);
-
-    console.log(`Config providerApiKeys after update:`, Object.keys(newConfig.providerApiKeys || {}));
-    console.log(
-      `Value for current provider after update: ${newConfig.providerApiKeys[newConfig.aiProvider] ? "[REDACTED]" : "empty"}`,
-    );
-
     await configService.saveConfig(newConfig);
   }
 

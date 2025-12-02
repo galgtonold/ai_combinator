@@ -159,10 +159,6 @@
     padding-right: 8px;
   }
 
-  .separator {
-    width: 12px;
-  }
-
   .icon {
     width: 18px;
     height: 18px;

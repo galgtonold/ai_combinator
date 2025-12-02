@@ -11,9 +11,6 @@ import {
   getErrorMessage
 } from "../../shared";
 
-// Re-export types for backward compatibility
-export type { AIProvider, Config } from "../../shared";
-
 const log = createLogger('ConfigManager');
 
 export class ConfigManager {

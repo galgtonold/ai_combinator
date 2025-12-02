@@ -7,9 +7,6 @@ import {
   getErrorMessage 
 } from "../../shared";
 
-// Re-export for backward compatibility
-export type { AIBridgeResult } from "../../shared";
-
 const log = createLogger('AIBridgeManager');
 
 export class AIBridgeManager {

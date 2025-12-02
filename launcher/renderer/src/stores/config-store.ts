@@ -25,7 +25,6 @@ export class ConfigService {
   async loadConfig(): Promise<void> {
     try {
       const loadedConfig = await ipc.getConfig();
-      console.log("Received config from backend:", loadedConfig);
 
       // Ensure all properties are present with defaults
       const newConfig: Config = {
@@ -33,11 +32,9 @@ export class ConfigService {
         aiBridgeEnabled: false, // Will be set below based on provider API key
         aiProvider: loadedConfig.aiProvider || DEFAULT_AI_PROVIDER,
         aiModel: loadedConfig.aiModel || DEFAULT_AI_MODEL,
-        udpPort: loadedConfig.udpPort || 9001,
+        udpPort: loadedConfig.udpPort || DEFAULT_UDP_PORT,
         providerApiKeys: loadedConfig.providerApiKeys || {},
       };
-
-      console.log("Frontend config after loading:", newConfig);
 
       // Update AI bridge enabled status based on current provider's API key
       newConfig.aiBridgeEnabled = !!this.getCurrentProviderApiKey(newConfig);
@@ -53,7 +50,6 @@ export class ConfigService {
    * Save configuration to the backend
    */
   async saveConfig(configValue: Config): Promise<void> {
-    console.log("Saving config:", configValue);
     try {
       // Auto-enable AI bridge if current provider has API key
       configValue.aiBridgeEnabled = !!this.getCurrentProviderApiKey(configValue);
@@ -70,11 +66,9 @@ export class ConfigService {
         aiProvider: configValue.aiProvider,
         aiModel: configValue.aiModel,
         udpPort: configValue.udpPort,
-        providerApiKeys: { ...configValue.providerApiKeys }, // Ensure it's a proper object copy
+        providerApiKeys: { ...configValue.providerApiKeys },
       };
 
-      console.log("Sending config to backend:", configToSave);
-      console.log("providerApiKeys being sent:", configToSave.providerApiKeys);
       await ipc.saveConfig(configToSave);
       
       // Update the store with the saved config
@@ -106,25 +100,17 @@ export class ConfigService {
    * Set the API key for the current provider
    */
   setCurrentProviderApiKey(configValue: Config, apiKey: string): Config {
-    console.log(
-      `Setting API key for provider ${configValue.aiProvider}:`,
-      apiKey ? "[REDACTED]" : "empty",
-    );
     if (!configValue.providerApiKeys) {
       configValue.providerApiKeys = {};
-      console.log("Initialized empty providerApiKeys object");
     }
     
-    const newConfig = {
+    return {
       ...configValue,
       providerApiKeys: {
         ...configValue.providerApiKeys,
         [configValue.aiProvider]: apiKey
       }
     };
-    
-    console.log("Updated providerApiKeys:", Object.keys(newConfig.providerApiKeys));
-    return newConfig;
   }
 }
 
