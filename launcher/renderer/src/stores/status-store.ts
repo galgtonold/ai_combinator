@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import type { FactorioStatus } from "../utils/ipc";
+import { STATUS_MESSAGE_TIMEOUT } from "@shared";
 
 export type StatusType = "error" | "warning" | "success";
 
@@ -86,7 +87,7 @@ export class StatusService {
   /**
    * Set a temporary status message that will clear after a timeout
    */
-  setStatus(message: string, type: StatusType, timeout: number = 5000): void {
+  setStatus(message: string, type: StatusType, timeout: number = STATUS_MESSAGE_TIMEOUT): void {
     status.update(current => ({
       ...current,
       statusMessage: message,

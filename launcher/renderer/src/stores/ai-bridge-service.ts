@@ -2,6 +2,7 @@ import ipc from "../utils/ipc";
 import { config, configService } from "./config-store";
 import { statusService } from "./status-store";
 import { get } from 'svelte/store';
+import { AI_BRIDGE_RESTART_DELAY, getErrorMessage } from "@shared";
 
 /**
  * AI Bridge management service
@@ -42,7 +43,7 @@ export class AIBridgeService {
         statusService.setStatus(result.message, "error");
       }
     } catch (error) {
-      statusService.setStatus(`Error starting AI Bridge: ${error}`, "error");
+      statusService.setStatus(`Error starting AI Bridge: ${getErrorMessage(error)}`, "error");
     }
   }
 
@@ -58,7 +59,7 @@ export class AIBridgeService {
         statusService.setStatus(result.message, "error");
       }
     } catch (error) {
-      statusService.setStatus(`Error stopping AI Bridge: ${error}`, "error");
+      statusService.setStatus(`Error stopping AI Bridge: ${getErrorMessage(error)}`, "error");
     }
   }
 
@@ -70,7 +71,7 @@ export class AIBridgeService {
     // Small delay to ensure clean shutdown
     setTimeout(async () => {
       await this.startAIBridge();
-    }, 500);
+    }, AI_BRIDGE_RESTART_DELAY);
   }
 
   /**
@@ -82,7 +83,7 @@ export class AIBridgeService {
       await ipc.updateAIModel(currentConfig.aiModel);
       statusService.setStatus("AI model updated successfully", "success");
     } catch (error) {
-      statusService.setStatus(`Error updating AI model: ${error}`, "error");
+      statusService.setStatus(`Error updating AI model: ${getErrorMessage(error)}`, "error");
     }
   }
 }

@@ -2,6 +2,7 @@ import ipc from "../utils/ipc";
 import { config, configService } from "./config-store";
 import { statusService } from "./status-store";
 import { get } from 'svelte/store';
+import { MIN_LAUNCH_DURATION, getErrorMessage } from "@shared";
 
 /**
  * Factorio management service
@@ -59,9 +60,8 @@ export class FactorioService {
     statusService.setLaunching(true);
     statusService.setStatus("Launching Factorio...", "success");
 
-    // Record the start time to ensure minimum 5 second duration
+    // Record the start time to ensure minimum launch duration
     const launchStartTime = Date.now();
-    const minLaunchDuration = 5000; // 5 seconds in milliseconds
 
     try {
       const result = await ipc.launchFactorio();
@@ -72,11 +72,11 @@ export class FactorioService {
         statusService.setStatus(result.message, "error");
       }
     } catch (error) {
-      statusService.setStatus(`Error launching Factorio: ${error}`, "error");
+      statusService.setStatus(`Error launching Factorio: ${getErrorMessage(error)}`, "error");
     } finally {
-      // Ensure the launching state is shown for at least 5 seconds
+      // Ensure the launching state is shown for at least MIN_LAUNCH_DURATION
       const elapsedTime = Date.now() - launchStartTime;
-      const remainingTime = Math.max(0, minLaunchDuration - elapsedTime);
+      const remainingTime = Math.max(0, MIN_LAUNCH_DURATION - elapsedTime);
       
       if (remainingTime > 0) {
         setTimeout(() => {
