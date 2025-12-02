@@ -43,7 +43,8 @@ local function find_gui(ev)
 		local gui_t = storage.guis[uid]
 		if gui_t then return uid, gui_t end
 	end
-	local el, el_chk = ev.element
+	local el = ev.element
+  local el_chk
 	if not el then return end
 	for uid, gui_t in pairs(storage.guis) do
 		el_chk = gui_t.el_map[el.index]
@@ -364,7 +365,7 @@ end
 
 function guis.vars_window_toggle(pn, toggle_on)
 	local gui = game.players[pn].gui.screen['ai-combinator-gui']
-	local uid, gui_t = find_gui{element=g}
+	local uid, gui_t = find_gui{element=gui}
 	if not uid then uid = storage.guis_player['vars.'..pn] end
 	if not uid then return end
 	vars_dialog.show(pn, uid, nil, toggle_on)

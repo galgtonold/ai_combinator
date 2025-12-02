@@ -20,29 +20,8 @@ function combinator_service.save_code(uid, code, source_type)
     local combinator = storage.combinators[uid]
     if not combinator then return end
 
-    -- If code is nil, use current code (just saving/committing existing state)
-    -- But code_manager.load_code expects the code to be passed if we want to update history
-    -- If we just want to trigger a save/init without changing code, we might need to handle that.
-    -- Looking at gui.lua, it passes `code` from event or nil.
-    -- If code is passed, we use it. If not, we might be just re-initializing?
-    -- Actually gui.save_code(uid) calls code_manager.load_code(code, uid, source_type) where code is nil.
-    -- code_manager.load_code handles nil code by using '' but checks against current code.
-    
-    -- Let's stick to the existing logic: pass what we have.
-    -- If the caller didn't provide code, we probably want to save the *current* code?
-    -- But code_manager.load_code(nil) treats it as ''. 
-    -- Wait, gui.lua: `guis.save_code(uid, code, source_type)`
-    -- If called from hotkey `on_code_save`, code is nil.
-    -- If called from `on_code_updated` event, code is provided.
-    
-    -- If code is NOT provided, we should probably fetch it from the entity if we were in a GUI context,
-    -- but here we are in the service layer. We assume the intention is to "commit" the current state 
-    -- or update it if `code` is provided.
-    
-    -- However, `code_manager.load_code` has a check: `if new_code ~= '' and new_code ~= (combinator.code or '') then ...`
-    -- So if we pass nil, it becomes '', and if current code is not empty, it won't update history.
-    -- This seems to imply `save_code` without arguments is just "re-run/init".
-    
+    -- Load code into the combinator. If code is nil, it acts as a re-initialization/commit of the current state.
+    -- If code is provided, it updates the combinator's code and history.
     local action = code_manager.load_code(code, uid, source_type)
     
     if action == "remove" then
@@ -175,10 +154,10 @@ end
 
 --- Add a new test case
 ---@param uid number
----@return number index The index of the new test case
+---@return number|nil index The index of the new test case
 function combinator_service.add_test_case(uid)
     local combinator = storage.combinators[uid]
-    if not combinator then return end
+    if not combinator then return nil end
     
     if not combinator.test_cases then
         combinator.test_cases = {}
