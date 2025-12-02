@@ -10,12 +10,12 @@ local ai_operation_manager = require('src/core/ai_operation_manager')
 -- Event modules
 local blueprint_events = require('src/events/blueprint_events')
 local entity_events = require('src/events/entity_events')
+local hotkey_events = require('src/events/hotkey_events')
 
 local guis = require('src/gui/gui')
 local dialog_manager = require('src/gui/dialogs/dialog_manager')
 
 local ai_bridge_warning_dialog = require('src/gui/dialogs/ai_bridge_warning_dialog')
-local help_dialog = require('src/gui/dialogs/help_dialog')
 local vars_dialog = require('src/gui/dialogs/vars_dialog')
 
 
@@ -30,6 +30,7 @@ local mlc_err_sig = {type='virtual', name='mlc-error'}
 
 blueprint_events.register()
 entity_events.register()
+hotkey_events.register()
 
 
 -- ----- on_tick handling - lua code, gui updates -----
@@ -352,51 +353,6 @@ script.on_event(defines.events.on_gui_opened, function(ev)
 		e = e and e.name or 'Another player'
 		player.print(e..' already opened this combinator', {1,1,0})
 	end
-end)
-
--- ----- Keyboard editing hotkeys -----
--- Most editing hotkeys only work if one window is opened,
---  as I don't know how to check which one is focused otherwise.
--- Keybindings don't work in general when text-box element is focused.
-
-local function get_active_gui()
-	local uid, gui_t
-	for uid_chk, gui_t_chk in pairs(storage.guis) do
-		if not uid
-			then uid, gui_t = uid_chk, gui_t_chk
-			else uid, gui_t = nil; break end
-	end
-	return uid, gui_t
-end
-
-script.on_event('mlc-code-save', function(ev)
-	local uid, gui_t = get_active_gui()
-	if uid then guis.save_code(uid) end
-end)
-
-script.on_event('mlc-code-commit', function(ev)
-	local uid, gui_t = next(storage.guis)
-	if not uid then return end
-	guis.save_code(uid)
-	guis.close(uid)
-end)
-
-script.on_event('mlc-code-close', function(ev)
-	guis.vars_window_toggle(ev.player_index, false)
-	help_dialog.show(ev.player_index, false)
-	local uid, gui_t = next(storage.guis)
-	if not uid then return end
-	guis.close(uid)
-end)
-
-script.on_event('mlc-code-vars', function(ev)
-	guis.vars_window_toggle(ev.player_index)
-end)
-
-script.on_event('mlc-open-gui', function(ev)
-	local player = game.players[ev.player_index]
-	local e = player.selected
-	if e and e.name == 'mlc' then player.opened = e end
 end)
 
 
