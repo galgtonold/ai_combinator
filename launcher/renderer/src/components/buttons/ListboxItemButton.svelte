@@ -1,29 +1,39 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import ButtonBase from './ButtonBase.svelte';
   
-  // Re-export props from ButtonBase
-  export let onClick: () => void = () => {};
-  export let disabled: boolean = false;
-  export let selected: boolean = false;
-  export let clicked: boolean = false;
-  export let fullWidth: boolean = false;
-  export let loading: boolean = false;
+  interface Props {
+    onClick?: () => void;
+    disabled?: boolean;
+    selected?: boolean;
+    clicked?: boolean;
+    fullWidth?: boolean;
+    children?: Snippet;
+  }
+
+  let { 
+    onClick = () => {}, 
+    disabled = false, 
+    selected = false, 
+    clicked = false, 
+    fullWidth = false,
+    children
+  }: Props = $props();
   
-  $: classString = [
+  const classString = $derived([
     'factorio-listbox-item',
     selected ? 'selected' : '',
     clicked ? 'clicked' : '',
     fullWidth ? 'full-width' : ''
-  ].filter(Boolean).join(' ');
+  ].filter(Boolean).join(' '));
 </script>
 
 <ButtonBase
   {onClick}
   {disabled}
-  {loading}
   class={classString}
 >
-  <slot></slot>
+  {@render children?.()}
 </ButtonBase>
 
 <style>

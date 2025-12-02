@@ -5,9 +5,18 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createXai } from '@ai-sdk/xai';
 import { createDeepSeek } from '@ai-sdk/deepseek';
+import {
+  type AIProvider,
+  AI_BRIDGE_LISTEN_PORT,
+  AI_BRIDGE_RESPONSE_PORT,
+  AI_BRIDGE_RESPONSE_HOST,
+  DEFAULT_AI_PROVIDER,
+  DEFAULT_AI_MODEL,
+  createLogger,
+  getErrorMessage
+} from "../../shared";
 
-// Provider type definition
-type AIProvider = 'openai' | 'anthropic' | 'google' | 'xai' | 'deepseek';
+const log = createLogger('AIBridge');
 
 // The same prompt used in the Python bridge
 const PROMPT = `
@@ -139,11 +148,11 @@ export class AIBridge {
 
   constructor(
     apiKey: string,
-    provider: AIProvider = 'openai',
-    model: string = 'gpt-4',
-    listenPort: number = 8889,
-    responsePort: number = 9001,
-    responseHost: string = 'localhost'
+    provider: AIProvider = DEFAULT_AI_PROVIDER,
+    model: string = DEFAULT_AI_MODEL,
+    listenPort: number = AI_BRIDGE_LISTEN_PORT,
+    responsePort: number = AI_BRIDGE_RESPONSE_PORT,
+    responseHost: string = AI_BRIDGE_RESPONSE_HOST
   ) {
     this.apiKey = apiKey;
     this.provider = provider;
@@ -161,7 +170,7 @@ export class AIBridge {
     
     // Set up error handler
     this.listenSocket.on('error', (err) => {
-      console.error(`UDP Server error:\n${err.stack}`);
+      log.error(`UDP Server error: ${err.stack}`);
       this.listenSocket.close();
     });
   }
@@ -188,7 +197,7 @@ export class AIBridge {
       // Build the prompt
       const prompt = `${PROMPT} ${userMessage}`;
       
-      console.log(`Calling ${this.provider} API with model ${this.model}...`);
+      log.info(`Calling ${this.provider} API with model ${this.model}...`);
       const startTime = Date.now();
       
       // Get the appropriate provider
@@ -202,19 +211,19 @@ export class AIBridge {
       });
       
       const endTime = Date.now();
-      console.log(`AI Response (took ${(endTime - startTime) / 1000}s)`);
-      console.log(text);
+      log.info(`AI Response (took ${(endTime - startTime) / 1000}s)`);
+      log.debug(text);
       
       return text;
     } catch (error) {
-      console.error('AI API Error:', error);
-      return `ERROR: ${error.message}`;
+      log.error('AI API Error:', getErrorMessage(error));
+      return `ERROR: ${getErrorMessage(error)}`;
     }
   }
 
   private async callAIForTestGeneration(prompt: string): Promise<string> {
     try {
-      console.log(`Calling ${this.provider} API for test generation with model ${this.model}...`);
+      log.info(`Calling ${this.provider} API for test generation with model ${this.model}...`);
       const startTime = Date.now();
       
       // Get the appropriate provider
@@ -228,65 +237,75 @@ export class AIBridge {
       });
       
       const endTime = Date.now();
-      console.log(`AI Test Generation Response (took ${(endTime - startTime) / 1000}s)`);
+      log.info(`AI Test Generation Response (took ${(endTime - startTime) / 1000}s)`);
       
       return text;
     } catch (error) {
-      console.error('AI API Error during test generation:', error);
-      return `ERROR: ${error.message}`;
+      log.error('AI API Error during test generation:', getErrorMessage(error));
+      return `ERROR: ${getErrorMessage(error)}`;
     }
   }
 
-  private sendResponse(message: string | object) {
+  private sendResponse(message: string | object): void {
+    let messageStr: string;
     if (typeof message === 'object') {
-      message = JSON.stringify(message);
+      messageStr = JSON.stringify(message);
+    } else {
+      messageStr = message;
     }
 
     try {
       this.responseSocket.send(
-        Buffer.from(message, 'utf-8'),
+        Buffer.from(messageStr, 'utf-8'),
         this.responsePort,
         this.responseHost,
         (err) => {
           if (err) {
-            console.error('Error sending response:', err);
+            log.error('Error sending response:', getErrorMessage(err));
           } else {
-            console.log(`Response sent to ${this.responseHost}:${this.responsePort}`);
+            log.debug(`Response sent to ${this.responseHost}:${this.responsePort}`);
           }
         }
       );
     } catch (error) {
-      console.error('Error sending response:', error);
+      log.error('Error sending response:', getErrorMessage(error));
     }
   }
 
-  private async handleMessage(msg: Buffer, rinfo: dgram.RemoteInfo) {
+  private async handleMessage(msg: Buffer, rinfo: dgram.RemoteInfo): Promise<void> {
     const message = msg.toString('utf-8');
-    console.log(`Received message from ${rinfo.address}:${rinfo.port}: ${message}`);
+    log.debug(`Received message from ${rinfo.address}:${rinfo.port}: ${message}`);
     try {
-      const payload = JSON.parse(message);
+      const payload = JSON.parse(message) as {
+        type?: string;
+        uid?: number;
+        task_text?: string;
+        task_description?: string;
+        source_code?: string;
+        correlation_id?: number;
+      };
 
       if (!payload.type) {
-        console.error('Invalid message format. "type" field is missing.');
+        log.error('Invalid message format. "type" field is missing.');
         return;
       }
       
       if (payload.type === 'task_request') {
-        await this.handleTaskRequest(payload.uid, payload.task_text, payload.correlation_id);
+        await this.handleTaskRequest(payload.uid ?? 0, payload.task_text ?? '', payload.correlation_id);
       } else if (payload.type === 'fix_request') {
-        await this.handleFixRequest(payload.uid, payload.task_text, payload.correlation_id);
+        await this.handleFixRequest(payload.uid ?? 0, payload.task_text ?? '', payload.correlation_id);
       } else if (payload.type === 'test_generation_request') {
-        await this.handleTestGenerationRequest(payload.uid, payload.task_description, payload.source_code, payload.correlation_id);
+        await this.handleTestGenerationRequest(payload.uid ?? 0, payload.task_description ?? '', payload.source_code ?? '', payload.correlation_id);
       } else if (payload.type === 'ping_request') {
-        this.handlePingRequest(payload.uid || 0);
+        this.handlePingRequest(payload.uid ?? 0);
       }
     } catch (error) {
-      console.error(`Error processing message`, error);
+      log.error('Error processing message:', getErrorMessage(error));
     }
   }
 
-  private async handleTaskRequest(uid: number, taskText: string, correlationId?: number) {
-    console.log('Handling task request:', taskText);
+  private async handleTaskRequest(uid: number, taskText: string, correlationId?: number): Promise<void> {
+    log.info('Handling task request:', taskText);
     this.sendResponse({
       type: 'task_request_completed',
       uid: uid,
@@ -295,8 +314,8 @@ export class AIBridge {
     });
   }
 
-  private async handleFixRequest(uid: number, taskText: string, correlationId?: number) {
-    console.log('Handling fix request:', taskText);
+  private async handleFixRequest(uid: number, taskText: string, correlationId?: number): Promise<void> {
+    log.info('Handling fix request:', taskText);
     this.sendResponse({
       type: 'fix_completed',
       uid: uid,
@@ -305,8 +324,8 @@ export class AIBridge {
     });
   }  
 
-  private async handleTestGenerationRequest(uid: number, taskDescription: string, sourceCode: string, correlationId?: number) {
-    console.log('Handling test generation request for task:', taskDescription);
+  private async handleTestGenerationRequest(uid: number, taskDescription: string, sourceCode: string, correlationId?: number): Promise<void> {
+    log.info('Handling test generation request for task:', taskDescription);
     
     // Build the test generation prompt
     const prompt = TEST_GENERATION_PROMPT
@@ -318,8 +337,8 @@ export class AIBridge {
     const apiResponse = await this.callAIForTestGeneration(prompt);
     const endTime = Date.now();
     
-    console.log(`AI Test Generation Response (took ${(endTime - startTime) / 1000}s):`);
-    console.log(apiResponse);
+    log.info(`AI Test Generation Response (took ${(endTime - startTime) / 1000}s)`);
+    log.debug(apiResponse);
     
     // Send response back via UDP
     this.sendResponse({
@@ -330,8 +349,8 @@ export class AIBridge {
     });
   }
 
-  private handlePingRequest(uid: number) {
-    console.log('Handling ping request');
+  private handlePingRequest(uid: number): void {
+    log.debug('Handling ping request');
     
     // Send ping response back via UDP
     this.sendResponse({
@@ -342,44 +361,44 @@ export class AIBridge {
     });
   }
 
-  public start() {
+  public start(): void {
     if (this.isRunning) {
-      console.log('AI Bridge is already running');
+      log.warn('AI Bridge is already running');
       return;
     }
     
     if (!this.apiKey) {
-      console.error('ERROR: API key not provided!');
+      log.error('ERROR: API key not provided!');
       return;
     }
     
     try {
       // Bind the listen socket to the specified port
       this.listenSocket.bind(this.listenPort, () => {
-        console.log(`UDP AI Bridge started on port ${this.listenPort}`);
-        console.log(`Responses will be sent to ${this.responseHost}:${this.responsePort}`);
-        console.log(`Using model: ${this.model}`);
+        log.info(`UDP AI Bridge started on port ${this.listenPort}`);
+        log.info(`Responses will be sent to ${this.responseHost}:${this.responsePort}`);
+        log.info(`Using model: ${this.model}`);
         this.isRunning = true;
       });
     } catch (error) {
-      console.error('Failed to start AI Bridge:', error);
+      log.error('Failed to start AI Bridge:', getErrorMessage(error));
     }
   }
 
-  public stop() {
+  public stop(): void {
     if (!this.isRunning) {
-      console.log('AI Bridge is not running');
+      log.debug('AI Bridge is not running');
       return;
     }
     
     try {
       this.listenSocket.close(() => {
-        console.log('UDP AI Bridge stopped');
+        log.info('UDP AI Bridge stopped');
         this.isRunning = false;
       });
       this.responseSocket.close();
     } catch (error) {
-      console.error('Error stopping AI Bridge:', error);
+      log.error('Error stopping AI Bridge:', getErrorMessage(error));
     }
   }
 
@@ -387,17 +406,17 @@ export class AIBridge {
     return this.isRunning;
   }
 
-  public updateApiKey(apiKey: string) {
+  public updateApiKey(apiKey: string): void {
     this.apiKey = apiKey;
   }
 
-  public updateModel(model: string) {
+  public updateModel(model: string): void {
     this.model = model;
   }
 
-  public sendPing(uid: number = 0) {
+  public sendPing(uid: number = 0): void {
     if (!this.isRunning) {
-      console.log('Cannot send ping: AI Bridge is not running');
+      log.warn('Cannot send ping: AI Bridge is not running');
       return;
     }
     
@@ -408,6 +427,6 @@ export class AIBridge {
     };
     
     this.sendResponse(pingMessage);
-    console.log('Ping request sent');
+    log.debug('Ping request sent');
   }
 }

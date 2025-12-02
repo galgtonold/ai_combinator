@@ -65,5 +65,5 @@ export function isModelAvailableForProvider(provider: string, model: string): bo
 // Helper function to get the default model for a provider
 export function getDefaultModelForProvider(provider: string): string {
   const options = getModelOptionsForProvider(provider);
-  return options[0]?.value || "gpt-4";
+  return options[0]?.value;
 }

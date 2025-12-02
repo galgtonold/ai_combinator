@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ipc from "./utils/ipc";
+  import ipc, { type AIProvider } from "./utils/ipc";
   import {
     isModelAvailableForProvider,
     getDefaultModelForProvider,
@@ -74,7 +74,7 @@
   }
 
   async function handleProviderChange(provider: string): Promise<void> {
-    const newConfig = { ...$config, aiProvider: provider as any };
+    const newConfig = { ...$config, aiProvider: provider as AIProvider };
     
     // Check if model is available for new provider
     if (!isModelAvailableForProvider(newConfig.aiProvider, newConfig.aiModel)) {

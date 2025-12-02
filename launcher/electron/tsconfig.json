@@ -3,10 +3,17 @@
     /* Visit https://aka.ms/tsconfig to read more about this file */
     "target": "ES6",
     "module": "commonjs",
-    "rootDir": "./",
-    "outDir": "../dist/electron/",
+    "rootDir": "../",
+    "outDir": "../dist/",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
-  }
+    "skipLibCheck": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "include": ["./**/*.ts", "../shared/**/*.ts"],
+  "exclude": ["../dist", "../node_modules"]
 }

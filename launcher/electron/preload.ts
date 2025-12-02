@@ -1,11 +1,16 @@
 import { contextBridge, ipcRenderer } from "electron";
 
+type AIProvider = 'openai' | 'anthropic' | 'google' | 'xai' | 'deepseek';
+
 interface Config {
   factorioPath: string;
-  openAIKey: string;
   aiBridgeEnabled: boolean;
+  aiProvider: AIProvider;
   aiModel: string;
   udpPort: number;
+  providerApiKeys: {
+    [key in AIProvider]?: string;
+  };
 }
 
 export type FactorioStatus = 'not_found' | 'found' | 'running' | 'stopped';

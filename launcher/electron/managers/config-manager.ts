@@ -2,21 +2,19 @@
 import { app } from "electron";
 import { join } from "path";
 import { existsSync, readFileSync, writeFileSync } from "fs";
+import { 
+  type Config, 
+  DEFAULT_AI_PROVIDER, 
+  DEFAULT_AI_MODEL, 
+  DEFAULT_UDP_PORT,
+  createLogger,
+  getErrorMessage
+} from "../../shared";
 
-export type AIProvider = 'openai' | 'anthropic' | 'google' | 'xai' | 'deepseek';
+// Re-export types for backward compatibility
+export type { AIProvider, Config } from "../../shared";
 
-export interface Config {
-  factorioPath: string;
-  openAIKey: string; // Deprecated - kept for migration
-  aiBridgeEnabled: boolean;
-  aiProvider: AIProvider;
-  aiModel: string;
-  udpPort: number;
-  // Provider-specific API keys
-  providerApiKeys: {
-    [key in AIProvider]?: string;
-  };
-}
+const log = createLogger('ConfigManager');
 
 export class ConfigManager {
   private configPath: string;
@@ -31,11 +29,10 @@ export class ConfigManager {
   private getDefaultConfig(): Config {
     return {
       factorioPath: "",
-      openAIKey: "",
       aiBridgeEnabled: false,
-      aiProvider: "openai",
-      aiModel: "gpt-4",
-      udpPort: 9001,
+      aiProvider: DEFAULT_AI_PROVIDER,
+      aiModel: DEFAULT_AI_MODEL,
+      udpPort: DEFAULT_UDP_PORT,
       providerApiKeys: {}
     };
   }
@@ -44,7 +41,7 @@ export class ConfigManager {
     try {
       if (existsSync(this.configPath)) {
         const loadedConfig = JSON.parse(readFileSync(this.configPath, 'utf8'));
-        console.log("Loading config from disk:", JSON.stringify(loadedConfig, null, 2));
+        log.debug("Loading config from disk");
         
         // Properly merge config with special handling for nested objects
         this.config = {
@@ -58,35 +55,28 @@ export class ConfigManager {
         };
         
         this.migrateConfig();
-        console.log("Final loaded config:", JSON.stringify(this.config, null, 2));
+        log.debug("Config loaded successfully");
         this.saveConfig(); // Save the migrated config
       }
     } catch (error) {
-      console.error("Failed to load config:", error);
+      log.error("Failed to load config:", getErrorMessage(error));
     }
   }
 
   private migrateConfig(): void {
     // Migration: Set default provider if not present
     if (!this.config.aiProvider) {
-      this.config.aiProvider = "openai" as AIProvider;
-    }
-    
-    // Migration: Move old openAIKey to provider-specific key
-    if (this.config.openAIKey && !this.config.providerApiKeys.openai) {
-      this.config.providerApiKeys.openai = this.config.openAIKey;
-      // Keep the old key for backward compatibility but it will be deprecated
+      this.config.aiProvider = DEFAULT_AI_PROVIDER;
     }
   }
 
   public saveConfig(): void {
     try {
       const configToSave = JSON.stringify(this.config, null, 2);
-      console.log("Writing config to file:", configToSave);
       writeFileSync(this.configPath, configToSave);
-      console.log(`Config saved to: ${this.configPath}`);
+      log.debug(`Config saved to: ${this.configPath}`);
     } catch (error) {
-      console.error("Failed to save config:", error);
+      log.error("Failed to save config:", getErrorMessage(error));
     }
   }
 

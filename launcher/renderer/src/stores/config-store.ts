@@ -1,15 +1,15 @@
 import { writable } from 'svelte/store';
 import type { Config } from "../utils/ipc";
 import ipc from "../utils/ipc";
+import { DEFAULT_AI_PROVIDER, DEFAULT_AI_MODEL, DEFAULT_UDP_PORT } from "@shared";
 
 // Create reactive config store
 const initialConfig: Config = {
   factorioPath: "",
-  openAIKey: "", // Deprecated - kept for migration
   aiBridgeEnabled: false,
-  aiProvider: "openai",
-  aiModel: "gpt-4",
-  udpPort: 9001,
+  aiProvider: DEFAULT_AI_PROVIDER,
+  aiModel: DEFAULT_AI_MODEL,
+  udpPort: DEFAULT_UDP_PORT,
   providerApiKeys: {},
 };
 
@@ -30,21 +30,14 @@ export class ConfigService {
       // Ensure all properties are present with defaults
       const newConfig: Config = {
         factorioPath: loadedConfig.factorioPath || "",
-        openAIKey: loadedConfig.openAIKey || "", // Deprecated
         aiBridgeEnabled: false, // Will be set below based on provider API key
-        aiProvider: (loadedConfig as any).aiProvider || "openai",
-        aiModel: loadedConfig.aiModel || "gpt-4",
+        aiProvider: loadedConfig.aiProvider || DEFAULT_AI_PROVIDER,
+        aiModel: loadedConfig.aiModel || DEFAULT_AI_MODEL,
         udpPort: loadedConfig.udpPort || 9001,
-        providerApiKeys: (loadedConfig as any).providerApiKeys || {},
+        providerApiKeys: loadedConfig.providerApiKeys || {},
       };
 
       console.log("Frontend config after loading:", newConfig);
-
-      // Migration: Move old openAIKey to provider-specific key if needed
-      if (loadedConfig.openAIKey && !newConfig.providerApiKeys.openai) {
-        newConfig.providerApiKeys.openai = loadedConfig.openAIKey;
-        console.log("Migrated old OpenAI key to providerApiKeys");
-      }
 
       // Update AI bridge enabled status based on current provider's API key
       newConfig.aiBridgeEnabled = !!this.getCurrentProviderApiKey(newConfig);
@@ -73,7 +66,6 @@ export class ConfigService {
       // Create a plain object with all the properties we need to save
       const configToSave = {
         factorioPath: configValue.factorioPath,
-        openAIKey: configValue.openAIKey, // Keep for backward compatibility
         aiBridgeEnabled: configValue.aiBridgeEnabled,
         aiProvider: configValue.aiProvider,
         aiModel: configValue.aiModel,

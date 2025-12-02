@@ -1,11 +1,16 @@
 // AI Bridge management module
 import { AIBridge } from "../services/ai-bridge";
-import { AIProvider } from "./config-manager";
+import { 
+  type AIProvider, 
+  type AIBridgeResult,
+  createLogger,
+  getErrorMessage 
+} from "../../shared";
 
-export interface AIBridgeResult {
-  success: boolean;
-  message: string;
-}
+// Re-export for backward compatibility
+export type { AIBridgeResult } from "../../shared";
+
+const log = createLogger('AIBridgeManager');
 
 export class AIBridgeManager {
   private aiBridge: AIBridge | null = null;
@@ -17,7 +22,7 @@ export class AIBridgeManager {
       }
       
       if (!apiKey) {
-        console.error("Cannot start AI Bridge: API key not set");
+        log.warn("Cannot start AI Bridge: API key not set");
         return { success: false, message: "API key not set" };
       }
       
@@ -26,8 +31,8 @@ export class AIBridgeManager {
       
       return { success: true, message: "AI Bridge started successfully" };
     } catch (error) {
-      console.error("Failed to start AI Bridge:", error);
-      return { success: false, message: `Failed to start AI Bridge: ${error.message}` };
+      log.error("Failed to start AI Bridge:", getErrorMessage(error));
+      return { success: false, message: `Failed to start AI Bridge: ${getErrorMessage(error)}` };
     }
   }
 
@@ -40,8 +45,8 @@ export class AIBridgeManager {
       }
       return { success: false, message: "AI Bridge is not running" };
     } catch (error) {
-      console.error("Failed to stop AI Bridge:", error);
-      return { success: false, message: `Failed to stop AI Bridge: ${error.message}` };
+      log.error("Failed to stop AI Bridge:", getErrorMessage(error));
+      return { success: false, message: `Failed to stop AI Bridge: ${getErrorMessage(error)}` };
     }
   }
 
@@ -54,7 +59,7 @@ export class AIBridgeManager {
   }
 
   public isActive(): boolean {
-    return this.aiBridge && this.aiBridge.isActive();
+    return this.aiBridge !== null && this.aiBridge.isActive();
   }
 
   public updateModel(model: string): boolean {

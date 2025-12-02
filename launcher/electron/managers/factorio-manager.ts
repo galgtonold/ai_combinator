@@ -1,26 +1,41 @@
 // Factorio process and installation management module
-import { exec, ChildProcess } from "child_process";
+import { exec } from "child_process";
 import { promisify } from "util";
 import { join } from "path";
 import { existsSync, readFileSync } from "fs";
+import {
+  type FactorioStatusUpdate,
+  type LaunchResult,
+  FACTORIO_STATUS_CHECK_INTERVAL,
+  FACTORIO_LAUNCH_STATUS_DELAY,
+  createLogger,
+  getErrorMessage
+} from "../../shared";
 
+// Re-export types for backward compatibility
+export type { LaunchResult } from "../../shared";
+export type FactorioStatus = FactorioStatusUpdate;
+
+const log = createLogger('FactorioManager');
 const execAsync = promisify(exec);
 
-export interface FactorioStatus {
-  status: 'running' | 'stopped';
-  error: boolean;
+// VDF parsing types
+interface LibraryFolder {
+  path?: string;
+  [key: string]: string | undefined;
 }
 
-export interface LaunchResult {
-  success: boolean;
-  message: string;
+interface VDFResult {
+  libraryfolders: {
+    [key: string]: LibraryFolder;
+  };
 }
 
 export class FactorioManager {
   private statusCheckInterval: NodeJS.Timeout | null = null;
-  private onStatusChange?: (status: FactorioStatus) => void;
+  private onStatusChange?: (status: FactorioStatusUpdate) => void;
 
-  constructor(onStatusChange?: (status: FactorioStatus) => void) {
+  constructor(onStatusChange?: (status: FactorioStatusUpdate) => void) {
     this.onStatusChange = onStatusChange;
   }
 
@@ -32,15 +47,15 @@ export class FactorioManager {
       // Try to find from registry (Steam installation)
       const { stdout } = await execAsync('reg query "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App 427520" /v "InstallLocation" /reg:64');
       const match = stdout.match(/InstallLocation\s+REG_SZ\s+(.+)/);
-      if (match && match[1]) {
+      if (match?.[1]) {
         const steamPath = match[1].trim();
         const exePath = join(steamPath, "bin", "x64", "factorio.exe");
         if (existsSync(exePath)) {
           possiblePaths.push(exePath);
         }
       }
-    } catch (error) {
-      console.log("Failed to find Factorio from registry");
+    } catch {
+      log.debug("Failed to find Factorio from registry");
     }
 
     try {
@@ -54,9 +69,9 @@ export class FactorioManager {
           
           // Extract library paths from VDF content
           for (const key in libraryFolders.libraryfolders) {
-            if (libraryFolders.libraryfolders[key].path) {
-              const libraryPath = libraryFolders.libraryfolders[key].path;
-              const factorioPath = join(libraryPath, "steamapps", "common", "Factorio", "bin", "x64", "factorio.exe");
+            const folder = libraryFolders.libraryfolders[key];
+            if (folder?.path) {
+              const factorioPath = join(folder.path, "steamapps", "common", "Factorio", "bin", "x64", "factorio.exe");
               if (existsSync(factorioPath)) {
                 possiblePaths.push(factorioPath);
               }
@@ -65,7 +80,7 @@ export class FactorioManager {
         }
       }
     } catch (error) {
-      console.log("Failed to find Factorio from Steam libraries:", error);
+      log.debug("Failed to find Factorio from Steam libraries:", getErrorMessage(error));
     }
 
     return possiblePaths;
@@ -76,21 +91,21 @@ export class FactorioManager {
     try {
       const { stdout } = await execAsync('reg query "HKEY_LOCAL_MACHINE\\SOFTWARE\\Valve\\Steam" /v "InstallPath" /reg:64');
       const match = stdout.match(/InstallPath\s+REG_SZ\s+(.+)/);
-      if (match && match[1]) {
+      if (match?.[1]) {
         return match[1].trim();
       }
-    } catch (error) {
-      console.log("Failed to find Steam path from registry");
+    } catch {
+      log.debug("Failed to find Steam path from registry");
     }
     return null;
   }
 
   // Simple VDF parser for Steam library folders
-  private parseVDF(vdfContent: string): any {
-    const result: any = { libraryfolders: {} };
+  private parseVDF(vdfContent: string): VDFResult {
+    const result: VDFResult = { libraryfolders: {} };
     const lines = vdfContent.split('\n');
     let currentSection = '';
-    let currentObj: any = {};
+    let currentObj: LibraryFolder | null = null;
 
     for (const line of lines) {
       const trimmed = line.trim();
@@ -106,7 +121,7 @@ export class FactorioManager {
       // Check for key-value pair
       const kvMatch = trimmed.match(/^"([^"]+)"\s+"([^"]+)"$/);
       if (kvMatch) {
-        const [_, key, value] = kvMatch;
+        const [, key, value] = kvMatch;
         
         if (currentSection === 'libraryfolders') {
           // Library folder entries are numbered (e.g., "0", "1", etc.)
@@ -131,7 +146,7 @@ export class FactorioManager {
       // If Factorio is running, the output will include "factorio.exe"
       return stdout.toLowerCase().includes('factorio.exe');
     } catch (error) {
-      console.error('Error checking if Factorio is running:', error);
+      log.error('Error checking if Factorio is running:', getErrorMessage(error));
       return false;
     }
   }
@@ -142,12 +157,12 @@ export class FactorioManager {
     this.stopStatusMonitoring();
     
     // Check immediately
-    this.checkAndNotifyStatus();
+    void this.checkAndNotifyStatus();
     
     // Then check periodically
     this.statusCheckInterval = setInterval(() => {
-      this.checkAndNotifyStatus();
-    }, 5000);
+      void this.checkAndNotifyStatus();
+    }, FACTORIO_STATUS_CHECK_INTERVAL);
   }
 
   // Stop monitoring Factorio status
@@ -184,14 +199,14 @@ export class FactorioManager {
         // Launch the process with UDP port arguments
         exec(`"${factorioPath}" --enable-lua-udp ${udpPort}`);
         
-        // Give it 2 seconds to start, then check status
-        setTimeout(async () => {
-          await this.checkAndNotifyStatus();
-        }, 2000);
+        // Give it time to start, then check status
+        setTimeout(() => {
+          void this.checkAndNotifyStatus();
+        }, FACTORIO_LAUNCH_STATUS_DELAY);
         
         return { success: true, message: `Factorio launch initiated with UDP port ${udpPort}` };
       } catch (error) {
-        return { success: false, message: `Failed to launch Factorio: ${error.message}` };
+        return { success: false, message: `Failed to launch Factorio: ${getErrorMessage(error)}` };
       }
     }
     return { success: false, message: "Factorio executable not found" };

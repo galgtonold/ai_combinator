@@ -1,25 +1,36 @@
 <script lang="ts">
-  // Common props for all button types
-  export let onClick: () => void = () => {};
-  export let disabled: boolean = false;
-  export let title: string | undefined = undefined;
+  import type { Snippet } from 'svelte';
+
+  interface Props {
+    onClick?: () => void;
+    disabled?: boolean;
+    title?: string;
+    class?: string;
+    children?: Snippet;
+  }
+
+  let { 
+    onClick = () => {}, 
+    disabled = false, 
+    title = undefined,
+    class: className = '',
+    children
+  }: Props = $props();
   
-  function handleClick(event: MouseEvent) {
+  function handleClick(): void {
     if (disabled) return;
-    
-    // Call the onClick handler
     onClick();
   }
 </script>
 
 <!-- Default slot for button content -->
 <button 
-  class="button-base {$$props.class || ''}"
-  on:click={handleClick}
+  class="button-base {className}"
+  onclick={handleClick}
   {disabled}
   {title}
 >
-    <slot></slot>
+  {@render children?.()}
 </button>
 
 <style>

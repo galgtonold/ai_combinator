@@ -5,16 +5,25 @@ import { ConfigManager } from "./managers/config-manager";
 import { FactorioManager } from "./managers/factorio-manager";
 import { AIBridgeManager } from "./managers/ai-bridge-manager";
 import { IPCHandlers } from "./services/ipc-handlers";
+import { 
+  VITE_DEV_SERVER_URL, 
+  VITE_MAX_RETRIES, 
+  VITE_RETRY_INTERVAL,
+  createLogger 
+} from "../shared";
 
-const { updateElectronApp } = require('update-electron-app')
+// Using require for update-electron-app as it doesn't have ES module exports
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { updateElectronApp } = require('update-electron-app');
+
+const log = createLogger('App');
 
 let mainWindow: BrowserWindow;
 let configManager: ConfigManager;
 let factorioManager: FactorioManager;
 let aiBridgeManager: AIBridgeManager;
-let ipcHandlers: IPCHandlers;
 
-updateElectronApp()
+updateElectronApp();
 
 app.once("ready", main);
 
@@ -29,10 +38,10 @@ app.on("will-quit", () => {
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
+  if (process.platform !== 'darwin') app.quit();
+});
 
-async function main() {
+async function main(): Promise<void> {
   // Initialize managers
   configManager = new ConfigManager();
   
@@ -69,8 +78,8 @@ async function main() {
     ? join(__dirname, "..", "assets", "icon.png")
     : join(__dirname, "..", "..", "assets", "icon.png");
 
-  console.log("Icon path:", iconPath); // Debug log
-  console.log("__dirname:", __dirname); // Debug log
+  log.debug("Icon path:", iconPath);
+  log.debug("__dirname:", __dirname);
 
   mainWindow = new BrowserWindow({
     width: 600,
@@ -84,7 +93,7 @@ async function main() {
     autoHideMenuBar: true, // Hide the menu bar
     icon: iconPath, // Custom icon
     webPreferences: {
-      devTools: true || !app.isPackaged,
+      devTools: !app.isPackaged,
       preload: join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
@@ -98,7 +107,7 @@ async function main() {
   app.commandLine.appendSwitch('disable-features', 'FontSubpixelPositioning');
 
   // Initialize IPC handlers after all managers are created
-  ipcHandlers = new IPCHandlers(configManager, factorioManager, aiBridgeManager, mainWindow);
+  new IPCHandlers(configManager, factorioManager, aiBridgeManager, mainWindow);
 
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
@@ -107,7 +116,7 @@ async function main() {
   });
 
   if (app.isPackaged) {
-    mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
+    await mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
   } else {
     // Only watch our electron directory for changes, not the entire project
     electronReload(join(__dirname), {
@@ -125,21 +134,19 @@ async function main() {
 // Helper function for loading development URL with retry logic
 async function loadDevelopmentURL(): Promise<void> {
   let retries = 0;
-  const maxRetries = 30;
-  const retryInterval = 1000; // 1 second
   
   const loadURL = async (): Promise<void> => {
     try {
-      await mainWindow.loadURL('http://localhost:5173/');
-      console.log('Successfully connected to Vite dev server');
+      await mainWindow.loadURL(VITE_DEV_SERVER_URL);
+      log.info('Successfully connected to Vite dev server');
     } catch (err) {
       retries++;
-      if (retries <= maxRetries) {
-        console.log(`Failed to connect to Vite dev server, retrying (${retries}/${maxRetries})...`);
-        await new Promise(resolve => setTimeout(resolve, retryInterval));
+      if (retries <= VITE_MAX_RETRIES) {
+        log.debug(`Failed to connect to Vite dev server, retrying (${retries}/${VITE_MAX_RETRIES})...`);
+        await new Promise(resolve => setTimeout(resolve, VITE_RETRY_INTERVAL));
         await loadURL();
       } else {
-        console.error('Failed to connect to Vite dev server after maximum retries');
+        log.error('Failed to connect to Vite dev server after maximum retries');
         throw err;
       }
     }

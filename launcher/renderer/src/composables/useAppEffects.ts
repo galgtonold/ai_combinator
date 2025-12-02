@@ -33,7 +33,7 @@ export function useAppEffects() {
    * Setup status listener for Factorio updates
    */
   function setupStatusListener(): void {
-    unsubscribeStatusUpdate = ipc.onFactorioStatusUpdate((data: any) => {
+    unsubscribeStatusUpdate = ipc.onFactorioStatusUpdate((data: { status: string; error?: boolean }) => {
       if (data.status === "running") {
         statusService.setFactorioStatus("running");
       } else if (data.status === "stopped") {

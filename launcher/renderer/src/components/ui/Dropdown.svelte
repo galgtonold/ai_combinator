@@ -1,41 +1,68 @@
-
 <script lang="ts">
   import NormalButton from '../buttons/NormalButton.svelte';
   import ListboxItemButton from '../buttons/ListboxItemButton.svelte';
   import '../../styles/factorio-dropdown.css';
   import dropdownArrow from '/graphics/dropdown.png';
   
-  export let value: string;
-  export let options: { value: string; label: string }[];
-  export let onChange: (value: string) => void = () => {};
-  export let width: string = '200px';
-  let open = false;
-  let dropdownRef: HTMLDivElement;
+  interface Option {
+    value: string;
+    label: string;
+  }
 
-  function selectOption(val: string) {
+  interface Props {
+    value: string;
+    options: Option[];
+    onChange?: (value: string) => void;
+    width?: string;
+  }
+
+  let { 
+    value, 
+    options, 
+    onChange = () => {}, 
+    width = '200px' 
+  }: Props = $props();
+
+  let open = $state(false);
+  let dropdownRef: HTMLDivElement | undefined = $state();
+
+  function selectOption(val: string): void {
     value = val;
     onChange(val);
     open = false;
   }
 
-  function handleClickOutside(event: MouseEvent) {
+  function handleClickOutside(event: MouseEvent): void {
     if (dropdownRef && !dropdownRef.contains(event.target as Node)) {
       open = false;
     }
   }
 
-  $: if (open) {
-    window.addEventListener('mousedown', handleClickOutside);
-  } else {
-    window.removeEventListener('mousedown', handleClickOutside);
+  function toggleDropdown(): void {
+    open = !open;
   }
+
+  $effect(() => {
+    if (open) {
+      window.addEventListener('mousedown', handleClickOutside);
+    } else {
+      window.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      window.removeEventListener('mousedown', handleClickOutside);
+    };
+  });
+
+  const selectedLabel = $derived(options.find(o => o.value === value)?.label ?? '');
 </script>
 
 <div class="factorio-dropdown" bind:this={dropdownRef} style="width: {width};">
-  <div class="factorio-dropdown-btn" on:click={() => open = !open}>
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="factorio-dropdown-btn" onclick={toggleDropdown}>
     <NormalButton clicked={open} size="medium" fullWidth={true}>
       <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-        <span style="text-align: left;">{options.find(o => o.value === value)?.label ?? ''}</span>
+        <span style="text-align: left;">{selectedLabel}</span>
         <img src={dropdownArrow} alt="▼" class="factorio-dropdown-arrow" draggable="false" />
       </div>
     </NormalButton>

@@ -6,23 +6,8 @@ declare global {
   }
 }
 
-// Provider type definition
-type AIProvider = 'openai' | 'anthropic' | 'google' | 'xai' | 'deepseek';
-
-export interface Config {
-  factorioPath: string;
-  openAIKey: string; // Deprecated - kept for migration
-  aiBridgeEnabled: boolean;
-  aiProvider: AIProvider;
-  aiModel: string;
-  udpPort: number;
-  // Provider-specific API keys
-  providerApiKeys: {
-    [key in AIProvider]?: string;
-  };
-}
-
-export type FactorioStatus = 'not_found' | 'found' | 'running' | 'stopped';
+// Re-export shared types for use in the renderer
+export type { AIProvider, Config, FactorioStatus } from "@shared";
 
 const ipc = window.bridge;
 export default ipc;

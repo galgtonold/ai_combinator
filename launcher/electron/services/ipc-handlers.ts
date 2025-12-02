@@ -1,8 +1,11 @@
 // IPC handlers module - separates business logic from IPC communication
-import { ipcMain, dialog, BrowserWindow, app, shell } from "electron";
-import { ConfigManager, Config } from "../managers/config-manager";
+import { ipcMain, dialog, BrowserWindow, shell } from "electron";
+import { ConfigManager } from "../managers/config-manager";
 import { FactorioManager } from "../managers/factorio-manager";
 import { AIBridgeManager } from "../managers/ai-bridge-manager";
+import { type Config, createLogger, getErrorMessage } from "../../shared";
+
+const log = createLogger('IPCHandlers');
 
 export class IPCHandlers {
   private configManager: ConfigManager;
@@ -28,12 +31,12 @@ export class IPCHandlers {
     // Config management handlers
     ipcMain.handle("get-config", () => {
       const config = this.configManager.getConfig();
-      console.log("Frontend requesting config:", JSON.stringify(config, null, 2));
+      log.debug("Frontend requesting config");
       return config;
     });
 
     ipcMain.handle("save-config", (_, newConfig: Config) => {
-      console.log("Saving config from frontend:", JSON.stringify(newConfig, null, 2));
+      log.debug("Saving config from frontend");
       this.configManager.updateConfig(newConfig);
       return true;
     });
@@ -76,7 +79,7 @@ export class IPCHandlers {
     });
 
     // AI Bridge management handlers
-    ipcMain.handle("toggle-ai-bridge", async () => {
+    ipcMain.handle("toggle-ai-bridge", () => {
       const config = this.configManager.getConfig();
       const result = this.aiBridgeManager.toggleBridge(
         this.configManager.getCurrentProviderApiKey(),
@@ -92,7 +95,7 @@ export class IPCHandlers {
       return this.aiBridgeManager.isActive();
     });
 
-    ipcMain.handle("start-ai-bridge", async () => {
+    ipcMain.handle("start-ai-bridge", () => {
       const config = this.configManager.getConfig();
       const result = this.aiBridgeManager.startBridge(
         this.configManager.getCurrentProviderApiKey(),
@@ -104,7 +107,7 @@ export class IPCHandlers {
       return result;
     });
 
-    ipcMain.handle("stop-ai-bridge", async () => {
+    ipcMain.handle("stop-ai-bridge", () => {
       const result = this.aiBridgeManager.stopBridge();
       this.configManager.setAiBridgeEnabled(false);
       return result;
@@ -140,7 +143,7 @@ export class IPCHandlers {
         await shell.openExternal(url);
         return true;
       } catch (error) {
-        console.error("Failed to open external URL:", error);
+        log.error("Failed to open external URL:", getErrorMessage(error));
         return false;
       }
     });

@@ -2,3 +2,6 @@ node_modules/
 dist/
 build/
 .DS_Store
+
+# Compiled JS files in shared (Electron's tsc outputs to dist/, but just in case)
+shared/*.js
