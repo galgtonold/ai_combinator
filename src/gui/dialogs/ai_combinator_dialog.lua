@@ -268,7 +268,7 @@ end
 
 
 function dialog.update()
-  if not (next(storage.guis) and game.tick % config.gui_signals_update_interval == 0) then
+  if not next(storage.guis) then
     return
   end
 

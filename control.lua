@@ -1,5 +1,4 @@
 local conf = require('src/core/config')
-conf.update_from_settings()
 
 local event_handler = require("src/events/event_handler")
 local constants = require("src/core/constants")

@@ -1,7 +1,3 @@
-local event_handler = require("src/events/event_handler")
-local config = require('src/core/config')
-
-
 local dialog = {}
 
 function dialog.show(pn, uid, paused, toggle_on)
@@ -24,7 +20,7 @@ function dialog.show(pn, uid, paused, toggle_on)
 	local scroll = gui.add{type='scroll-pane',  name='mlc-vars-scroll', direction='vertical'}
 	scroll.style.maximal_height = (dh - 300) * dsf
 	local tb = scroll.add{type='text-box', name='mlc-vars-box', text=''}
-	tb.style.width = conf.gui_vars_line_px
+	tb.style.width = 500
 	tb.read_only, tb.selectable, tb.word_wrap = true, false, true
 	local btns = gui.add{type='flow', name='mlc-vars-btns', direction='horizontal'}
 	btns.add{type='button', name='mlc-vars-close', caption='Close'}
@@ -57,16 +53,18 @@ function dialog.update(player, uid, pause_update)
 		vars_box.selectable, vars_box.read_only, vars_box.tooltip = false, true, ''
 	end
 
+    gui_vars_serpent_opts = {metatostring=true, nocode=true}
+
 	if not mlc then vars_box.text = '--- [color=#911818]Moon Logic Combinator is Offline[/color] ---'
 	else
 		local text, esc, vs, c = '', function(s) return tostring(s):gsub('%[', '[ ') end
 		for k, v in pairs(mlc.vars) do
 			if k:match('^__') then goto skip end
 			if text ~= '' then text = text..'\n' end
-			vs = serpent.line(v, conf.gui_vars_serpent_opts)
-			if vs:len() > conf.gui_vars_line_len_max
-			then vs = serpent.block(v, conf.gui_vars_serpent_opts)
-			elseif vs:len() > conf.gui_vars_line_len_max * 0.6 then vs = '\n  '..vs end
+			vs = serpent.line(v, gui_vars_serpent_opts)
+			if vs:len() > 80
+			then vs = serpent.block(v, gui_vars_serpent_opts)
+			elseif vs:len() > 80 * 0.6 then vs = '\n  '..vs end
 			text = text..('[color=#520007][font=default-bold]%s[/font][/color] = %s'):format(esc(k), esc(vs))
 		::skip:: end
 		vars_box.text = text
