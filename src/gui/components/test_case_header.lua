@@ -54,17 +54,22 @@ local function on_gui_click(event)
   end
 end
 
-local function on_test_case_name_updated(event)
+local function on_test_case_updated(event)
   local gui_t = storage.guis[event.uid]
-  gui_t.test_case_name_label.caption = event.test_name
-
-  local combinator = storage.combinators[event.uid]
-  local test_case = combinator.test_cases[event.test_index]
-
-  test_case.name = event.test_name
+  if not gui_t or not gui_t.test_case_name_label or not gui_t.test_case_name_label.valid then return end
+  
+  -- Check if this update is for the test case we are displaying
+  -- The label doesn't have tags, but we can check if the dialog is open for this test index
+  if gui_t.test_case_dialog and gui_t.test_case_dialog.tags.test_index == event.test_index then
+      local combinator = storage.combinators[event.uid]
+      local test_case = combinator.test_cases[event.test_index]
+      if test_case then
+          gui_t.test_case_name_label.caption = test_case.name
+      end
+  end
 end
 
 event_handler.add_handler(defines.events.on_gui_click, on_gui_click)
-event_handler.add_handler(constants.events.on_test_case_name_updated, on_test_case_name_updated)
+event_handler.add_handler(constants.events.on_test_case_updated, on_test_case_updated)
 
 return component

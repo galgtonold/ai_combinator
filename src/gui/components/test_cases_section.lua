@@ -6,6 +6,8 @@ local bridge = require("src/services/bridge")
 local ai_operation_manager = require('src/core/ai_operation_manager')
 
 
+local combinator_service = require('src/ai_combinator/combinator_service')
+
 local component = {}
 
 -- Forward declaration
@@ -356,33 +358,11 @@ local function on_test_generation_completed(event)
 end
 
 local function delete_test_case(uid, test_index)
-  local combinator = storage.combinators[uid]
-  if not combinator or not combinator.test_cases then return end
-
-  table.remove(combinator.test_cases, test_index)
+  combinator_service.remove_test_case(uid, test_index)
 end
 
 local function add_test_case(uid)
-  local combinator = storage.combinators[uid]
-  if not combinator then return end
-  
-  if not combinator.test_cases then
-    combinator.test_cases = {}
-  end
-  
-  local new_test_index = #combinator.test_cases + 1
-  table.insert(combinator.test_cases, {
-    name = "Test Case " .. new_test_index,
-    red_input = {},
-    green_input = {},
-    expected_output = {},
-    actual_output = {},
-    success = false
-  })
-  event_handler.raise_event(constants.events.on_test_case_updated, {
-    uid = uid,
-    test_index = new_test_index
-  })
+  combinator_service.add_test_case(uid)
 end
 
 local function auto_generate_test_cases(uid)
@@ -509,7 +489,7 @@ local function on_fix_completion(event)
 end
 
 event_handler.add_handler(constants.events.on_test_case_evaluated, on_test_case_evaluated)
-event_handler.add_handler(constants.events.on_test_case_name_updated, on_test_case_evaluated)
+event_handler.add_handler(constants.events.on_test_case_updated, on_test_case_evaluated)
 event_handler.add_handler(constants.events.on_test_generation_completed, on_test_generation_completed)
 event_handler.add_handler(constants.events.on_ai_operation_state_changed, on_ai_operation_state_changed)
 event_handler.add_handler(constants.events.on_fix_completed, on_fix_completion)

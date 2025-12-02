@@ -1,6 +1,7 @@
 local utils = require("src/core/utils")
 local event_handler = require("src/events/event_handler")
 local constants = require("src/core/constants")
+local combinator_service = require("src/ai_combinator/combinator_service")
 
 local signal_element = require("src/gui/components/signal_element")
 
@@ -95,7 +96,8 @@ local function on_gui_elem_changed(event)
   local signal_type = element.tags.signal_type
   local slot_index = element.tags.slot_index
       
-  local signal_array = get_signal_array(uid, test_index, signal_type)
+  -- Get a copy of the signal array to modify
+  local signal_array = util.shallow_copy(get_signal_array(uid, test_index, signal_type))
 
   -- Ensure the array is large enough
   while #signal_array < slot_index do
@@ -126,6 +128,18 @@ local function on_gui_elem_changed(event)
     end
   end
   
+  -- Update via service
+  local update_data = {}
+  if signal_type == "red" then
+    update_data.red_input = signal_array
+  elseif signal_type == "green" then
+    update_data.green_input = signal_array
+  elseif signal_type == "expected" then
+    update_data.expected_output = signal_array
+  end
+  
+  combinator_service.update_test_case(uid, test_index, update_data)
+  
   -- Refresh the dialog to show/hide edit buttons properly and expand rows if needed
   local gui_t = storage.guis[uid]
   if gui_t and gui_t.test_case_dialog and gui_t.test_case_dialog.valid then
@@ -135,25 +149,34 @@ local function on_gui_elem_changed(event)
       compact_signal_panel.update(panel, signal_array, uid, test_index, signal_type)
     end
   end
-  
-  event_handler.raise_event(constants.events.on_test_case_updated, {uid = uid, test_index = test_index})
 end
 
 local function on_quantity_set(event)
   if not event.edit_test_signal_quantity then return end
 
-  local signal_array = get_signal_array(event.uid, event.test_index, event.signal_type)
+  local signal_array = util.shallow_copy(get_signal_array(event.uid, event.test_index, event.signal_type))
   if not signal_array then return end
 
   signal_array[event.slot_index] = signal_array[event.slot_index] or {}
   signal_array[event.slot_index].count = event.quantity
+
+  -- Update via service
+  local update_data = {}
+  if event.signal_type == "red" then
+    update_data.red_input = signal_array
+  elseif event.signal_type == "green" then
+    update_data.green_input = signal_array
+  elseif event.signal_type == "expected" then
+    update_data.expected_output = signal_array
+  end
+  
+  combinator_service.update_test_case(event.uid, event.test_index, update_data)
 
   local gui_t = storage.guis[event.uid]
   local panel_name = "compact_" .. event.signal_type .. "_signal_panel"
   local panel = gui_t[panel_name]
 
   compact_signal_panel.update(panel, signal_array, event.uid, event.test_index, event.signal_type)
-  event_handler.raise_event(constants.events.on_test_case_updated, {uid = event.uid, test_index = event.test_index})
 end
 
 local function on_test_case_evaluated(event)

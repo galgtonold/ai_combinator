@@ -79,7 +79,7 @@ function serialization.deserialize_combinator(tags)
   end
   
   -- Fallback to basic format
-  combinator_data.code = tags.ai_combinator_code or tags.mlc_code
+  combinator_data.code = tags.ai_combinator_code
   combinator_data.task = tags.task
   combinator_data.description = tags.description
   

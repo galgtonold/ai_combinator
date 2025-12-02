@@ -3,7 +3,7 @@ local titlebar = require('src/gui/components/titlebar')
 local constants = require('src/core/constants')
 local utils = require('src/core/utils')
 local dialog_manager = require('src/gui/dialogs/dialog_manager')
-
+local combinator_service = require('src/ai_combinator/combinator_service')
 
 local dialog = {}
 
@@ -70,7 +70,9 @@ end
 local function confirm_dialog(player_index, test_name_input)
     local test_name = test_name_input.text
     if test_name then
-      event_handler.raise_event(constants.events.on_test_case_name_updated, utils.merge(test_name_input.tags, {player_index = player_index, test_name = test_name}))
+      local uid = test_name_input.tags.uid
+      local test_index = test_name_input.tags.test_index
+      combinator_service.update_test_case(uid, test_index, {name = test_name})
       dialog_manager.close_dialog(player_index)
     end
 end

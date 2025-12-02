@@ -8,6 +8,7 @@ local memory = require('src/ai_combinator/memory')
 local update = require('src/ai_combinator/update')
 local code_manager = require('src/ai_combinator/code_manager')
 local init = require('src/ai_combinator/init')
+local combinator_service = require('src/ai_combinator/combinator_service')
 
 local dialog_manager = require('src/gui/dialogs/dialog_manager')
 local variable_row = require('src/gui/components/variable_row')
@@ -67,115 +68,34 @@ function guis.close(uid)
 	local gui_t = storage.guis[uid]
 	local gui = gui_t and (gui_t.gui or gui_t.gui)
 	if gui then gui.destroy() end
-	storage.guis[uid] = nil
-end
 
-
-function guis.save_code(uid, code, source_type)
-	local gui_t, combinator = storage.guis[uid], storage.combinators[uid]
-	if not combinator then return end
-	local action = code_manager.load_code(code, uid, source_type)
-	if action == "remove" then
-		return init.combinator_remove(uid)
-	elseif action == "init" then
-		init.combinator_init(combinator.e)
-	end
-  
-  ai_operation_manager.complete_operation(uid)
-end
-
-function guis.navigate_code_history(uid, direction)
-  local combinator = storage.combinators[uid]
-  if not combinator or not combinator.code_history or #combinator.code_history == 0 then
-    return false
-  end
-  
-  local current_index = combinator.code_history_index or #combinator.code_history
-  local new_index
-  
-  if direction == "previous" then
-    new_index = math.max(1, current_index - 1)
-  elseif direction == "next" then
-    new_index = math.min(#combinator.code_history, current_index + 1)
-  else
-    return false
-  end
-  
-  if new_index == current_index then
-    return false -- No change possible
-  end
-  
-  combinator.code_history_index = new_index
-  
-  -- Load the selected version
-  local historical_entry = combinator.code_history[new_index]
-  if historical_entry then
-    combinator.code = historical_entry.code
-    local combinator_env = memory.combinators[uid]
-    if combinator_env then
-      update.update_code(combinator, combinator_env, memory.combinator_env[combinator_env._uid])
+  -- Also destroy any open dialogs
+  if gui_t then
+    if gui_t.edit_code_dialog and gui_t.edit_code_dialog.valid then
+      gui_t.edit_code_dialog.destroy()
     end
-    return true
+    if gui_t.test_case_dialog and gui_t.test_case_dialog.valid then
+      gui_t.test_case_dialog.destroy()
+    end
   end
-  
-  return false
-end
 
-function guis.get_code_history_info(uid)
-  local combinator = storage.combinators[uid]
-  if not combinator then
-    return nil
-  end
-  
-  if not combinator.code_history then
-    combinator.code_history = {}
-  end
-  
-  local total_versions = #combinator.code_history
-  local current_index = combinator.code_history_index or total_versions
-  
-  -- Ensure index is valid
-  if current_index < 1 then current_index = total_versions end
-  if current_index > total_versions then current_index = total_versions end
-  
-  local current_entry = nil
-  if current_index >= 1 and current_index <= total_versions then
-    current_entry = combinator.code_history[current_index]
-  end
-  
-  return {
-    current_index = current_index,
-    total_versions = total_versions,
-    can_go_back = current_index > 1,
-    can_go_forward = current_index < total_versions,
-    current_entry = current_entry,
-    is_latest = current_index == total_versions
-  }
-end
-
-function guis.set_task(uid, task)
-  local combinator = storage.combinators[uid]
-	local gui_t = storage.guis[uid]
-  combinator.task = task
-  gui_t.task_label.caption = task
-  
-  -- Note: AI operation is started by the caller when sending the request
+	storage.guis[uid] = nil
 end
 
 event_handler.add_handler(constants.events.on_description_updated, function(event)
   local uid = event.uid
-  local description = event.description
-  guis.set_description(uid, description)
+  -- Only update UI, model is updated by service
+  guis.update_description_ui(uid)
 end)
 
-function guis.set_description(uid, description)
-  local combinator = storage.combinators[uid]
+event_handler.add_handler(constants.events.on_task_updated, function(event)
+  local uid = event.uid
+  local task = event.task
   local gui_t = storage.guis[uid]
-  
-  combinator.description = description
-  -- Update the UI to reflect the new description
-  guis.update_description_ui(uid)
-end
+  if gui_t and gui_t.task_label then
+    gui_t.task_label.caption = task
+  end
+end)
 
 function guis.create_signal_inputs(parent, signals, uid, test_index, signal_type, gui_t)
   -- Create editable signal input fields
@@ -318,7 +238,7 @@ end
 
 
 event_handler.add_handler(constants.events.on_code_updated, function(event)
-  guis.save_code(event.uid, event.code, event.source_type)
+  combinator_service.save_code(event.uid, event.code, event.source_type)
 
   update_all_test_cases(event.uid)
 end)
@@ -339,7 +259,7 @@ function guis.handle_task_dialog_click(event)
 
   if event.element.tags.set_task_button then
     local task_input = gui.task_textbox
-    guis.set_task(uid, task_input.text)
+    combinator_service.set_task(uid, task_input.text)
     -- Check bridge availability before sending task request
     bridge.check_bridge_availability()
     
@@ -353,7 +273,7 @@ function guis.handle_task_dialog_click(event)
     return true
   elseif event.element.tags.set_description_button then
     local description_input = gui.description_textbox
-    guis.set_description(uid, description_input.text)
+    combinator_service.set_description(uid, description_input.text)
     dialog_manager.close_dialog(event.player_index)
     return true
   elseif event.element.tags.task_dialog_close then
@@ -415,8 +335,8 @@ function guis.on_gui_click(event)
     ai_operation_manager.cancel_operation(uid)
   elseif el_id == 'ai-combinator-desc-btn-flow' then set_description_dialog.show(event.player_index, uid)
   elseif el_id == 'ai-combinator-edit-code' then edit_code_dialog.show(event.player_index, uid)
-	elseif el_id == 'ai-combinator-save' then guis.save_code(uid)
-	elseif el_id == 'ai-combinator-commit' then guis.save_code(uid); guis.close(uid)
+	elseif el_id == 'ai-combinator-save' then combinator_service.save_code(uid)
+	elseif el_id == 'ai-combinator-commit' then combinator_service.save_code(uid); guis.close(uid)
 	elseif el_id == 'ai-combinator-close' then guis.close(uid)
 	elseif el_id == 'ai-combinator-vars' then
 		if event.button == rmb then

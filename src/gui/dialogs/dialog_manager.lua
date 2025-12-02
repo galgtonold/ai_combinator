@@ -34,6 +34,14 @@ end
 function dialog_manager.get_current_dialog(player_index)
   ensure_dialog_stack(player_index)
   local stack = dialog_manager.dialog_stacks[player_index]
+  -- Prune invalid dialogs from the top
+  while #stack > 0 do
+    if stack[#stack] and stack[#stack].valid then
+      break
+    else
+      table.remove(stack)
+    end
+  end
   return stack[#stack]
 end
 
@@ -60,7 +68,14 @@ end
 -- Get the number of open dialogs for a player
 function dialog_manager.get_dialog_count(player_index)
   ensure_dialog_stack(player_index)
-  return #dialog_manager.dialog_stacks[player_index]
+  local stack = dialog_manager.dialog_stacks[player_index]
+  -- Prune all invalid dialogs
+  for i = #stack, 1, -1 do
+    if not (stack[i] and stack[i].valid) then
+      table.remove(stack, i)
+    end
+  end
+  return #stack
 end
 
 -- Close all dialogs for a player

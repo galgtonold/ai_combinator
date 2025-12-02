@@ -2,6 +2,7 @@ local constants = require('src/core/constants')
 local update = require('src/ai_combinator/update')
 local circuit_network = require('src/core/circuit_network')
 local util = require('src/core/utils')
+local combinator_service = require('src/ai_combinator/combinator_service')
 
 local runtime = {}
 
@@ -120,7 +121,7 @@ function runtime.run_combinator_tick(combinator, combinator_env, tick, guis)
 		combinator_src = combinator_src ~= combinator_env._uid and
 			storage.combinators[combinator.vars.ota_update_from_uid]
 		if combinator_src and combinator_src.code ~= combinator.code
-			then guis.save_code(combinator_env._uid, combinator_src.code) end
+			then combinator_service.save_code(combinator_env._uid, combinator_src.code) end
 		combinator.vars.ota_update_from_uid = nil
 	end
 end

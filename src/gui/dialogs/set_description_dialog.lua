@@ -2,6 +2,7 @@ local event_handler = require("src/events/event_handler")
 local constants = require("src/core/constants")
 local titlebar = require('src/gui/components/titlebar')
 local dialog_manager = require('src/gui/dialogs/dialog_manager')
+local combinator_service = require('src/ai_combinator/combinator_service')
 
 local dialog = {}
 
@@ -79,7 +80,7 @@ local function on_gui_click(event)
 
   if event.element.tags.set_description_button then
     local description_input = gui.description_textbox
-    event_handler.raise_event(constants.events.on_description_updated, {player_index = event.player_index, uid = uid, description = description_input.text})
+    combinator_service.set_description(uid, description_input.text)
     dialog_manager.close_dialog(event.player_index)
   end
 end

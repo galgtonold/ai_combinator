@@ -6,6 +6,7 @@ local update = require('src/ai_combinator/update')
 local circuit_network = require('src/core/circuit_network')
 local memory = require('src/ai_combinator/memory')
 local ai_operation_manager = require('src/core/ai_operation_manager')
+local combinator_service = require('src/ai_combinator/combinator_service')
 
 -- Event modules
 local blueprint_events = require('src/events/blueprint_events')
@@ -109,7 +110,7 @@ event_handler.add_handler(constants.events.on_task_request_completed, function(e
       game.print("[color=red]AI Error: " .. error_message .. "[/color]")
     end
   else
-    guis.save_code(event.uid, event.response, "ai_generation")
+    combinator_service.save_code(event.uid, event.response, "ai_generation")
   end
 end)
 

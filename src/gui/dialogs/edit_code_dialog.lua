@@ -38,6 +38,15 @@ function dialog.show(player_index, uid)
 	local combinator = storage.combinators[uid]
 	local combinator_err = combinator.err_parse or combinator.errun
 
+  -- Close existing dialogs of this type or conflicting types
+  if gui_t.edit_code_dialog and gui_t.edit_code_dialog.valid then
+    gui_t.edit_code_dialog.destroy()
+    gui_t.edit_code_dialog = nil
+  end
+  if gui_t.test_case_dialog and gui_t.test_case_dialog.valid then
+    gui_t.test_case_dialog.destroy()
+    gui_t.test_case_dialog = nil
+  end
 
   local combinator_frame = gui_t.ai_combinator_gui
   local popup_location = {
@@ -71,11 +80,9 @@ function dialog.show(player_index, uid)
   -- Get current code from the combinator
   local current_code = combinator.code or ""
   
-  -- Set current history index to the latest version if not already set
+  -- Reset history index to latest when opening dialog to ensure we see current state
   local history = combinator.code_history or {}
-  if not combinator.code_history_index or combinator.code_history_index < 1 then
-    combinator.code_history_index = #history
-  end
+  combinator.code_history_index = #history
 
   local code_textbox = content_flow.add{
     type = "text-box",
@@ -298,5 +305,28 @@ function on_gui_click(event)
 end
 
 event_handler.add_handler(defines.events.on_gui_click, on_gui_click)
+
+event_handler.add_handler(constants.events.on_code_changed, function(event)
+  local uid = event.uid
+  local gui_t = storage.guis[uid]
+  
+  -- If dialog is open for this combinator
+  if gui_t and gui_t.edit_code_dialog and gui_t.edit_code_dialog.valid then
+    local combinator = storage.combinators[uid]
+    if not combinator then return end
+    
+    -- Update textbox with new code
+    if gui_t.edit_code_textbox and gui_t.edit_code_textbox.valid then
+      gui_t.edit_code_textbox.text = code_error_highlight(event.code or "")
+    end
+    
+    -- Update history index to point to the new latest version
+    local history = combinator.code_history or {}
+    combinator.code_history_index = #history
+    
+    -- Update navigation buttons/info
+    dialog.update_history_navigation(uid)
+  end
+end)
 
 return dialog

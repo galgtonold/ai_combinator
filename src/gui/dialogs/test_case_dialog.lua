@@ -92,6 +92,16 @@ function dialog.show(player_index, uid, test_index)
   if not combinator or not combinator.test_cases or not combinator.test_cases[test_index] then
     return
   end
+
+  -- Close existing dialogs of this type or conflicting types
+  if gui_t.edit_code_dialog and gui_t.edit_code_dialog.valid then
+    gui_t.edit_code_dialog.destroy()
+    gui_t.edit_code_dialog = nil
+  end
+  if gui_t.test_case_dialog and gui_t.test_case_dialog.valid then
+    gui_t.test_case_dialog.destroy()
+    gui_t.test_case_dialog = nil
+  end
   
   local combinator_frame = gui_t.ai_combinator_gui
   local popup_location = {
