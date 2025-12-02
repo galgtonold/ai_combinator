@@ -1,12 +1,32 @@
 {
   "extends": "@tsconfig/svelte/tsconfig.json",
   "compilerOptions": {
+    /* Language and Environment */
     "target": "ESNext",
     "useDefineForClassFields": true,
+    
+    /* Modules */
     "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    
+    /* Type Checking - Enhanced */
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    
     /**
      * Typecheck JS in `.svelte` and `.js` files by default.
      * Disable checkJs if you'd like to use dynamic types in JS.
@@ -15,13 +35,24 @@
      */
     "allowJs": true,
     "checkJs": false,
+    
+    /* Emit */
     "isolatedModules": true,
+    "skipLibCheck": true,
+    
+    /* Path Aliases */
     "baseUrl": ".",
     "paths": {
       "@shared": ["../shared/index.ts"],
       "@shared/*": ["../shared/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte", "../shared/**/*.ts", "../electron/preload.ts"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.js", 
+    "src/**/*.svelte",
+    "../shared/**/*.ts",
+    "../electron/preload.ts"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -1,18 +1,49 @@
 {
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig to read more about this file */
+    
+    /* Language and Environment */
     "target": "ES2022",
+    
+    /* Modules */
     "module": "commonjs",
     "rootDir": "../",
+    "moduleResolution": "node",
+    
+    /* Emit */
     "outDir": "../dist/",
+    "sourceMap": true,
+    "removeComments": false,
+    "importHelpers": true,
+    
+    /* Interop Constraints */
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
+    "isolatedModules": true,
+    
+    /* Type Checking */
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    
+    /* Completeness */
+    "skipLibCheck": true,
+    
+    /* Advanced */
+    "resolveJsonModule": true
   },
   "include": ["./**/*.ts", "../shared/**/*.ts"],
   "exclude": ["../dist", "../node_modules"]

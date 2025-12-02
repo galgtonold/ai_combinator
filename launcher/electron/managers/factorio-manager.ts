@@ -109,7 +109,7 @@ export class FactorioManager {
 
       // Check for section start
       const sectionMatch = trimmed.match(/^"([^"]+)"\s*$/);
-      if (sectionMatch) {
+      if (sectionMatch && sectionMatch[1]) {
         currentSection = sectionMatch[1];
         continue;
       }
@@ -117,13 +117,15 @@ export class FactorioManager {
       // Check for key-value pair
       const kvMatch = trimmed.match(/^"([^"]+)"\s+"([^"]+)"$/);
       if (kvMatch) {
-        const [, key, value] = kvMatch;
+        const key = kvMatch[1];
+        const value = kvMatch[2];
         
-        if (currentSection === 'libraryfolders') {
+        if (key && value && currentSection === 'libraryfolders') {
           // Library folder entries are numbered (e.g., "0", "1", etc.)
           if (!isNaN(Number(key))) {
-            result.libraryfolders[key] = result.libraryfolders[key] || {};
-            currentObj = result.libraryfolders[key];
+            const folder = result.libraryfolders[key] || {};
+            result.libraryfolders[key] = folder;
+            currentObj = folder;
           } else if (currentObj) {
             // Add property to current library folder object
             currentObj[key] = value;

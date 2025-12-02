@@ -54,7 +54,7 @@ export const modelsByProvider: ModelsByProvider = {
 
 // Helper function to get model options for a provider
 export function getModelOptionsForProvider(provider: string): AIModel[] {
-  return modelsByProvider[provider] || modelsByProvider.openai;
+  return modelsByProvider[provider] || modelsByProvider['openai'] || [];
 }
 
 // Helper function to check if a model exists for a provider
@@ -66,5 +66,5 @@ export function isModelAvailableForProvider(provider: string, model: string): bo
 // Helper function to get the default model for a provider
 export function getDefaultModelForProvider(provider: string): string {
   const options = getModelOptionsForProvider(provider);
-  return options[0]?.value;
+  return options[0]?.value || "";
 }

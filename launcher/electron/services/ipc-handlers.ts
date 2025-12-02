@@ -51,9 +51,10 @@ export class IPCHandlers {
         properties: ["openFile"]
       });
       
-      if (!result.canceled && result.filePaths.length > 0) {
-        this.configManager.setFactorioPath(result.filePaths[0]);
-        return result.filePaths[0];
+      const selectedPath = result.filePaths[0];
+      if (!result.canceled && selectedPath) {
+        this.configManager.setFactorioPath(selectedPath);
+        return selectedPath;
       }
       
       return null;
@@ -61,9 +62,10 @@ export class IPCHandlers {
 
     ipcMain.handle("auto-detect-factorio", async () => {
       const foundPaths = await this.factorioManager.findFactorioExecutable();
-      if (foundPaths.length > 0) {
-        this.configManager.setFactorioPath(foundPaths[0]);
-        return foundPaths[0];
+      const firstPath = foundPaths[0];
+      if (firstPath) {
+        this.configManager.setFactorioPath(firstPath);
+        return firstPath;
       }
       return null;
     });
@@ -71,6 +73,9 @@ export class IPCHandlers {
     // Factorio process management
     ipcMain.handle("launch-factorio", async () => {
       const config = this.configManager.getConfig();
+      if (!config.factorioPath) {
+        return { success: false, message: "Factorio path not configured" };
+      }
       return await this.factorioManager.launchFactorio(config.factorioPath, config.udpPort);
     });
 
@@ -81,8 +86,14 @@ export class IPCHandlers {
     // AI Bridge management handlers
     ipcMain.handle("toggle-ai-bridge", () => {
       const config = this.configManager.getConfig();
+      const apiKey = this.configManager.getCurrentProviderApiKey();
+      
+      if (!apiKey) {
+        return { success: false, message: "API key not configured" };
+      }
+
       const result = this.aiBridgeManager.toggleBridge(
-        this.configManager.getCurrentProviderApiKey(),
+        apiKey,
         config.aiProvider,
         config.aiModel
       );
@@ -97,8 +108,14 @@ export class IPCHandlers {
 
     ipcMain.handle("start-ai-bridge", () => {
       const config = this.configManager.getConfig();
+      const apiKey = this.configManager.getCurrentProviderApiKey();
+      
+      if (!apiKey) {
+        return { success: false, message: "API key not configured" };
+      }
+
       const result = this.aiBridgeManager.startBridge(
-        this.configManager.getCurrentProviderApiKey(),
+        apiKey,
         config.aiProvider,
         config.aiModel
       );

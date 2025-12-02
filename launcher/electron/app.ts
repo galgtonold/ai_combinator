@@ -59,15 +59,16 @@ async function main(): Promise<void> {
   const config = configManager.getConfig();
   if (!config.factorioPath) {
     const foundPaths = await factorioManager.findFactorioExecutable();
-    if (foundPaths.length > 0) {
+    if (foundPaths.length > 0 && foundPaths[0]) {
       configManager.setFactorioPath(foundPaths[0]);
     }
   }
   
   // Start AI Bridge if enabled
-  if (config.aiBridgeEnabled && configManager.getCurrentProviderApiKey()) {
+  const apiKey = configManager.getCurrentProviderApiKey();
+  if (config.aiBridgeEnabled && apiKey) {
     aiBridgeManager.startBridge(
-      configManager.getCurrentProviderApiKey(),
+      apiKey,
       config.aiProvider,
       config.aiModel
     );
