@@ -1,5 +1,3 @@
-local conf = require('src/core/config')
-
 local event_handler = require("src/events/event_handler")
 local constants = require("src/core/constants")
 local bridge = require('src/services/bridge')
@@ -8,8 +6,10 @@ local update = require('src/ai_combinator/update')
 local circuit_network = require('src/core/circuit_network')
 local memory = require('src/ai_combinator/memory')
 local ai_operation_manager = require('src/core/ai_operation_manager')
-local blueprint_serialization = require('src/core/blueprint_serialization')
 
+-- Event modules
+local blueprint_events = require('src/events/blueprint_events')
+local entity_events = require('src/events/entity_events')
 
 local guis = require('src/gui/gui')
 local dialog_manager = require('src/gui/dialogs/dialog_manager')
@@ -26,228 +26,10 @@ local util = require('src/core/utils')
 
 local mlc_err_sig = {type='virtual', name='mlc-error'}
 
--- ----- MLC (+ sandbox) init / remove -----
+-- ----- Register entity and blueprint event handlers -----
 
-local Terminals = {
-	red = {
-		output = defines.wire_connector_id.combinator_output_red,
-		input = defines.wire_connector_id.combinator_input_red
-	},
-	green = {
-		output = defines.wire_connector_id.combinator_output_green,
-		input = defines.wire_connector_id.combinator_input_green
-	}
-}
-
--- Create/connect/remove invisible constant-combinator entities for wire outputs
-local function out_wire_connect(e, color)
-	local core = e.surface.create_entity{
-		name='mlc-core', position=e.position,
-		force=e.force, create_build_effect_smoke=false }
-
-	local terminals = Terminals[color]
-	local connectors = {
-		transmitter = e.get_wire_connector( terminals.output ),
-		receiver = core.get_wire_connector( terminals.input )
-	}
-
-	local success = connectors.transmitter.connect_to( connectors.receiver, false, defines.wire_origin.script )
-
-	if not success then
-		error(('Failed to connect %s wire outputs to core'):format(color))
-	end
-
-	core.destructible = false
-	return core
-end
-local function out_wire_connect_both(e)
-	return
-		out_wire_connect(e, "red"),
-		out_wire_connect(e, "green")
-end
-local function out_wire_clear_mlc(mlc)
-	for _, e in ipairs{'core', 'out_red', 'out_green'} do
-		e, mlc[e] = mlc[e]
-		if e and e.valid then e.destroy() end
-	end
-	return mlc
-end
-local function out_wire_connect_mlc(mlc)
-	out_wire_clear_mlc(mlc)
-	mlc.out_red, mlc.out_green = out_wire_connect_both(mlc.e)
-	return mlc
-end
-
--- ----- Misc events -----
-
-local mlc_filter = { { filter = 'name', name = 'mlc' },
--- { filter = "ghost", ghost_name = "mlc" } 
-}
-
-local function blueprint_match_positions(bp_es, map_es)
-	-- Hack to work around invalidated ev.mapping - match entities by x/y position
-	-- Same idea as in https://forums.factorio.com/viewtopic.php?p=466734
-	--  but x/y in blueprints seem to be absolute in current factorio, not offset from center
-	local bp_mlcs, bp_mlc_uids, be, k = {}, {}, nil, nil
-	for _, e in ipairs(bp_es) do if e.name == 'mlc'
-		then bp_mlcs[e.position.x..'_'..e.position.y] = e end end
-	if not next(bp_mlcs) then return bp_mlc_uids end -- no mlcs in blueprint
-	for _, e in ipairs(map_es) do
-		if not (e.valid and ( e.name == 'mlc'
-				or (e.name == 'entity-ghost' and e.ghost_name == 'mlc') ))
-			then goto skip end
-		k = e.position.x..'_'..e.position.y
-		be, bp_mlcs[k] = bp_mlcs[k]
-		if not be or e.name == 'entity-ghost' then goto skip end -- ghosts have tags already
-		bp_mlc_uids[be.entity_number] = e.unit_number
-	::skip:: end
-	if next(bp_mlcs) then return end -- blueprint entities left unmapped
-	return bp_mlc_uids
-end
-
-local function blueprint_map_validate(bp_es, bp_map)
-	-- Blueprint ev.mapping can be invalidated by other mods acting on this event, so checked first
-	-- See https://forums.factorio.com/viewtopic.php?p=457054#p457054 for more details
-	local bp_check, bp_mlc_uids = {}, {}
-	for _, e in ipairs(bp_es) do bp_check[e.entity_number] = e.name end
-	for bp_idx, e in pairs(bp_map) do
-		if not e.valid or bp_check[bp_idx] ~= e.name then return end -- abort on mismatch
-		if e.name == 'mlc' then bp_mlc_uids[bp_idx] = e.unit_number end
-		bp_check[bp_idx] = nil
-	end
-	if next(bp_check) then return end -- not all bp entities are in the mapping
-	return bp_mlc_uids
-end
-
-local function on_setup_blueprint(ev)
-	local p = game.players[ev.player_index]
-	if not (p and p.valid) then return end
-
-	local bp = p.blueprint_to_setup
-	if not (bp and bp.valid_for_read) then bp = p.cursor_stack end
-	if not (bp and bp.valid_for_read and bp.is_blueprint)
-		then return util.console_warn( p, 'BUG: Failed to detect blueprint'..
-			' item/info, Moon Logic Combinator code (if any) WILL NOT be stored there' ) end
-
-	local bp_es = bp.get_blueprint_entities()
-	if not bp_es then return end -- tiles-only blueprint, no mlcs
-	local bp_map = ev.mapping.valid and ev.mapping.get() or {}
-	local bp_mlc_uids = blueprint_map_validate(bp_es, bp_map) -- try using ev.mapping first
-	if not bp_mlc_uids then -- fallback - map entities via blueprint_match_position
-		-- Entity name filters are not used because both ghost/real entities must be matched
-		local map_es = p.surface.find_entities(ev.area)
-		bp_mlc_uids = blueprint_match_positions(bp_es, map_es)
-	end
-	if not bp_mlc_uids then return util.console_warn( p, 'BUG: Failed to match blueprint'..
-		' entities to ones on the map, combinator settings WILL NOT be stored in this blueprint!' ) end
-
-	for bp_idx, uid in pairs(bp_mlc_uids) do
-		local mlc = storage.combinators[uid]
-		if mlc then
-			local tags = blueprint_serialization.serialize_combinator(mlc)
-			for tag_name, tag_value in pairs(tags) do
-				bp.set_blueprint_entity_tag(bp_idx, tag_name, tag_value)
-			end
-		end
-	end
-end
-
-script.on_event(defines.events.on_player_setup_blueprint, on_setup_blueprint)
-
-
-local function on_built(ev)
-	local e = ev.created_entity or ev.entity -- latter for revive event
-	if not e.valid then return end
-	local mlc = out_wire_connect_mlc{e=e}
-	
-	-- Merge with default combinator structure while preserving existing fields
-	local default_mlc = blueprint_serialization.create_default_combinator(e)
-	mlc = blueprint_serialization.merge_combinator_data(mlc, default_mlc)
-	
-	storage.combinators[e.unit_number] = mlc
-
-	-- Blueprints - try to restore settings from tags stored there on setup,
-	--  or fallback to old method with uid stored in a constant for simple copy-paste if tags fail
-	if ev.tags then
-		local deserialized_data = blueprint_serialization.deserialize_combinator(ev.tags)
-		mlc = blueprint_serialization.merge_combinator_data(mlc, deserialized_data)
-		storage.combinators[e.unit_number] = mlc
-		
-		-- Refresh imported test cases to ensure they're properly evaluated
-		if deserialized_data.test_cases and #deserialized_data.test_cases > 0 then
-			blueprint_serialization.refresh_imported_test_cases(mlc)
-		end
-	else
-		local ecc_params = e.get_or_create_control_behavior().parameters
-		local uid_src = ecc_params.first_constant or 0
-		if uid_src < 0 then uid_src = uid_src + 0x100000000 end -- int -> uint conversion
-		if uid_src ~= 0 then
-			local mlc_src = storage.combinators[uid_src]
-			if mlc_src then 
-				local copied_data = {
-					code = mlc_src.code,
-					task = mlc_src.task,
-					description = mlc_src.description,
-					test_cases = mlc_src.test_cases,
-					code_history = mlc_src.code_history,
-					code_history_index = mlc_src.code_history_index,
-					vars = mlc_src.vars
-				}
-				mlc = blueprint_serialization.merge_combinator_data(mlc, copied_data)
-				storage.combinators[e.unit_number] = mlc
-				
-				-- Also refresh test cases when copying from another combinator
-				if copied_data.test_cases and #copied_data.test_cases > 0 then
-					blueprint_serialization.refresh_imported_test_cases(mlc)
-				end
-			else
-				mlc.code = ('-- No code was stored in blueprint and'..
-					' Moon Logic [%s] is unavailable for OTA code update'):format(uid_src) 
-			end
-		end
-	end
-end
-
-script.on_event(defines.events.on_built_entity, on_built, mlc_filter)
-script.on_event(defines.events.on_robot_built_entity, on_built, mlc_filter)
-script.on_event(defines.events.on_space_platform_built_entity, on_built, mlc_filter)
-script.on_event(defines.events.script_raised_built, on_built, mlc_filter)
-script.on_event(defines.events.script_raised_revive, on_built, mlc_filter)
-
-local function on_entity_copy(ev)
-	if ev.destination.name == 'mlc-core' then return ev.destination.destroy() end -- for clone event
-	if not (ev.source.name == 'mlc' and ev.destination.name == 'mlc') then return end
-	local uid_src, uid_dst = ev.source.unit_number, ev.destination.unit_number
-	local mlc_old_outs = storage.combinators[uid_dst]
-	init.mlc_remove(uid_dst, true)
-	if mlc_old_outs
-		then mlc_old_outs = {mlc_old_outs.out_red, mlc_old_outs.out_green}
-		-- For cloned entities, mlc-core's might not yet exist - create/register them here, remove clones above
-		-- It'd give zero-outputs for one tick, but probably not an issue, easier to handle it like this
-		else mlc_old_outs = {out_wire_connect_both(ev.destination)} end
-	storage.combinators[uid_dst] = util.deep_copy(storage.combinators[uid_src])
-	local mlc_dst, mlc_src = storage.combinators[uid_dst], storage.combinators[uid_src]
-	mlc_dst.e, mlc_dst.next_tick, mlc_dst.core = ev.destination, 0, nil
-	mlc_dst.out_red, mlc_dst.out_green = table.unpack(mlc_old_outs)
-end
-
-script.on_event(
-	defines.events.on_entity_cloned, on_entity_copy, -- can be tested via clone in /editor
-	{{filter='name', name='mlc'}, {filter='name', name='mlc-core'}} )
-script.on_event(defines.events.on_entity_settings_pasted, on_entity_copy)
-
-local function on_destroyed(ev)
-  init.mlc_remove(ev.entity.unit_number)
-end
-local function on_mined(ev)
-  storage.combinators[ev.entity.unit_number].removed_by_player = true
-  init.mlc_remove(ev.entity.unit_number, nil, true)
-end
-
-script.on_event(defines.events.on_pre_player_mined_item, on_mined, mlc_filter)
-script.on_event(defines.events.on_robot_pre_mined, on_mined, mlc_filter)
-script.on_event(defines.events.on_entity_died, on_destroyed, mlc_filter)
-script.on_event(defines.events.script_raised_destroy, on_destroyed, mlc_filter)
+blueprint_events.register()
+entity_events.register()
 
 
 -- ----- on_tick handling - lua code, gui updates -----
@@ -303,7 +85,7 @@ local function update_signals_in_guis()
 				label = gui_flow.add{
 					type='label', name='mlc-sig-in-'..k..'-'..sig,
 					caption=('[%s] %s%s = %s'):format(
-						conf.get_wire_label(k), icon, sig, v ) }
+						constants.get_wire_label(k), icon, sig, v ) }
 				label.style.font_color = color
 				label.tags = {signal=sig}
 		::skip:: end end
@@ -313,7 +95,7 @@ local function update_signals_in_guis()
 		for k, cb in pairs{red=mlc.out_red, green=mlc.out_green} do
 			cb = cb.get_control_behavior()
 			for _, cbs in pairs(cb.sections[1].filters or {}) do
-				sig, label = cbs.value.name, conf.get_wire_label(k)
+				sig, label = cbs.value.name, constants.get_wire_label(k)
 				if not sig then goto cb_slots_end end
 				if cbs.value.quality ~= nil and cbs.value.quality ~= "normal" then
 					sig = cbs.value.quality.."/"..sig
@@ -345,7 +127,7 @@ local function update_signals_in_guis()
 				k.tags = {signal=sig}
 			else for k, color in pairs(colors) do
 				k = gui_flow.add{ type='label', name='mlc-sig-out/'..k..'-'..sig,
-					caption=('[out/%s] %s%s = %s'):format(conf.get_wire_label(k), label, sig, val[k] or 0) }
+					caption=('[out/%s] %s%s = %s'):format(constants.get_wire_label(k), label, sig, val[k] or 0) }
 				k.style.font_color = color
 				k.tags = {signal=sig}
 		end end end
@@ -390,10 +172,10 @@ local function run_moon_logic_tick(mlc, mlc_env, tick)
 		log((' -- moon-logic [%s]: %s'):format(mlc_env._uid, fmt:format(...))) end
 	mlc.vars.delay, mlc.vars.var, mlc.vars.debug, mlc.vars.irq, mlc.irq = 1, mlc.vars.var or {}
 
-	if mlc.e.energy < conf.energy_fail_level then
+	if mlc.e.energy < constants.ENERGY_FAIL_LEVEL then
 		mlc.state = 'no-power'
 		update.mlc_update_led(mlc, mlc_env)
-		mlc.next_tick = game.tick + conf.energy_fail_delay
+		mlc.next_tick = game.tick + constants.ENERGY_FAIL_DELAY
 		return
 	end
 
@@ -426,7 +208,7 @@ local function run_moon_logic_tick(mlc, mlc_env, tick)
 		dbg('out-after :: %s', serpent.line(mlc_env._out)) end
 
 	local delay = tonumber(mlc.vars.delay) or 1
-	if delay > conf.led_sleep_min then mlc.state = 'sleep' end
+	if delay > constants.LED_SLEEP_MIN then mlc.state = 'sleep' end
 	mlc.next_tick = tick + delay
 
 	local sig = mlc.vars.irq
@@ -492,7 +274,7 @@ local function on_tick(ev)
 
 		local err_msg = format_mlc_err_msg(mlc)
 		if err_msg then
-			if tick % conf.logic_alert_interval == 0
+			if tick % constants.LOGIC_ALERT_INTERVAL == 0
 				then alert_about_mlc_error(mlc_env, err_msg) end
 			goto skip -- suspend combinator logic until errors are addressed
 		elseif mlc_env._alert then alert_clear(mlc_env) end
@@ -515,9 +297,9 @@ local function on_tick(ev)
 		end
 	::skip:: end
 
-	if next(storage.guis)
-			and game.tick % conf.gui_signals_update_interval == 0
-		then update_signals_in_guis() end
+	if next(storage.guis) then 
+        update_signals_in_guis() 
+    end
 end
 
 event_handler.add_handler(defines.events.on_tick, on_tick)
@@ -553,56 +335,6 @@ end)
 
 
 -- ----- GUI events and entity interactions -----
-
-function load_code_from_gui(code, uid, source_type) -- note: in global _ENV, used from gui.lua
-	local mlc, mlc_env = storage.combinators[uid], memory.combinators[uid]
-	if not ( mlc and mlc.e.valid
-			and mlc.out_red.valid and mlc.out_green.valid )
-		then return init.mlc_remove(uid) end
-	
-	-- Initialize code history if not present
-	if not mlc.code_history then
-		mlc.code_history = {}
-	end
-	
-	-- Only add to history if code is different from current and non-empty
-	local new_code = code or ''
-	if new_code ~= '' and new_code ~= (mlc.code or '') then
-		-- Track the source of this code change
-		mlc.last_code_source = source_type or "manual"
-
-		-- Add the new code to history
-		table.insert(mlc.code_history, {
-			code = new_code,
-			timestamp = game.tick,
-			source = mlc.last_code_source or "manual"
-		})
-		
-		-- Limit history size to last 20 versions
-		if #mlc.code_history > 20 then
-			table.remove(mlc.code_history, 1)
-		end
-		
-		-- Set history index to the latest entry
-		mlc.code_history_index = #mlc.code_history
-	end
-	
-	mlc.code = new_code
-	if not mlc_env then return init.mlc_init(mlc.e) end
-	update.mlc_update_code(mlc, mlc_env, memory.combinator_env[mlc_env._uid])
-	if not mlc.err_parse then
-		for _, player in pairs(game.players)
-			do player.remove_alert{entity=mlc_env._e}
-    end
-	end
-end
-
-function clear_outputs_from_gui(uid) -- note: in global _ENV, used from gui.lua
-	local mlc, mlc_env = storage.combinators[uid], memory.combinators[uid]
-	if not (mlc and mlc_env) then return end
-	circuit_network.cn_output_table_replace(mlc_env._out)
-	update.mlc_update_output(mlc, mlc_env._out)
-end
 
 script.on_event(defines.events.on_gui_opened, function(ev)
 	if not ev.entity then return end
@@ -770,11 +502,6 @@ script.on_configuration_changed(function(data) -- migration
 	bridge.check_bridge_availability()
 end)
 
-script.on_load(function()
-	-- Check if AI bridge is available when mod is loaded
-	bridge.check_bridge_availability()
-end)
-
 -- Add console command to test AI bridge ping
 commands.add_command("ai-ping", "Send a ping request to the AI bridge", function(command)
   local uid = tonumber(command.parameter) or 0
@@ -785,7 +512,7 @@ end)
 -- Add event handler for ping responses
 event_handler.add_handler(constants.events.on_ping_response, function(payload)
   -- Only print message for manual console commands, not automatic bridge checks
-  if (payload.uid or 0) ~= 999999 then
+  if (payload.uid or 0) ~= constants.BRIDGE_CHECK_UID then
     game.print("Received ping response (uid: " .. (payload.uid or 0) .. ", status: " .. (payload.status or "unknown") .. ")")
   end
 end)

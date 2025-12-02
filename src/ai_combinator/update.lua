@@ -1,7 +1,7 @@
 -- src/mlc/update.lua
 local util = require('src/core/utils')
 local cn = require('src/core/circuit_network')
-local conf = require('src/core/config')
+local constants = require('src/core/constants')
 
 local update = {}
 
@@ -16,7 +16,7 @@ function update.mlc_update_output(mlc, output_raw)
 	for _, k in ipairs{false, 'red', 'green'} do
 		st = signals[k] and {signals[k]} or {signals.red, signals.green}
 		if not k then pre, pre_label = '^.+$', '^.+$'
-			else pre, pre_label = '^'..k..'/(.+)$', '^'..conf.get_wire_label(k)..'/(.+)$' end
+			else pre, pre_label = '^'..k..'/(.+)$', '^'..constants.get_wire_label(k)..'/(.+)$' end
 		for k, v in pairs(output) do
 			sig, err = cn.cn_sig(k:match(pre) or k:match(pre_label))
 			if not sig then goto skip end
@@ -64,7 +64,7 @@ function update.mlc_update_led(mlc, mlc_env)
 
 	local op, a, b, out = '*', mlc_env._uid, 0
 	-- uid is uint, signal is int (signed), so must be negative if >=2^31
-	if a >= 0x80000000 then a = a - 0x100000000 end
+	if a >= constants.INT32_SIGN_BIT then a = a - constants.INT32_TO_UINT32_OFFSET end
 	if not st then op = '*'
 	elseif st == 'run' then op = '%'
 	elseif st == 'sleep' then op = '-'

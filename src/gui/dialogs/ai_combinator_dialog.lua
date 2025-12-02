@@ -1,5 +1,4 @@
 local event_handler = require('src/events/event_handler')
-local config = require('src/core/config')
 local constants = require('src/core/constants')
 local ai_operation_manager = require('src/core/ai_operation_manager')
 

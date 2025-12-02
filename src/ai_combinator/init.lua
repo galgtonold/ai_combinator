@@ -1,11 +1,10 @@
 -- src/mlc/init.lua
 local util = require('src/core/utils')
 local cn = require('src/core/circuit_network')
-local conf = require('src/core/config')
+local constants = require('src/core/constants')
 local sandbox = require('src/sandbox/base')
 local update = require('src/ai_combinator/update')
 local memory = require('src/ai_combinator/memory')
-local guis = require('src/gui/gui')
 
 local init = {}
 
@@ -46,6 +45,10 @@ local function out_wire_connect_both(e)
 		out_wire_connect(e, "red"),
 		out_wire_connect(e, "green")
 end
+
+-- Export for use in control.lua
+init.out_wire_connect_both = out_wire_connect_both
+
 function init.out_wire_clear_mlc(mlc)
 	for _, e in ipairs{'core', 'out_red', 'out_green'} do
 		e, mlc[e] = mlc[e]
@@ -91,8 +94,8 @@ function init.mlc_init(e)
 		green = setmetatable(env_wire_green, {
 			__serialize=cn.cn_input_signal_table_serialize, __len=cn.cn_input_signal_len,
 			__index=cn.cn_input_signal_get, __newindex=cn.cn_input_signal_set }) }
-	env_ro[conf.red_wire_name] = env_ro.red
-	env_ro[conf.green_wire_name] = env_ro.green
+	env_ro[constants.RED_WIRE_NAME] = env_ro.red
+	env_ro[constants.GREEN_WIRE_NAME] = env_ro.green
 	setmetatable(env_ro, {__index=sandbox.env_base})
 
 	if not mlc.vars.var then mlc.vars.var = {} end
@@ -119,12 +122,17 @@ function init.mlc_init(e)
 end
 
 function init.mlc_remove(uid, keep_entities, to_be_mined)
-	guis.close(uid)
+	-- Close any open GUI for this combinator directly (avoiding circular dependency with gui.lua)
+	local gui_t = storage.guis[uid]
+	local gui = gui_t and (gui_t.mlc_gui or gui_t.gui)
+	if gui then gui.destroy() end
+	storage.guis[uid] = nil
+	
 	if not keep_entities then
 		local mlc = init.out_wire_clear_mlc(storage.combinators[uid] or {})
 		if not to_be_mined and mlc.e and mlc.e.valid then mlc.e.destroy() end
 	end
-	memory.combinators[uid], memory.combinator_env[uid], storage.guis[uid] = nil, nil, nil
+	memory.combinators[uid], memory.combinator_env[uid] = nil, nil
 
   if not storage.combinators[uid].removed_by_player then -- Keep combinator data for possible restore on redo
     storage.combinators[uid] = nil

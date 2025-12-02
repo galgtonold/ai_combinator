@@ -1,4 +1,4 @@
-local config = require('src/core/config')
+local constants = require('src/core/constants')
 
 local circuit_network = {}
 
@@ -162,12 +162,12 @@ end
 
 function circuit_network.cn_input_signal_get(wenv, k)
 	local v = circuit_network.cn_input_signal(wenv, defines.wire_type[wenv._wire], k) or 0
-	if wenv._debug then wenv._debug[config.get_wire_label(wenv._wire)..'['..k..']'] = v end
+	if wenv._debug then wenv._debug[constants.get_wire_label(wenv._wire)..'['..k..']'] = v end
 	return v
 end
 function circuit_network.cn_input_signal_set(wenv, k, v)
 	error(( 'Attempt to set value on input wire:'..
-		' %s[%s] = %s' ):format(config.get_wire_label(wenv._wire), k, v), 2)
+		' %s[%s] = %s' ):format(constants.get_wire_label(wenv._wire), k, v), 2)
 end
 
 function circuit_network.cn_input_signal_len(wenv)
@@ -180,14 +180,14 @@ function circuit_network.cn_input_signal_iter(wenv)
 	local signals, sig_cache = {}, circuit_network.cn_input_signal(wenv, defines.wire_type[wenv._wire])
 	for k, v in pairs(sig_cache) do signals[circuit_network.cn_sig_name(k)] = sig_cache[k] end
 	if wenv._debug then
-		local sig_fmt = config.get_wire_label(wenv._wire)..'[%s]'
+		local sig_fmt = constants.get_wire_label(wenv._wire)..'[%s]'
 		for sig, v in pairs(signals) do wenv._debug[sig_fmt:format(sig)] = v or 0 end
 	end
 	return signals
 end
 
 function circuit_network.cn_input_signal_table_serialize(wenv)
-	return {__wire_inputs=config.get_wire_label(wenv._wire)}
+	return {__wire_inputs=constants.get_wire_label(wenv._wire)}
 end
 
 function circuit_network.cn_output_table_len(out) -- rawlen won't skip 0 and doesn't work anyway

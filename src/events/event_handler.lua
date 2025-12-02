@@ -86,8 +86,9 @@ local function ensure_event_registered(event_name_or_id)
              local handler_list = handlers[event_key]
              if not handler_list then return end
 
-            function error_handler(err)
-              traceback = debug.traceback("", 2)
+            local function error_handler(err)
+              local traceback = debug.traceback("", 2)
+              local event_name = event_key
               if type(event_key) == "number" then
                 event_name = defines.events[event_key] or 'Unknown'
               end
@@ -97,11 +98,10 @@ local function ensure_event_registered(event_name_or_id)
             end
 
             for _, handler_func in pairs(handler_list) do
-                --local success, err = xpcall(handler_func, error_handler, event)
-                handler_func(event) -- Call the handler directly
+                local success, err = xpcall(handler_func, error_handler, event)
+                -- Error already logged by error_handler
             end
          end)
-         -- log(string.format("DEBUG [EventHandler]: Registered script.on_event multiplexer for ID %d", event_key))
     else
         log(string.format("ERROR [EventHandler]: Cannot register unknown event type/name: %s", tostring(event_key)))
         handlers[event_key] = nil -- Clean up invalid entry

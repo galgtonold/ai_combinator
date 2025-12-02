@@ -114,8 +114,8 @@ When trying to run npm always navigate to the launcher directory.
 Especially if you want to launch the electron app, this is what you should do:
 cd "c:\Users\...\AppData\Roaming\Factorio\mods\ai_combinator\launcher"; npm run dev
 
+In factorio lua: Require can't be used outside of control.lua parsing, so don't import within functions. Also avoid circular dependencies.
 
-
-In factorio lua all imports need to happen at a top level. Do not put them into functions or conditionals.
+Your avaiable shell is a standard windows power shell
 
 We don't want to overengineer code into an enterprise level fizzbuzz ravioli. Keep it simple and pragmatic. However, make sure that code is clean, modular and when code files become too large, split them up into smaller files.

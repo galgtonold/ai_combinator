@@ -6,6 +6,8 @@ local ai_operation_manager = require('src/core/ai_operation_manager')
 
 local memory = require('src/ai_combinator/memory')
 local update = require('src/ai_combinator/update')
+local code_manager = require('src/ai_combinator/code_manager')
+local init = require('src/ai_combinator/init')
 
 local dialog_manager = require('src/gui/dialogs/dialog_manager')
 local variable_row = require('src/gui/components/variable_row')
@@ -72,7 +74,12 @@ end
 function guis.save_code(uid, code, source_type)
 	local gui_t, mlc = storage.guis[uid], storage.combinators[uid]
 	if not mlc then return end
-	load_code_from_gui(code, uid, source_type)
+	local action = code_manager.load_code(code, uid, source_type)
+	if action == "remove" then
+		return init.mlc_remove(uid)
+	elseif action == "init" then
+		init.mlc_init(mlc.e)
+	end
   
   ai_operation_manager.complete_operation(uid)
 end
@@ -413,7 +420,7 @@ function guis.on_gui_click(event)
 	elseif el_id == 'mlc-close' then guis.close(uid)
 	elseif el_id == 'mlc-vars' then
 		if event.button == rmb then
-			if event.shift then clear_outputs_from_gui(uid)
+			if event.shift then code_manager.clear_outputs(uid)
 			else -- clear env
 				for k, _ in pairs(mlc.vars) do mlc.vars[k] = nil end
 				vars_dialog.update(game.players[event.player_index], uid)

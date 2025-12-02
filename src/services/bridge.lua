@@ -4,18 +4,16 @@ local ai_operation_manager = require("src/core/ai_operation_manager")
 
 local bridge = {}
 
-local SERVER_PORT = 8889
-
 -- Bridge availability check state
 local bridge_check_state = {
   active = false,
-  check_uid = 999999,
+  check_uid = constants.BRIDGE_CHECK_UID,
   timeout_tick = 0,
   pending_check = false
 }
 
 local function send_message(payload)
-  helpers.send_udp(SERVER_PORT, helpers.table_to_json(payload))
+  helpers.send_udp(constants.AI_BRIDGE_PORT, helpers.table_to_json(payload))
 end
 
 function bridge.send_task_request(uid, task_text)
