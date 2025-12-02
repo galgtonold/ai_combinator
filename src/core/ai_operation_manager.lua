@@ -20,11 +20,11 @@ local canceled_operations = {}
 local function cleanup_canceled_operations()
   -- Remove entries for UIDs that no longer exist or have newer operations
   for uid, canceled_correlation_id in pairs(canceled_operations) do
-    local mlc = storage.combinators[uid]
-    if not mlc then
+    local combinator = storage.combinators[uid]
+    if not combinator then
       -- Combinator no longer exists, remove from canceled operations
       canceled_operations[uid] = nil
-    elseif mlc.ai_operation_correlation_id and mlc.ai_operation_correlation_id > canceled_correlation_id then
+    elseif combinator.ai_operation_correlation_id and combinator.ai_operation_correlation_id > canceled_correlation_id then
       -- There's a newer operation, remove the old canceled one
       canceled_operations[uid] = nil
     end
@@ -43,11 +43,11 @@ end
 
 -- Start an AI operation for a combinator
 function ai_operation_manager.start_operation(uid, operation_type)
-  local mlc = storage.combinators[uid]
-  if not mlc then return false, nil end
+  local combinator = storage.combinators[uid]
+  if not combinator then return false, nil end
   
   -- If there's already an active operation, cancel it first
-  if mlc.ai_operation_start_time then
+  if combinator.ai_operation_start_time then
     ai_operation_manager.cancel_operation(uid)
   end
   
@@ -55,9 +55,9 @@ function ai_operation_manager.start_operation(uid, operation_type)
   local correlation_id = generate_correlation_id()
   
   -- Set new operation state
-  mlc.ai_operation_start_time = game.tick
-  mlc.ai_operation_type = operation_type
-  mlc.ai_operation_correlation_id = correlation_id
+  combinator.ai_operation_start_time = game.tick
+  combinator.ai_operation_type = operation_type
+  combinator.ai_operation_correlation_id = correlation_id
   
   -- Remove from canceled operations if it was there
   canceled_operations[uid] = nil
@@ -76,17 +76,17 @@ end
 
 -- Complete an AI operation for a combinator
 function ai_operation_manager.complete_operation(uid)
-  local mlc = storage.combinators[uid]
-  if not mlc then return false end
+  local combinator = storage.combinators[uid]
+  if not combinator then return false end
   
-  local was_active = mlc.ai_operation_start_time ~= nil
-  local operation_type = mlc.ai_operation_type
-  local correlation_id = mlc.ai_operation_correlation_id
+  local was_active = combinator.ai_operation_start_time ~= nil
+  local operation_type = combinator.ai_operation_type
+  local correlation_id = combinator.ai_operation_correlation_id
   
   -- Clear operation state
-  mlc.ai_operation_start_time = nil
-  mlc.ai_operation_type = nil
-  mlc.ai_operation_correlation_id = nil
+  combinator.ai_operation_start_time = nil
+  combinator.ai_operation_type = nil
+  combinator.ai_operation_correlation_id = nil
   
   -- Remove from canceled operations
   canceled_operations[uid] = nil
@@ -107,21 +107,21 @@ end
 
 -- Cancel an AI operation for a combinator
 function ai_operation_manager.cancel_operation(uid)
-  local mlc = storage.combinators[uid]
-  if not mlc then return false end
+  local combinator = storage.combinators[uid]
+  if not combinator then return false end
   
-  local was_active = mlc.ai_operation_start_time ~= nil
-  local operation_type = mlc.ai_operation_type
-  local correlation_id = mlc.ai_operation_correlation_id
+  local was_active = combinator.ai_operation_start_time ~= nil
+  local operation_type = combinator.ai_operation_type
+  local correlation_id = combinator.ai_operation_correlation_id
   
   if was_active then
     -- Mark as canceled
     canceled_operations[uid] = correlation_id
     
     -- Clear operation state
-    mlc.ai_operation_start_time = nil
-    mlc.ai_operation_type = nil
-    mlc.ai_operation_correlation_id = nil
+    combinator.ai_operation_start_time = nil
+    combinator.ai_operation_type = nil
+    combinator.ai_operation_correlation_id = nil
     
     -- Emit state change event
     event_handler.raise_event(constants.events.on_ai_operation_state_changed, {
@@ -145,8 +145,8 @@ function ai_operation_manager.is_response_canceled(uid, correlation_id)
   end
   
   -- Then check if there's a current active operation with a different correlation ID
-  local mlc = storage.combinators[uid]
-  if mlc and mlc.ai_operation_correlation_id and mlc.ai_operation_correlation_id ~= correlation_id then
+  local combinator = storage.combinators[uid]
+  if combinator and combinator.ai_operation_correlation_id and combinator.ai_operation_correlation_id ~= correlation_id then
     -- There's a different active operation, so this response is outdated
     return true
   end
@@ -156,23 +156,23 @@ end
 
 -- Check if a combinator has an active AI operation
 function ai_operation_manager.is_operation_active(uid)
-  local mlc = storage.combinators[uid]
-  if not mlc then return false end
+  local combinator = storage.combinators[uid]
+  if not combinator then return false end
   
-  return mlc.ai_operation_start_time ~= nil
+  return combinator.ai_operation_start_time ~= nil
 end
 
 -- Get the current operation info for a combinator
 function ai_operation_manager.get_operation_info(uid)
-  local mlc = storage.combinators[uid]
-  if not mlc then return nil end
+  local combinator = storage.combinators[uid]
+  if not combinator then return nil end
   
-  if mlc.ai_operation_start_time then
+  if combinator.ai_operation_start_time then
     return {
-      type = mlc.ai_operation_type,
-      start_time = mlc.ai_operation_start_time,
-      correlation_id = mlc.ai_operation_correlation_id,
-      elapsed_seconds = (game.tick - mlc.ai_operation_start_time) / 60
+      type = combinator.ai_operation_type,
+      start_time = combinator.ai_operation_start_time,
+      correlation_id = combinator.ai_operation_correlation_id,
+      elapsed_seconds = (game.tick - combinator.ai_operation_start_time) / 60
     }
   end
   

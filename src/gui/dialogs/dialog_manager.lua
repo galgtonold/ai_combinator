@@ -134,9 +134,9 @@ function dialog_manager.handle_dialog_closed(player_index)
 		-- If there are no more dialogs in the stack, refocus the main combinator window
 		if dialog_manager.get_dialog_count(player_index) == 0 and dialog_uid then
 			local gui_t = storage.guis[dialog_uid]
-			if gui_t and gui_t.mlc_gui and gui_t.mlc_gui.valid then
+			if gui_t and gui_t.ai_combinator_gui and gui_t.ai_combinator_gui.valid then
 				local p = game.players[player_index]
-				p.opened = gui_t.mlc_gui
+				p.opened = gui_t.ai_combinator_gui
 			end
 		end
 		return true

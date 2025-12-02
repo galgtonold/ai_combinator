@@ -8,9 +8,9 @@ local dialog = {}
 function dialog.show(player_index, uid)
   local player = game.players[player_index]
 	local gui_t = storage.guis[uid]
-  local mlc = storage.combinators[uid]
+  local combinator = storage.combinators[uid]
 
-  local combinator_frame = gui_t.mlc_gui
+  local combinator_frame = gui_t.ai_combinator_gui
   local popup_location = {
     x = combinator_frame.location.x + 28,
     y = combinator_frame.location.y + 500
@@ -30,11 +30,11 @@ function dialog.show(player_index, uid)
     tags = {uid = uid, dialog = true, description_dialog = true},
   }
 
-  local description_text = mlc.description or ""
+  local description_text = combinator.description or ""
 
   local description_textbox = content_flow.add{
     type = "text-box",
-    name = "mlc-description-input",
+    name = "ai-combinator-description-input",
     text = description_text,
     style = "edit_blueprint_description_textbox",
     tags = {uid = uid, dialog = true, description_dialog = true},

@@ -14,40 +14,40 @@ local SERIALIZATION_VERSION = 1
 local MAX_TAG_LENGTH = 200000
 
 --- Serializes a combinator's complete state for blueprint storage
-function serialization.serialize_combinator(mlc)
-  if not mlc then return {} end
+function serialization.serialize_combinator(combinator)
+  if not combinator then return {} end
   
   local tags = {}
   
   -- Basic data for backward compatibility
-  tags.mlc_code = mlc.code
-  tags.task = mlc.task
-  tags.description = mlc.description
+  tags.ai_combinator_code = combinator.code
+  tags.task = combinator.task
+  tags.description = combinator.description
   
   -- Extended data structure with cleaned test cases
   local extended_data = {
     version = SERIALIZATION_VERSION,
-    code = mlc.code,
-    task = mlc.task,
-    description = mlc.description,
-    test_cases = serialization._clean_test_cases_for_serialization(mlc.test_cases or {}),
-    code_history = mlc.code_history or {},
-    code_history_index = mlc.code_history_index,
-    vars = mlc.vars or {},
-    created_time = mlc.created_time or game.tick,
+    code = combinator.code,
+    task = combinator.task,
+    description = combinator.description,
+    test_cases = serialization._clean_test_cases_for_serialization(combinator.test_cases or {}),
+    code_history = combinator.code_history or {},
+    code_history_index = combinator.code_history_index,
+    vars = combinator.vars or {},
+    created_time = combinator.created_time or game.tick,
     last_modified = game.tick
   }
   
   -- Try to serialize extended data
   local success, serialized_data = pcall(serpent.line, extended_data, {sparse=false, nocode=true, nohuge=true})
   if success and serialized_data and #serialized_data <= MAX_TAG_LENGTH then
-    tags.mlc_extended = serialized_data
+    tags.ai_combinator_extended = serialized_data
   else
     -- Fallback: try without code history
     extended_data.code_history = {}
     local success_fallback, serialized_fallback = pcall(serpent.line, extended_data, {sparse=false, nocode=true, nohuge=true})
     if success_fallback and serialized_fallback and #serialized_fallback <= MAX_TAG_LENGTH then
-      tags.mlc_extended = serialized_fallback
+      tags.ai_combinator_extended = serialized_fallback
     end
   end
   
@@ -58,32 +58,32 @@ end
 function serialization.deserialize_combinator(tags)
   if not tags then return {} end
   
-  local mlc_data = {}
+  local combinator_data = {}
   
-  -- Try extended format first
-  if tags.mlc_extended then
-    local success, load_success, extended_data = pcall(serpent.load, tags.mlc_extended)
+  -- Try extended format first (new format)
+  if tags.ai_combinator_extended then
+    local success, load_success, extended_data = pcall(serpent.load, tags.ai_combinator_extended)
     if success and load_success and extended_data then
       if extended_data and type(extended_data) == "table" and extended_data.version == SERIALIZATION_VERSION then
-        mlc_data = extended_data
-        mlc_data.version = nil
+        combinator_data = extended_data
+        combinator_data.version = nil
         
         -- Restore test_cases signal structures
-        if mlc_data.test_cases then
-          mlc_data.test_cases = serialization._restore_test_case_signals(mlc_data.test_cases)
+        if combinator_data.test_cases then
+          combinator_data.test_cases = serialization._restore_test_case_signals(combinator_data.test_cases)
         end
         
-        return mlc_data
+        return combinator_data
       end
     end
   end
   
   -- Fallback to basic format
-  mlc_data.code = tags.mlc_code
-  mlc_data.task = tags.task
-  mlc_data.description = tags.description
+  combinator_data.code = tags.ai_combinator_code or tags.mlc_code
+  combinator_data.task = tags.task
+  combinator_data.description = tags.description
   
-  return mlc_data
+  return combinator_data
 end
 
 --- Cleans test cases for serialization by converting signals to simple structures
@@ -273,49 +273,49 @@ function serialization.create_default_combinator(entity)
 end
 
 --- Merges deserialized data into combinator structure
-function serialization.merge_combinator_data(mlc, deserialized_data)
-  if not mlc or not deserialized_data then return mlc end
+function serialization.merge_combinator_data(combinator, deserialized_data)
+  if not combinator or not deserialized_data then return combinator end
   
-  -- Preserve all existing fields from mlc, only override with non-nil values from deserialized_data
+  -- Preserve all existing fields from combinator, only override with non-nil values from deserialized_data
   for key, value in pairs(deserialized_data) do
     if value ~= nil then
       if key == "vars" then
-        mlc.vars = util.deep_copy(value)
-        if not mlc.vars.var then
-          mlc.vars.var = {}
+        combinator.vars = util.deep_copy(value)
+        if not combinator.vars.var then
+          combinator.vars.var = {}
         end
       else
-        mlc[key] = value
+        combinator[key] = value
       end
     end
   end
   
   -- Ensure required fields exist with defaults if not already present
-  mlc.code = mlc.code or nil
-  mlc.task = mlc.task or nil
-  mlc.description = mlc.description or nil
-  mlc.test_cases = mlc.test_cases or {}
-  mlc.code_history = mlc.code_history or {}
-  mlc.code_history_index = mlc.code_history_index or 0
-  mlc.vars = mlc.vars or { var = {} }
-  mlc.output = mlc.output or {}
-  mlc.created_time = mlc.created_time or game.tick
-  mlc.last_modified = game.tick
-  mlc.next_tick = mlc.next_tick or 0
+  combinator.code = combinator.code or nil
+  combinator.task = combinator.task or nil
+  combinator.description = combinator.description or nil
+  combinator.test_cases = combinator.test_cases or {}
+  combinator.code_history = combinator.code_history or {}
+  combinator.code_history_index = combinator.code_history_index or 0
+  combinator.vars = combinator.vars or { var = {} }
+  combinator.output = combinator.output or {}
+  combinator.created_time = combinator.created_time or game.tick
+  combinator.last_modified = game.tick
+  combinator.next_tick = combinator.next_tick or 0
   
-  return mlc
+  return combinator
 end
 
 --- Refreshes all imported test cases by triggering evaluation events
-function serialization.refresh_imported_test_cases(mlc)
-  if not mlc or not mlc.test_cases or not mlc.e or not mlc.e.valid then
+function serialization.refresh_imported_test_cases(combinator)
+  if not combinator or not combinator.test_cases or not combinator.e or not combinator.e.valid then
     return
   end
   
   -- Trigger test case update events for all imported test cases
-  for i = 1, #mlc.test_cases do
+  for i = 1, #combinator.test_cases do
     event_handler.raise_event(constants.events.on_test_case_updated, {
-      uid = mlc.e.unit_number,
+      uid = combinator.e.unit_number,
       test_index = i
     })
   end

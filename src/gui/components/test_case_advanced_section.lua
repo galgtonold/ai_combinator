@@ -5,14 +5,14 @@ local value_parser = require("src/core/value_parser")
 local component = {}
 
 function component.show(parent, uid, test_index)
-  local mlc = storage.combinators[uid]
+  local combinator = storage.combinators[uid]
   local gui_t = storage.guis[uid]
   
-  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then
+  if not combinator or not combinator.test_cases or not combinator.test_cases[test_index] then
     return
   end
   
-  local test_case = mlc.test_cases[test_index]
+  local test_case = combinator.test_cases[test_index]
   
   -- Helper function to add elements to the el_map
   local function add_to_map(element)
@@ -60,14 +60,14 @@ function component.show(parent, uid, test_index)
 end
 
 function component.update_content(advanced_content, uid, test_index)
-  local mlc = storage.combinators[uid]
+  local combinator = storage.combinators[uid]
   local gui_t = storage.guis[uid]
   
-  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then
+  if not combinator or not combinator.test_cases or not combinator.test_cases[test_index] then
     return
   end
   
-  local test_case = mlc.test_cases[test_index]
+  local test_case = combinator.test_cases[test_index]
   
   -- Helper function to add elements to the el_map
   local function add_to_map(element)
@@ -265,12 +265,12 @@ function component.update(uid, test_index)
     return
   end
 
-  local mlc = storage.combinators[uid]
-  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then
+  local combinator = storage.combinators[uid]
+  if not combinator or not combinator.test_cases or not combinator.test_cases[test_index] then
     return
   end
 
-  local test_case = mlc.test_cases[test_index]
+  local test_case = combinator.test_cases[test_index]
   local advanced_content = gui_t.test_case_advanced_content
   
   if advanced_content and advanced_content.valid then
@@ -307,14 +307,14 @@ function component.rebuild(uid, test_index)
 end
 
 local function toggle_advanced_section(uid, test_index, show_advanced)
-  local mlc = storage.combinators[uid]
+  local combinator = storage.combinators[uid]
   local gui_t = storage.guis[uid]
   
-  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then
+  if not combinator or not combinator.test_cases or not combinator.test_cases[test_index] then
     return
   end
   
-  local test_case = mlc.test_cases[test_index]
+  local test_case = combinator.test_cases[test_index]
   test_case.show_advanced = show_advanced
   
   if gui_t and gui_t.test_case_advanced_content and gui_t.test_case_advanced_content.valid then
@@ -323,12 +323,12 @@ local function toggle_advanced_section(uid, test_index, show_advanced)
 end
 
 local function add_variable(uid, test_index)
-  local mlc = storage.combinators[uid]
-  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then
+  local combinator = storage.combinators[uid]
+  if not combinator or not combinator.test_cases or not combinator.test_cases[test_index] then
     return
   end
   
-  local test_case = mlc.test_cases[test_index]
+  local test_case = combinator.test_cases[test_index]
   if not test_case.variables then
     test_case.variables = {}
   end
@@ -348,12 +348,12 @@ local function add_variable(uid, test_index)
 end
 
 local function delete_variable(uid, test_index, var_index)
-  local mlc = storage.combinators[uid]
-  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then
+  local combinator = storage.combinators[uid]
+  if not combinator or not combinator.test_cases or not combinator.test_cases[test_index] then
     return
   end
   
-  local test_case = mlc.test_cases[test_index]
+  local test_case = combinator.test_cases[test_index]
   if test_case.variables and test_case.variables[var_index] then
     table.remove(test_case.variables, var_index)
     component.rebuild(uid, test_index)
@@ -367,12 +367,12 @@ local function delete_variable(uid, test_index, var_index)
 end
 
 local function update_variable_name(uid, test_index, var_index, name)
-  local mlc = storage.combinators[uid]
-  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then
+  local combinator = storage.combinators[uid]
+  if not combinator or not combinator.test_cases or not combinator.test_cases[test_index] then
     return
   end
   
-  local test_case = mlc.test_cases[test_index]
+  local test_case = combinator.test_cases[test_index]
   if not test_case.variables or not test_case.variables[var_index] then
     return
   end
@@ -387,12 +387,12 @@ local function update_variable_name(uid, test_index, var_index, name)
 end
 
 local function update_variable_value(uid, test_index, var_index, value_str)
-  local mlc = storage.combinators[uid]
-  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then
+  local combinator = storage.combinators[uid]
+  if not combinator or not combinator.test_cases or not combinator.test_cases[test_index] then
     return
   end
   
-  local test_case = mlc.test_cases[test_index]
+  local test_case = combinator.test_cases[test_index]
   if not test_case.variables or not test_case.variables[var_index] then
     return
   end
@@ -420,12 +420,12 @@ local function update_variable_value(uid, test_index, var_index, value_str)
 end
 
 local function update_game_tick(uid, test_index, tick)
-  local mlc = storage.combinators[uid]
-  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then
+  local combinator = storage.combinators[uid]
+  if not combinator or not combinator.test_cases or not combinator.test_cases[test_index] then
     return
   end
   
-  local test_case = mlc.test_cases[test_index]
+  local test_case = combinator.test_cases[test_index]
   test_case.game_tick = tonumber(tick) or 0
   
   -- Trigger test case re-evaluation
@@ -436,12 +436,12 @@ local function update_game_tick(uid, test_index, tick)
 end
 
 local function update_expected_print(uid, test_index, expected_print)
-  local mlc = storage.combinators[uid]
-  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then
+  local combinator = storage.combinators[uid]
+  if not combinator or not combinator.test_cases or not combinator.test_cases[test_index] then
     return
   end
   
-  local test_case = mlc.test_cases[test_index]
+  local test_case = combinator.test_cases[test_index]
   test_case.expected_print = expected_print
   
   -- Trigger test case re-evaluation

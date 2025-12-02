@@ -26,7 +26,7 @@ local guis = {}
 
 local function vars_window_uid(gui)
 	if not gui then return end
-	while gui.name ~= 'mlc-vars' do gui = gui.parent end
+	while gui.name ~= 'ai-combinator-vars' do gui = gui.parent end
 	return tonumber(gui.caption:match('%[(%d+)%]'))
 end
 
@@ -54,7 +54,7 @@ function guis.open(player, e)
 	local uid_old = storage.guis_player[player.index]
 	if uid_old then player.opened = guis.close(uid_old) end
 	local gui_t = ai_combinator_dialog.show(player, e)
-	player.opened = gui_t.mlc_gui
+	player.opened = gui_t.gui
 	storage.guis_player[player.index] = e.unit_number
 	
 	-- Initialize the description UI now that gui_t is stored
@@ -65,38 +65,38 @@ end
 
 function guis.close(uid)
 	local gui_t = storage.guis[uid]
-	local gui = gui_t and (gui_t.mlc_gui or gui_t.gui)
+	local gui = gui_t and (gui_t.gui or gui_t.gui)
 	if gui then gui.destroy() end
 	storage.guis[uid] = nil
 end
 
 
 function guis.save_code(uid, code, source_type)
-	local gui_t, mlc = storage.guis[uid], storage.combinators[uid]
-	if not mlc then return end
+	local gui_t, combinator = storage.guis[uid], storage.combinators[uid]
+	if not combinator then return end
 	local action = code_manager.load_code(code, uid, source_type)
 	if action == "remove" then
-		return init.mlc_remove(uid)
+		return init.combinator_remove(uid)
 	elseif action == "init" then
-		init.mlc_init(mlc.e)
+		init.combinator_init(combinator.e)
 	end
   
   ai_operation_manager.complete_operation(uid)
 end
 
 function guis.navigate_code_history(uid, direction)
-  local mlc = storage.combinators[uid]
-  if not mlc or not mlc.code_history or #mlc.code_history == 0 then
+  local combinator = storage.combinators[uid]
+  if not combinator or not combinator.code_history or #combinator.code_history == 0 then
     return false
   end
   
-  local current_index = mlc.code_history_index or #mlc.code_history
+  local current_index = combinator.code_history_index or #combinator.code_history
   local new_index
   
   if direction == "previous" then
     new_index = math.max(1, current_index - 1)
   elseif direction == "next" then
-    new_index = math.min(#mlc.code_history, current_index + 1)
+    new_index = math.min(#combinator.code_history, current_index + 1)
   else
     return false
   end
@@ -105,15 +105,15 @@ function guis.navigate_code_history(uid, direction)
     return false -- No change possible
   end
   
-  mlc.code_history_index = new_index
+  combinator.code_history_index = new_index
   
   -- Load the selected version
-  local historical_entry = mlc.code_history[new_index]
+  local historical_entry = combinator.code_history[new_index]
   if historical_entry then
-    mlc.code = historical_entry.code
-    local mlc_env = memory.combinators[uid]
-    if mlc_env then
-      update.mlc_update_code(mlc, mlc_env, memory.combinator_env[mlc_env._uid])
+    combinator.code = historical_entry.code
+    local combinator_env = memory.combinators[uid]
+    if combinator_env then
+      update.update_code(combinator, combinator_env, memory.combinator_env[combinator_env._uid])
     end
     return true
   end
@@ -122,17 +122,17 @@ function guis.navigate_code_history(uid, direction)
 end
 
 function guis.get_code_history_info(uid)
-  local mlc = storage.combinators[uid]
-  if not mlc then
+  local combinator = storage.combinators[uid]
+  if not combinator then
     return nil
   end
   
-  if not mlc.code_history then
-    mlc.code_history = {}
+  if not combinator.code_history then
+    combinator.code_history = {}
   end
   
-  local total_versions = #mlc.code_history
-  local current_index = mlc.code_history_index or total_versions
+  local total_versions = #combinator.code_history
+  local current_index = combinator.code_history_index or total_versions
   
   -- Ensure index is valid
   if current_index < 1 then current_index = total_versions end
@@ -140,7 +140,7 @@ function guis.get_code_history_info(uid)
   
   local current_entry = nil
   if current_index >= 1 and current_index <= total_versions then
-    current_entry = mlc.code_history[current_index]
+    current_entry = combinator.code_history[current_index]
   end
   
   return {
@@ -154,10 +154,10 @@ function guis.get_code_history_info(uid)
 end
 
 function guis.set_task(uid, task)
-  local mlc = storage.combinators[uid]
+  local combinator = storage.combinators[uid]
 	local gui_t = storage.guis[uid]
-  mlc.task = task
-  gui_t.mlc_task_label.caption = task
+  combinator.task = task
+  gui_t.task_label.caption = task
   
   -- Note: AI operation is started by the caller when sending the request
 end
@@ -169,10 +169,10 @@ event_handler.add_handler(constants.events.on_description_updated, function(even
 end)
 
 function guis.set_description(uid, description)
-  local mlc = storage.combinators[uid]
+  local combinator = storage.combinators[uid]
   local gui_t = storage.guis[uid]
   
-  mlc.description = description
+  combinator.description = description
   -- Update the UI to reflect the new description
   guis.update_description_ui(uid)
 end
@@ -190,7 +190,7 @@ function guis.create_signal_inputs(parent, signals, uid, test_index, signal_type
       type = "choose-elem-button",
       elem_type = "signal",
       signal = signal_data.signal,
-      name = "mlc-test-signal-" .. test_index .. "-" .. signal_type .. "-" .. i,
+      name = "ai-combinator-test-signal-" .. test_index .. "-" .. signal_type .. "-" .. i,
       tags = {
         uid = uid,
         test_case_signal = true,
@@ -210,7 +210,7 @@ function guis.create_signal_inputs(parent, signals, uid, test_index, signal_type
     -- Value input
     local value_input = signal_flow.add{
       type = "textfield",
-      name = "mlc-test-value-" .. test_index .. "-" .. signal_type .. "-" .. i,
+      name = "ai-combinator-test-value-" .. test_index .. "-" .. signal_type .. "-" .. i,
       text = signal_data.count and tostring(signal_data.count) or "",
       numeric = true,
       allow_negative = true,
@@ -233,10 +233,10 @@ function guis.create_signal_inputs(parent, signals, uid, test_index, signal_type
 end
 
 function guis.update_description_ui(uid)
-  local mlc = storage.combinators[uid]
+  local combinator = storage.combinators[uid]
   local gui_t = storage.guis[uid]
   
-  if not mlc then
+  if not combinator then
     return
   end
   
@@ -244,11 +244,11 @@ function guis.update_description_ui(uid)
     return
   end
   
-  if not gui_t.mlc_description_container then
+  if not gui_t.description_container then
     return
   end
   
-  local container = gui_t.mlc_description_container
+  local container = gui_t.description_container
   container.clear()
   
   -- Helper function to add elements to the el_map
@@ -259,12 +259,12 @@ function guis.update_description_ui(uid)
     return element
   end
   
-  if mlc.description and mlc.description ~= "" then
+  if combinator.description and combinator.description ~= "" then
     -- Show description with edit button
     local header_flow = container.add{
       type = "flow",
       direction = "horizontal",
-      name = "mlc-description-header"
+      name = "ai-combinator-description-header"
     }
     add_to_map(header_flow)
     
@@ -276,7 +276,7 @@ function guis.update_description_ui(uid)
     
     local edit_btn = header_flow.add{
       type = "sprite-button",
-      name = "mlc-desc-btn-flow",
+      name = "ai-combinator-desc-btn-flow",
       sprite = "utility/rename_icon",
       tooltip = "Edit description",
       style = "mini_button_aligned_to_text_vertically",
@@ -288,7 +288,7 @@ function guis.update_description_ui(uid)
     
     local desc_text = container.add{
       type = "label",
-      caption = mlc.description,
+      caption = combinator.description,
       style = "label"
     }
     desc_text.style.single_line = false
@@ -297,7 +297,7 @@ function guis.update_description_ui(uid)
     -- Show "Add Description" button
     local desc_btn = container.add{
       type = "button",
-      name = "mlc-desc-btn-flow",
+      name = "ai-combinator-desc-btn-flow",
       caption = "Add Description",
       tags = {uid = uid, description_add = true}
     }
@@ -306,9 +306,9 @@ function guis.update_description_ui(uid)
 end
 
 local function update_all_test_cases(uid)
-  local mlc = storage.combinators[uid]
-  if not mlc or not mlc.test_cases then return end
-  for i, _ in ipairs(mlc.test_cases) do
+  local combinator = storage.combinators[uid]
+  if not combinator or not combinator.test_cases then return end
+  for i, _ in ipairs(combinator.test_cases) do
     event_handler.raise_event(constants.events.on_test_case_updated, {
       uid = uid,
       test_index = i,
@@ -380,11 +380,11 @@ function guis.on_gui_click(event)
 
   if not element.valid then return end
 
-	-- Separate "help" and "vars" windows, not tracked in globals (storage), unlike main MLC gui
-	if element.name == 'mlc-help-close' then return element.parent.destroy()
-	elseif element.name == 'mlc-vars-close' then
+	-- Separate "help" and "vars" windows, not tracked in globals (storage), unlike main AI Combinator gui
+	if element.name == 'ai-combinator-help-close' then return element.parent.destroy()
+	elseif element.name == 'ai-combinator-vars-close' then
 		return (element.parent.paent or element.parent).destroy()
-	elseif element.name == 'mlc-vars-pause' then
+	elseif element.name == 'ai-combinator-vars-pause' then
 		return vars_dialog.show( event.player_index, vars_window_uid(element), element.style.name ~= 'green_button', true)
 	end
 
@@ -404,25 +404,25 @@ function guis.on_gui_click(event)
 	local uid, gui_t = find_gui(event)
 	if not uid then return end
 
-	local mlc = storage.combinators[uid]
-	if not mlc then return guis.close(uid) end
+	local combinator = storage.combinators[uid]
+	if not combinator then return guis.close(uid) end
 	local el_id = element.name
 	local rmb = defines.mouse_button_type.right
 
-  if el_id == 'mlc-set-task' then 
+  if el_id == 'ai-combinator-set-task' then 
     set_task_dialog.show(event.player_index, uid)
-  elseif el_id == 'mlc-cancel-ai' then
+  elseif el_id == 'ai-combinator-cancel-ai' then
     ai_operation_manager.cancel_operation(uid)
-  elseif el_id == 'mlc-desc-btn-flow' then set_description_dialog.show(event.player_index, uid)
-  elseif el_id == 'mlc-edit-code' then edit_code_dialog.show(event.player_index, uid)
-	elseif el_id == 'mlc-save' then guis.save_code(uid)
-	elseif el_id == 'mlc-commit' then guis.save_code(uid); guis.close(uid)
-	elseif el_id == 'mlc-close' then guis.close(uid)
-	elseif el_id == 'mlc-vars' then
+  elseif el_id == 'ai-combinator-desc-btn-flow' then set_description_dialog.show(event.player_index, uid)
+  elseif el_id == 'ai-combinator-edit-code' then edit_code_dialog.show(event.player_index, uid)
+	elseif el_id == 'ai-combinator-save' then guis.save_code(uid)
+	elseif el_id == 'ai-combinator-commit' then guis.save_code(uid); guis.close(uid)
+	elseif el_id == 'ai-combinator-close' then guis.close(uid)
+	elseif el_id == 'ai-combinator-vars' then
 		if event.button == rmb then
 			if event.shift then code_manager.clear_outputs(uid)
 			else -- clear env
-				for k, _ in pairs(mlc.vars) do mlc.vars[k] = nil end
+				for k, _ in pairs(combinator.vars) do combinator.vars[k] = nil end
 				vars_dialog.update(game.players[event.player_index], uid)
 			end
 		else 
@@ -443,7 +443,7 @@ function guis.on_gui_close(ev)
 end
 
 function guis.vars_window_toggle(pn, toggle_on)
-	local gui = game.players[pn].gui.screen['mlc-gui']
+	local gui = game.players[pn].gui.screen['ai-combinator-gui']
 	local uid, gui_t = find_gui{element=g}
 	if not uid then uid = storage.guis_player['vars.'..pn] end
 	if not uid then return end

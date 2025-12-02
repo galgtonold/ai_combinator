@@ -21,19 +21,19 @@ local function quality_icon_tag(qname)
 		then return '[img=quality/'..qname..']' end
 end
 
-function gui_updater.update_signals_in_guis(format_mlc_err_msg)
-	local gui_flow, label, mlc, cb, sig, mlc_out, mlc_out_idx, mlc_out_err
+function gui_updater.update_signals_in_guis(format_error_message)
+	local gui_flow, label, combinator, cb, sig, combinator_out, combinator_out_idx, combinator_out_err
 	local colors = {red={1,0.3,0.3}, green={0.3,1,0.3}}
 	for uid, gui_t in pairs(storage.guis) do
-		mlc = storage.combinators[uid]
-		if not (mlc and mlc.e.valid) then init.mlc_remove(uid); goto skip end
+		combinator = storage.combinators[uid]
+		if not (combinator and combinator.e.valid) then init.combinator_remove(uid); goto skip end
 		gui_flow = gui_t.signal_pane
 		if not (gui_flow and gui_flow.valid) then goto skip end
 		gui_flow.clear()
 
 		-- Inputs
 		for k, color in pairs(colors) do
-			cb = circuit_network.cn_wire_signals(mlc.e, defines.wire_type[k])
+			cb = circuit_network.cn_wire_signals(combinator.e, defines.wire_type[k])
 			for sig, v in pairs(cb) do
 				if v == 0 then goto skip end
 				if not sig then goto skip end
@@ -43,7 +43,7 @@ function gui_updater.update_signals_in_guis(format_mlc_err_msg)
 					icon = quality_icon_tag(qname) .. icon
 				end
 				label = gui_flow.add{
-					type='label', name='mlc-sig-in-'..k..'-'..sig,
+					type='label', name='ai-combinator-sig-in-'..k..'-'..sig,
 					caption=('[%s] %s%s = %s'):format(
 						constants.get_wire_label(k), icon, sig, v ) }
 				label.style.font_color = color
@@ -51,8 +51,8 @@ function gui_updater.update_signals_in_guis(format_mlc_err_msg)
 		::skip:: end end
 
 		-- Outputs
-		mlc_out, mlc_out_idx, mlc_out_err = {}, {}, util.shallow_copy((memory.combinators[uid] or {})._out or {})
-		for k, cb in pairs{red=mlc.out_red, green=mlc.out_green} do
+		combinator_out, combinator_out_idx, combinator_out_err = {}, {}, util.shallow_copy((memory.combinators[uid] or {})._out or {})
+		for k, cb in pairs{red=combinator.out_red, green=combinator.out_green} do
 			cb = cb.get_control_behavior()
 			for _, cbs in pairs(cb.sections[1].filters or {}) do
 				sig, label = cbs.value.name, constants.get_wire_label(k)
@@ -60,20 +60,20 @@ function gui_updater.update_signals_in_guis(format_mlc_err_msg)
 				if cbs.value.quality ~= nil and cbs.value.quality ~= "normal" then
 					sig = cbs.value.quality.."/"..sig
 				end
-				mlc_out_err[sig], mlc_out_err[('%s/%s'):format(k, sig)] = nil, nil
-				mlc_out_err[('%s/%s'):format(label, sig)] = nil
+				combinator_out_err[sig], combinator_out_err[('%s/%s'):format(k, sig)] = nil, nil
+				combinator_out_err[('%s/%s'):format(label, sig)] = nil
 				sig = circuit_network.cn_sig_str(cbs.value)
-				mlc_out_err[sig], mlc_out_err[('%s/%s'):format(k, sig)] = nil, nil
-				mlc_out_err[('%s/%s'):format(label, sig)] = nil
+				combinator_out_err[sig], combinator_out_err[('%s/%s'):format(k, sig)] = nil, nil
+				combinator_out_err[('%s/%s'):format(label, sig)] = nil
 				if cbs.min ~= 0 then
-					if not mlc_out[sig] then mlc_out_idx[#mlc_out_idx+1], mlc_out[sig] = sig, {} end
-					mlc_out[sig][k] = cbs.min
+					if not combinator_out[sig] then combinator_out_idx[#combinator_out_idx+1], combinator_out[sig] = sig, {} end
+					combinator_out[sig][k] = cbs.min
         end
 		end ::cb_slots_end:: end
-		table.sort(mlc_out_idx)
-		for val, k in pairs(mlc_out_idx) do
+		table.sort(combinator_out_idx)
+		for val, k in pairs(combinator_out_idx) do
 			local signame, qname = circuit_network.cn_sig_quality(k)
-			val, sig, label = mlc_out[k], storage.signals[signame].name, signal_icon_tag(signame)
+			val, sig, label = combinator_out[k], storage.signals[signame].name, signal_icon_tag(signame)
 			if string.sub(signame,1,1)== '~' then
 				sig = "~"..sig
 			end
@@ -82,11 +82,11 @@ function gui_updater.update_signals_in_guis(format_mlc_err_msg)
 				sig = qname.."/"..sig
 			end
 			if val['red'] == val['green'] then
-				k = gui_flow.add{ type='label', name='mlc-sig-out-'..sig,
+				k = gui_flow.add{ type='label', name='ai-combinator-sig-out-'..sig,
 					caption=('[out] %s%s = %s'):format(label, sig, val['red'] or 0) }
 				k.tags = {signal=sig}
 			else for k, color in pairs(colors) do
-				k = gui_flow.add{ type='label', name='mlc-sig-out/'..k..'-'..sig,
+				k = gui_flow.add{ type='label', name='ai-combinator-sig-out/'..k..'-'..sig,
 					caption=('[out/%s] %s%s = %s'):format(constants.get_wire_label(k), label, sig, val[k] or 0) }
 				k.style.font_color = color
 				k.tags = {signal=sig}
@@ -94,15 +94,15 @@ function gui_updater.update_signals_in_guis(format_mlc_err_msg)
 
 		-- Remaining invalid signals and errors
 		local n = 0 -- to dedup bogus non-string signal keys that have same string repr
-		for sig, val in pairs(mlc_out_err) do
+		for sig, val in pairs(combinator_out_err) do
 			cb, val = pcall(serpent.line, val, {compact=true, nohuge=false})
 			if not cb then val = '<err>' end
 			if val:len() > 8 then val = val:sub(1, 8)..'+' end
-			gui_flow.add{ type='label', name=('mlc-sig-out/err-%d-%s'):format(n, sig),
+			gui_flow.add{ type='label', name=('ai-combinator-sig-out/err-%d-%s'):format(n, sig),
 				caption=('[color=#ce9f7f][out-invalid] %s = %s[/color]'):format(sig, val) }
 			n = n + 1
 		end
-		gui_t.mlc_errors.caption = format_mlc_err_msg(mlc) or ''
+		gui_t.errors.caption = format_error_message(combinator) or ''
 	::skip:: end
 end
 

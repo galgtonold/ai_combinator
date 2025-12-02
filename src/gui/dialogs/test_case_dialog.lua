@@ -68,12 +68,12 @@ local function update_status(uid, test_index)
     return
   end
 
-  local mlc = storage.combinators[uid]
-  if not (mlc and mlc.test_cases and mlc.test_cases[test_index]) then
+  local combinator = storage.combinators[uid]
+  if not (combinator and combinator.test_cases and combinator.test_cases[test_index]) then
     return
   end
 
-  local test_case = mlc.test_cases[test_index]
+  local test_case = combinator.test_cases[test_index]
   local status_flow = gui_t.test_case_status_flow
   
   if test_case.success then
@@ -87,13 +87,13 @@ end
 function dialog.show(player_index, uid, test_index)
   local player = game.players[player_index]
   local gui_t = storage.guis[uid]
-  local mlc = storage.combinators[uid]
+  local combinator = storage.combinators[uid]
   
-  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then
+  if not combinator or not combinator.test_cases or not combinator.test_cases[test_index] then
     return
   end
   
-  local combinator_frame = gui_t.mlc_gui
+  local combinator_frame = gui_t.ai_combinator_gui
   local popup_location = {
     x = combinator_frame.location.x + 28,
     y = combinator_frame.location.y + 200
@@ -108,11 +108,11 @@ function dialog.show(player_index, uid, test_index)
   dialog_manager.set_current_dialog(player_index, popup_frame)
   popup_frame.location = popup_location
   
-  local test_case = mlc.test_cases[test_index]
+  local test_case = combinator.test_cases[test_index]
   local extra_buttons = {
     {
       type = "sprite-button",
-      sprite = "mlc-help",
+      sprite = "ai-combinator-help",
       style = "frame_action_button",
       tooltip = "Help",
       tags = {show_test_case_help_button = true, uid = uid, dialog = true, test_case_dialog = true, test_index = test_index}

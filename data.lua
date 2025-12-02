@@ -11,45 +11,45 @@ styles["ugg_deep_frame"] = {
 
 -- ----- Main combinator entity
 
--- Actual visible combinator is "mlc", which uses arithmetic-combinator base
--- Invisible "mlc-core" constant-combinator gets created and connected to its output when placed
+-- Actual visible combinator is "ai-combinator", which uses arithmetic-combinator base
+-- Invisible "ai-combinator-core" constant-combinator gets created and connected to its output when placed
 -- All signals are set on the invisible combinator, while arithmetic one is only used for reading inputs
 
 -- Combinator looks are based on decider combinator, but behavior is from arithmetic one
 -- This is because arithmetic one supports more symbols on the display
-local mlc = table.deepcopy(data.raw['arithmetic-combinator']['arithmetic-combinator'])
+local ai_combinator = table.deepcopy(data.raw['arithmetic-combinator']['arithmetic-combinator'])
 local decider = data.raw['decider-combinator']['decider-combinator']
 
-mlc.name = 'mlc'
-mlc.icon = png('ai-combinator-item')
-mlc.icon_mipmaps = 0
-mlc.minable = {mining_time=0.2, result='mlc'}
-mlc.circuit_wire_max_distance = 7 -- 9 in regular combinators
-mlc.max_health = 250 -- 150 for arithmetic/decider
-mlc.active_energy_usage = '6kW' -- base=1KW, lamp=5KW
+ai_combinator.name = 'ai-combinator'
+ai_combinator.icon = png('ai-combinator-item')
+ai_combinator.icon_mipmaps = 0
+ai_combinator.minable = {mining_time=0.2, result='ai-combinator'}
+ai_combinator.circuit_wire_max_distance = 7 -- 9 in regular combinators
+ai_combinator.max_health = 250 -- 150 for arithmetic/decider
+ai_combinator.active_energy_usage = '6kW' -- base=1KW, lamp=5KW
 
 -- *_box, *_sound, damaged_trigger_effect - same
 
 -- Spritesheet here has all same offsets and dimensions as normal (previously hr) version, so copy and change filename
-mlc.sprites = table.deepcopy(decider.sprites)
-for k, spec in pairs(mlc.sprites) do
+ai_combinator.sprites = table.deepcopy(decider.sprites)
+for k, spec in pairs(ai_combinator.sprites) do
 	for n, layer in pairs(spec.layers) do
 		spec.layers[n] = layer
 		if not layer.filename:match('^__base__/graphics/entity/combinator/decider%-combinator')
 			then error('decider-combinator sprite sheet incompatibility detected') end
 		if not layer.filename:match('%-shadow%.png$')
-			then layer.filename = png('mlc-sprites')
-			else layer.filename = png('mlc-sprites-shadow') end
+			then layer.filename = png('ai-combinator-sprites')
+			else layer.filename = png('ai-combinator-sprites-shadow') end
 end end
 
--- normal (previously hr-only) symbols from local mlc-displays.png, matching vanilla one in size
-for prop, sprites in pairs(mlc) do
+-- normal (previously hr-only) symbols from local ai-combinator-displays.png, matching vanilla one in size
+for prop, sprites in pairs(ai_combinator) do
 	if not prop:match('_symbol_sprites$') then goto skip end
 	for dir, spec in pairs(sprites) do
 		sprites[dir] = spec
 		if spec.filename ~= '__base__/graphics/entity/combinator/combinator-displays.png'
 			then error('decider-combinator display symbols sprite sheet incompatibility detected') end
-		spec.filename = png('mlc-displays.v2')
+		spec.filename = png('ai-combinator-displays.v2')
 		spec.shift = table.deepcopy(decider.greater_symbol_sprites[dir].shift)
 end ::skip:: end
 
@@ -62,15 +62,15 @@ for _, k in ipairs{
 } do
 	local v = decider[k]
 	if type(v) == 'table' then v = table.deepcopy(decider[k]) end
-	mlc[k] = v
+	ai_combinator[k] = v
 end
 
 do
 	local invisible_sprite = {filename=png('invisible'), width=1, height=1}
 	local wire_conn = {wire={red={0, 0}, green={0, 0}}, shadow={red={0, 0}, green={0, 0}}}
-	data:extend{ mlc,
+	data:extend{ ai_combinator,
 		{ type = 'constant-combinator',
-			name = 'mlc-core',
+			name = 'ai-combinator-core',
 			flags = {'placeable-off-grid'},
 			-- collision_mask = {},
 			item_slot_count = 500,
@@ -89,40 +89,40 @@ data:extend{
 
 	-- Item
   { type = 'item',
-		name = 'mlc',
+		name = 'ai-combinator',
 		icon_size = 64,
 		icon = png('ai-combinator-item'),
 		subgroup = 'circuit-network',
-		order = 'c[combinators]-bb[mlc]',
-		place_result = 'mlc',
+		order = 'c[combinators]-bb[ai-combinator]',
+		place_result = 'ai-combinator',
 		stack_size = 50 },
 
 	-- Recipe
 	{ type = 'recipe',
-		name = 'mlc',
+		name = 'ai-combinator',
 		enabled = false,
 		ingredients = {
             { type = 'item', name = 'selector-combinator', amount = 5 },
 			{ type = 'item', name = 'advanced-circuit', amount = 5 }
         },
-		results = {{ type = 'item', name = 'mlc', amount = 1 }} 
+		results = {{ type = 'item', name = 'ai-combinator', amount = 1 }} 
     },
 
 	-- Signal
 	{ type = 'virtual-signal',
-		name = 'mlc-error',
+		name = 'ai-combinator-error',
 		special_signal = false,
-		icon = png('mlc-error'),
+		icon = png('ai-combinator-error'),
 		icon_size = 64,
 		subgroup = 'virtual-signal',
-		order = 'e[signal]-[zzz-mlc-err]' },
+		order = 'e[signal]-[zzz-ai-combinator-err]' },
 
 	-- Technology
 	{ type = 'technology',
-		name = 'mlc',
+		name = 'ai-combinator',
 		icon_size = 256,
 		icon = png('ai-combinator-tech'),
-		effects={{type='unlock-recipe', recipe='mlc'}},
+		effects={{type='unlock-recipe', recipe='ai-combinator'}},
 		prerequisites = {'advanced-combinators', 'advanced-circuit'},
 		unit = {
 		  count = 100,
@@ -136,29 +136,29 @@ data:extend{
 
 	-- Key bindings
 	{ type = 'custom-input',
-		name = 'mlc-code-save',
+		name = 'ai-combinator-code-save',
 		key_sequence = 'CONTROL + S',
 		order = '03' },
 	{ type = 'custom-input',
-		name = 'mlc-code-commit',
+		name = 'ai-combinator-code-commit',
 		key_sequence = 'CONTROL + RETURN',
 		order = '04' },
 	{ type = 'custom-input',
-		name = 'mlc-code-vars',
+		name = 'ai-combinator-code-vars',
 		key_sequence = 'CONTROL + F',
 		order = '05' },
 	{ type = 'custom-input',
-		name = 'mlc-code-close',
+		name = 'ai-combinator-code-close',
 		key_sequence = 'CONTROL + Q',
 		order = '06' },
 	{ type = 'custom-input',
-		name = 'mlc-open-gui',
+		name = 'ai-combinator-open-gui',
 		key_sequence = 'CONTROL + E',
 		order = '07' },
 
 	-- GUI button sprites
 	{ type = 'sprite',
-		name = 'mlc-fwd',
+		name = 'ai-combinator-fwd',
 		filename = png('btn-fwd'),
 		priority = 'extra-high-no-scale',
 		width = 32,
@@ -166,7 +166,7 @@ data:extend{
 		flags = {'no-crop', 'icon'},
 		scale = 0.3 },
 	{ type = 'sprite',
-		name = 'mlc-back',
+		name = 'ai-combinator-back',
 		filename = png('btn-back'),
 		priority = 'extra-high-no-scale',
 		width = 32,
@@ -174,7 +174,7 @@ data:extend{
 		flags = {'no-crop', 'icon'},
 		scale = 0.3 },
 	{ type = 'sprite',
-		name = 'mlc-fwd-enabled',
+		name = 'ai-combinator-fwd-enabled',
 		filename = png('btn-fwd-enabled'),
 		priority = 'extra-high-no-scale',
 		width = 32,
@@ -182,7 +182,7 @@ data:extend{
 		flags = {'no-crop', 'icon'},
 		scale = 0.3 },
 	{ type = 'sprite',
-		name = 'mlc-back-enabled',
+		name = 'ai-combinator-back-enabled',
 		filename = png('btn-back-enabled'),
 		priority = 'extra-high-no-scale',
 		width = 32,
@@ -190,7 +190,7 @@ data:extend{
 		flags = {'no-crop', 'icon'},
 		scale = 0.3 },
 	{ type = 'sprite',
-		name = 'mlc-close',
+		name = 'ai-combinator-close',
 		filename = png('btn-close'),
 		priority = 'extra-high-no-scale',
 		width = 20,
@@ -198,7 +198,7 @@ data:extend{
 		flags = {'no-crop', 'icon'},
 		scale = 1 },
 	{ type = 'sprite',
-		name = 'mlc-help',
+		name = 'ai-combinator-help',
 		filename = png('btn-help'),
 		priority = 'extra-high-no-scale',
 		width = 20,
@@ -206,7 +206,7 @@ data:extend{
 		flags = {'no-crop', 'icon'},
 		scale = 1 },
 	{ type = 'sprite',
-		name = 'mlc-vars',
+		name = 'ai-combinator-vars',
 		filename = png('btn-vars'),
 		priority = 'extra-high-no-scale',
 		width = 20,
@@ -214,7 +214,7 @@ data:extend{
 		flags = {'no-crop', 'icon'},
 		scale = 1 },
 	{ type = 'sprite',
-		name = 'mlc-clear',
+		name = 'ai-combinator-clear',
 		filename = png('btn-clear'),
 		priority = 'extra-high-no-scale',
 		width = 20,

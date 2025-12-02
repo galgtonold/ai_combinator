@@ -1,14 +1,14 @@
--- src/mlc/update.lua
+-- src/ai_combinator/update.lua
 local util = require('src/core/utils')
 local cn = require('src/core/circuit_network')
 local constants = require('src/core/constants')
 
 local update = {}
 
-local mlc_err_sig = {type='virtual', name='mlc-error'}
+local error_signal = {type='virtual', name='ai-combinator-error'}
 
-function update.mlc_update_output(mlc, output_raw)
-	-- Sets signal outputs on invisible mlc-core combinators to visible outputs
+function update.update_output(combinator, output_raw)
+	-- Sets signal outputs on invisible ai-combinator-core combinators to visible outputs
 	local signals, errors, output = {red={}, green={}}, {}, {}
 	for k, v in pairs(output_raw) do output[tostring(k)] = v end
 
@@ -34,7 +34,7 @@ function update.mlc_update_output(mlc, output_raw)
 
 	local ps, ecc, n
 	for _, k in ipairs{'red', 'green'} do
-		ps, ecc = {}, mlc['out_'..k].get_or_create_control_behavior()
+		ps, ecc = {}, combinator['out_'..k].get_or_create_control_behavior()
 		if not (ecc and ecc.valid) then goto skip end
 		n = 1
 		for sig, v in pairs(signals[k]) do
@@ -50,43 +50,43 @@ function update.mlc_update_output(mlc, output_raw)
 		ecc.get_section(1).filters = ps
 	::skip:: end
 
-	if next(errors) then mlc.err_out = table.concat(errors, ', ') end
+	if next(errors) then combinator.err_out = table.concat(errors, ', ') end
 end
 
-function update.mlc_update_led(mlc, mlc_env)
+function update.update_led(combinator, combinator_env)
 	-- This should set state in a way that doesn't actually produce any signals
-	-- Combinator is not considered 'active', as it ends up with 0 value, unless it's mlc-error
+	-- Combinator is not considered 'active', as it ends up with 0 value, unless it's ai-combinator-error
 	-- It's possible to have it output value and cancel it out, but shows-up on ALT-display
 	-- First constant on the combinator encodes its uid value, as a fallback to copy code in blueprints
-	if mlc.state == mlc_env._state then return end
-	local st, cb = mlc.state, mlc.e.get_or_create_control_behavior()
+	if combinator.state == combinator_env._state then return end
+	local st, cb = combinator.state, combinator.e.get_or_create_control_behavior()
 	if not (cb and cb.valid) then return end
 
-	local op, a, b, out = '*', mlc_env._uid, 0
+	local op, a, b, out = '*', combinator_env._uid, 0
 	-- uid is uint, signal is int (signed), so must be negative if >=2^31
 	if a >= constants.INT32_SIGN_BIT then a = a - constants.INT32_TO_UINT32_OFFSET end
 	if not st then op = '*'
 	elseif st == 'run' then op = '%'
 	elseif st == 'sleep' then op = '-'
 	elseif st == 'no-power' then op = '^'
-	elseif st == 'error' then op, b, out = '+', 1 - a, mlc_err_sig end -- shown with ALT
-	mlc_env._state, cb.parameters = st, {
+	elseif st == 'error' then op, b, out = '+', 1 - a, error_signal end -- shown with ALT
+	combinator_env._state, cb.parameters = st, {
 		operation=op, first_signal=nil, second_signal=nil,
 		first_constant=a, second_constant=b, output_signal=out }
 end
 
-function update.mlc_update_code(mlc, mlc_env, lua_env)
-	mlc.next_tick, mlc.state, mlc.err_parse, mlc.err_run, mlc.err_out = 0, nil, nil, nil, nil
-	local code, err = (mlc.code or '')
+function update.update_code(combinator, combinator_env, lua_env)
+	combinator.next_tick, combinator.state, combinator.err_parse, combinator.err_run, combinator.err_out = 0, nil, nil, nil, nil
+	local code, err = (combinator.code or '')
 	if code:match('^%s*(.-)%s*$') ~= '' then -- Check if not just whitespace
-		mlc_env._func, err = load(code, code, 't', lua_env)
-		if not mlc_env._func then mlc.err_parse, mlc.state = err, 'error' end
+		combinator_env._func, err = load(code, code, 't', lua_env)
+		if not combinator_env._func then combinator.err_parse, combinator.state = err, 'error' end
 	else
-		mlc_env._func = nil
-		cn.cn_output_table_replace(mlc_env._out)
-		update.mlc_update_output(mlc, mlc_env._out)
+		combinator_env._func = nil
+		cn.cn_output_table_replace(combinator_env._out)
+		update.update_output(combinator, combinator_env._out)
 	end
-	update.mlc_update_led(mlc, mlc_env)
+	update.update_led(combinator, combinator_env)
 end
 
 return update

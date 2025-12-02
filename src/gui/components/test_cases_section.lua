@@ -12,18 +12,18 @@ local component = {}
 local update_ai_buttons
 
 function update_ai_buttons(uid)
-  local mlc = storage.combinators[uid]
+  local combinator = storage.combinators[uid]
   local gui_t = storage.guis[uid]
   
-  if not mlc or not gui_t then return end
+  if not combinator or not gui_t then return end
   
   -- Update Fix with AI button state
-  local fix_button = gui_t.mlc_fix_tests
+  local fix_button = gui_t.ai_combinator_fix_tests
   if fix_button and fix_button.valid then
-    local total_tests = #(mlc.test_cases or {})
+    local total_tests = #(combinator.test_cases or {})
     local passed_tests = 0
     
-    for _, test_case in ipairs(mlc.test_cases or {}) do
+    for _, test_case in ipairs(combinator.test_cases or {}) do
       if test_case.success then
         passed_tests = passed_tests + 1
       end
@@ -31,7 +31,7 @@ function update_ai_buttons(uid)
     
     local all_tests_pass = total_tests > 0 and passed_tests == total_tests
     local ai_operation_running = ai_operation_manager.is_operation_active(uid)
-    local max_attempts_reached = mlc.fix_attempt_count and mlc.fix_attempt_count >= 3
+    local max_attempts_reached = combinator.fix_attempt_count and combinator.fix_attempt_count >= 3
     
     -- Disable button if all tests pass, AI is running, or max attempts reached
     fix_button.enabled = not (all_tests_pass or ai_operation_running or max_attempts_reached)
@@ -49,7 +49,7 @@ function update_ai_buttons(uid)
   end
   
   -- Update Auto Generate button state
-  local auto_gen_button = gui_t.mlc_auto_generate_tests
+  local auto_gen_button = gui_t.ai_combinator_auto_generate_tests
   if auto_gen_button and auto_gen_button.valid then
     local ai_operation_running = ai_operation_manager.is_operation_active(uid)
     auto_gen_button.enabled = not ai_operation_running
@@ -64,22 +64,22 @@ end
 
 function component.show(parent, uid)
   local test_cases_container = parent.add{
-    type='flow', name='mlc_test_cases_container', direction='vertical'
+    type='flow', name='ai_combinator_test_cases_container', direction='vertical'
   }
   local gui_t = storage.guis[uid]
-  gui_t.mlc_test_cases_container = test_cases_container
+  gui_t.ai_combinator_test_cases_container = test_cases_container
   component.update(uid)
 end
 
 function component.update(uid)
-  local mlc = storage.combinators[uid]
+  local combinator = storage.combinators[uid]
   local gui_t = storage.guis[uid]
   
-  if not mlc or not gui_t or not gui_t.mlc_test_cases_container then
+  if not combinator or not gui_t or not gui_t.ai_combinator_test_cases_container then
     return
   end
   
-  local container = gui_t.mlc_test_cases_container
+  local container = gui_t.ai_combinator_test_cases_container
   container.clear()
   
   -- Helper function to add elements to the el_map
@@ -93,15 +93,15 @@ function component.update(uid)
   end
   
   -- Initialize test cases if not present
-  if not mlc.test_cases then
-    mlc.test_cases = {}
+  if not combinator.test_cases then
+    combinator.test_cases = {}
   end
   
   -- Header with summary and buttons
   local header_flow = container.add{
     type = "flow",
     direction = "horizontal",
-    name = "mlc-test-cases-header"
+    name = "ai-combinator-test-cases-header"
   }
   
   local title_flow = header_flow.add{
@@ -117,7 +117,7 @@ function component.update(uid)
   
   local add_test_btn = title_flow.add{
     type = "sprite-button",
-    name = "mlc-add-test-case",
+    name = "ai-combinator-add-test-case",
     sprite = "utility/add",
     tooltip = "Add test case",
     style = "mini_button_aligned_to_text_vertically",
@@ -127,9 +127,9 @@ function component.update(uid)
   add_to_map(add_test_btn)
   
   -- Calculate test case summary
-  local total_tests = #mlc.test_cases
+  local total_tests = #combinator.test_cases
   local passed_tests = 0
-  for _, test_case in ipairs(mlc.test_cases) do
+  for _, test_case in ipairs(combinator.test_cases) do
     local signals_match = test_case.success or false
         
     if signals_match then
@@ -152,7 +152,7 @@ function component.update(uid)
   
   local auto_generate_btn = header_flow.add{
     type = "button",
-    name = "mlc-auto-generate-tests",
+    name = "ai-combinator-auto-generate-tests",
     caption = "Auto Generate",
     tooltip = "Automatically generate test cases based on current inputs",
     style = "button",
@@ -162,7 +162,7 @@ function component.update(uid)
 
   local fix_tests_btn = header_flow.add{
     type = "button",
-    name = "mlc-fix-tests",
+    name = "ai-combinator-fix-tests",
     caption = "Fix with AI",
     tooltip = "Automatically fix implementation to make all tests pass",
     style = "green_button",
@@ -172,10 +172,10 @@ function component.update(uid)
 
   
   -- Condensed test cases list
-  if #mlc.test_cases > 0 then
+  if #combinator.test_cases > 0 then
     local test_scroll = container.add{
       type = "scroll-pane",
-      name = "mlc-test-cases-scroll",
+      name = "ai-combinator-test-cases-scroll",
       direction = "vertical",
       horizontal_scroll_policy = "never",
       style = "shallow_scroll_pane"
@@ -184,7 +184,7 @@ function component.update(uid)
     test_scroll.style.horizontally_stretchable = true
     add_to_map(test_scroll)
     
-    for i, test_case in ipairs(mlc.test_cases) do
+    for i, test_case in ipairs(combinator.test_cases) do
       local test_frame = test_scroll.add{
         type = "frame",
         direction = "horizontal",
@@ -228,7 +228,7 @@ function component.update(uid)
       -- Only delete button - edit is handled by clicking anywhere on the frame
       local delete_btn = test_frame.add{
         type = "sprite-button",
-        name = "mlc-delete-test-case-" .. i,
+        name = "ai-combinator-delete-test-case-" .. i,
         sprite = "utility/trash",
         tooltip = "Delete test case",
         style = "tool_button_red",
@@ -263,13 +263,13 @@ update_ai_buttons = function(uid)
   local ai_operation_in_progress = ai_operation_manager.is_operation_active(uid)
   
   -- Update Auto Generate Tests button if it exists
-  if gui_t.mlc_auto_generate_tests then
-    gui_t.mlc_auto_generate_tests.enabled = not ai_operation_in_progress
+  if gui_t.ai_combinator_auto_generate_tests then
+    gui_t.ai_combinator_auto_generate_tests.enabled = not ai_operation_in_progress
   end
   
   -- Update Fix Tests button if it exists
-  if gui_t.mlc_fix_tests then
-    gui_t.mlc_fix_tests.enabled = not ai_operation_in_progress
+  if gui_t.ai_combinator_fix_tests then
+    gui_t.ai_combinator_fix_tests.enabled = not ai_operation_in_progress
   end
 end
 
@@ -278,8 +278,8 @@ local function on_test_case_evaluated(event)
 end
 
 local function on_test_generation_completed(event)
-  local mlc = storage.combinators[event.uid]
-  if not mlc then return end
+  local combinator = storage.combinators[event.uid]
+  if not combinator then return end
   
   -- Complete AI operation using the new manager
   ai_operation_manager.complete_operation(event.uid)
@@ -296,8 +296,8 @@ local function on_test_generation_completed(event)
   end
   
   -- Initialize test cases if needed
-  if not mlc.test_cases then
-    mlc.test_cases = {}
+  if not combinator.test_cases then
+    combinator.test_cases = {}
   end
   
   -- Append generated test cases
@@ -324,8 +324,8 @@ local function on_test_generation_completed(event)
         uses_advanced = true
       end
       
-      table.insert(mlc.test_cases, {
-        name = generated_test.name or ("Generated Test " .. (#mlc.test_cases + 1)),
+      table.insert(combinator.test_cases, {
+        name = generated_test.name or ("Generated Test " .. (#combinator.test_cases + 1)),
         red_input = generated_test.red_input or {},
         green_input = generated_test.green_input or {},
         expected_output = generated_test.expected_output or {},
@@ -339,7 +339,7 @@ local function on_test_generation_completed(event)
       added_count = added_count + 1
       
       -- Evaluate the new test case
-      local test_index = #mlc.test_cases
+      local test_index = #combinator.test_cases
       event_handler.raise_event(constants.events.on_test_case_updated, {
         uid = event.uid,
         test_index = test_index
@@ -356,22 +356,22 @@ local function on_test_generation_completed(event)
 end
 
 local function delete_test_case(uid, test_index)
-  local mlc = storage.combinators[uid]
-  if not mlc or not mlc.test_cases then return end
+  local combinator = storage.combinators[uid]
+  if not combinator or not combinator.test_cases then return end
 
-  table.remove(mlc.test_cases, test_index)
+  table.remove(combinator.test_cases, test_index)
 end
 
 local function add_test_case(uid)
-  local mlc = storage.combinators[uid]
-  if not mlc then return end
+  local combinator = storage.combinators[uid]
+  if not combinator then return end
   
-  if not mlc.test_cases then
-    mlc.test_cases = {}
+  if not combinator.test_cases then
+    combinator.test_cases = {}
   end
   
-  local new_test_index = #mlc.test_cases + 1
-  table.insert(mlc.test_cases, {
+  local new_test_index = #combinator.test_cases + 1
+  table.insert(combinator.test_cases, {
     name = "Test Case " .. new_test_index,
     red_input = {},
     green_input = {},
@@ -386,12 +386,12 @@ local function add_test_case(uid)
 end
 
 local function auto_generate_test_cases(uid)
-  local mlc = storage.combinators[uid]
-  if not mlc then return end
+  local combinator = storage.combinators[uid]
+  if not combinator then return end
   
   -- Get task description and source code
-  local task_description = mlc.task or "No task description available"
-  local source_code = mlc.code or "No source code available"
+  local task_description = combinator.task or "No task description available"
+  local source_code = combinator.code or "No source code available"
   
   -- Start AI operation using the new manager
   local success, correlation_id = ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TEST_GENERATION)
@@ -405,14 +405,14 @@ local function auto_generate_test_cases(uid)
 end
 
 local function fix_failing_tests(uid)
-  local mlc = storage.combinators[uid]
-  if not mlc then return end
+  local combinator = storage.combinators[uid]
+  if not combinator then return end
   
   -- Check if any tests are failing
   local failed_tests = {}
   local passed_tests = 0
   
-  for i, test_case in ipairs(mlc.test_cases or {}) do
+  for i, test_case in ipairs(combinator.test_cases or {}) do
     if test_case.success then
       passed_tests = passed_tests + 1
     else
@@ -426,30 +426,30 @@ local function fix_failing_tests(uid)
   end
   
   -- Initialize fix attempt counter if not present
-  if not mlc.fix_attempt_count then
-    mlc.fix_attempt_count = 0
+  if not combinator.fix_attempt_count then
+    combinator.fix_attempt_count = 0
   end
   
-  if mlc.fix_attempt_count >= 3 then
+  if combinator.fix_attempt_count >= 3 then
     game.print("[color=red]Maximum fix attempts (3) reached. Cannot fix tests automatically.[/color]")
     return
   end
   
-  mlc.fix_attempt_count = mlc.fix_attempt_count + 1
+  combinator.fix_attempt_count = combinator.fix_attempt_count + 1
   
   -- Start AI operation
   local success, correlation_id = ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TEST_FIXING)
   
   if success then
     -- Get required data for fix request
-    local task_description = mlc.task or "No task description available"
-    local current_code = mlc.code or ""
+    local task_description = combinator.task or "No task description available"
+    local current_code = combinator.code or ""
     
     -- Send fix request via bridge
     bridge.send_fix_request(uid, task_description, current_code, failed_tests)
     
   else
-    mlc.fix_attempt_count = mlc.fix_attempt_count - 1  -- Rollback the attempt count
+    combinator.fix_attempt_count = combinator.fix_attempt_count - 1  -- Rollback the attempt count
     game.print("[color=red]Failed to start test fixing operation[/color]")
   end
 end
@@ -479,9 +479,9 @@ end
 
 local function on_fix_completion(event)
   local uid = event.uid
-  local mlc = storage.combinators[uid]
+  local combinator = storage.combinators[uid]
   
-  if not mlc then return end
+  if not combinator then return end
   
   if event.success then
     -- Update the combinator code with the fixed code and trigger proper re-evaluation

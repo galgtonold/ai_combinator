@@ -24,9 +24,9 @@ local runtime = require('src/ai_combinator/runtime')
 local gui_updater = require('src/gui/gui_updater')
 
 
--- ----- MLC update processing -----
+-- ----- AI Combinator update processing -----
 
-local mlc_err_sig = {type='virtual', name='mlc-error'}
+local error_signal = {type='virtual', name='ai-combinator-error'}
 
 -- ----- Register entity and blueprint event handlers -----
 
@@ -44,33 +44,33 @@ local function on_tick(ev)
 
 	local tick = ev.tick
 
-	for uid, mlc in pairs(storage.combinators) do
-		local mlc_env = memory.combinators[uid]
-		if not mlc_env then
-      mlc_env = init.mlc_init(mlc.e)
+	for uid, combinator in pairs(storage.combinators) do
+		local combinator_env = memory.combinators[uid]
+		if not combinator_env then
+      combinator_env = init.combinator_init(combinator.e)
     end
-    if mlc.removed_by_player then -- if it was removed by the user, keep it so it can be restored from undo
+    if combinator.removed_by_player then -- if it was removed by the user, keep it so it can be restored from undo
       goto skip
     end
-		if not (mlc_env and mlc.e.valid and mlc.out_red.valid and mlc.out_green.valid) then
-        init.mlc_remove(uid)
+		if not (combinator_env and combinator.e.valid and combinator.out_red.valid and combinator.out_green.valid) then
+        init.combinator_remove(uid)
         goto skip
     end
 
-		local err_msg = runtime.format_mlc_err_msg(mlc)
+		local err_msg = runtime.format_error_message(combinator)
 		if err_msg then
 			if tick % constants.LOGIC_ALERT_INTERVAL == 0
-				then runtime.alert_about_mlc_error(mlc_env, err_msg) end
+				then runtime.alert_about_error(combinator_env, err_msg) end
 			goto skip -- suspend combinator logic until errors are addressed
-		elseif mlc_env._alert then runtime.alert_clear(mlc_env) end
+		elseif combinator_env._alert then runtime.alert_clear(combinator_env) end
 
-		if mlc.irq and (mlc.irq_tick or 0) < tick - (mlc.irq_delay or 0)
-				and mlc.e.get_signal(mlc.irq, defines.wire_connector_id.combinator_input_green, defines.wire_connector_id.combinator_input_red) ~= 0 then
-      mlc.irq_tick = tick
-      mlc.next_tick = nil
+		if combinator.irq and (combinator.irq_tick or 0) < tick - (combinator.irq_delay or 0)
+				and combinator.e.get_signal(combinator.irq, defines.wire_connector_id.combinator_input_green, defines.wire_connector_id.combinator_input_red) ~= 0 then
+      combinator.irq_tick = tick
+      combinator.next_tick = nil
     end
-		if tick >= (mlc.next_tick or 0) and mlc_env._func then
-			runtime.run_moon_logic_tick(mlc, mlc_env, tick)
+		if tick >= (combinator.next_tick or 0) and combinator_env._func then
+			runtime.run_combinator_tick(combinator, combinator_env, tick)
 			for _, p in ipairs(game.connected_players) do
         local player, vars_uid = game.players[p.index], storage.guis_player['vars.'..p.index]
         if not player or vars_uid ~= uid then
@@ -83,7 +83,7 @@ local function on_tick(ev)
 	::skip:: end
 
 	if next(storage.guis) then 
-        gui_updater.update_signals_in_guis(runtime.format_mlc_err_msg) 
+        gui_updater.update_signals_in_guis(runtime.format_error_message) 
     end
 end
 
@@ -95,16 +95,16 @@ event_handler.add_handler(constants.events.on_task_request_completed, function(e
   
   -- Check if response starts with ERROR:
   if event.response and event.response:sub(1, 6) == "ERROR:" then
-    local mlc = storage.combinators[event.uid]
-    local mlc_env = memory.combinators[event.uid]
-    if mlc and mlc_env then
+    local combinator = storage.combinators[event.uid]
+    local combinator_env = memory.combinators[event.uid]
+    if combinator and combinator_env then
       -- Extract the error message after "ERROR: "
       local error_message = event.response:sub(8) -- Skip "ERROR: "
-      mlc.state = "error"
-      mlc.err_parse = "AI Error: " .. error_message
+      combinator.state = "error"
+      combinator.err_parse = "AI Error: " .. error_message
       
       -- Update the LED to show error state
-      update.mlc_update_led(mlc, mlc_env)
+      update.update_led(combinator, combinator_env)
       
       game.print("[color=red]AI Error: " .. error_message .. "[/color]")
     end
@@ -125,7 +125,7 @@ script.on_event(defines.events.on_gui_opened, function(ev)
 	if not ev.entity then return end
 	local player = game.players[ev.player_index]
 	local e = player.opened
-	if not (e and e.name == 'mlc') then return end
+	if not (e and e.name == 'ai-combinator') then return end
 	if not storage.combinators[e.unit_number] then
 		player.opened = nil
 		return util.console_warn(player, 'BUG: Combinator #'..e.unit_number..' is not registered with mod code')
@@ -133,7 +133,7 @@ script.on_event(defines.events.on_gui_opened, function(ev)
 	local gui_t = storage.guis[e.unit_number]
 	if not gui_t then guis.open(player, e)
 	else
-		e = game.players[gui_t.mlc_gui.player_index or 0]
+		e = game.players[gui_t.gui.player_index or 0]
 		e = e and e.name or 'Another player'
 		player.print(e..' already opened this combinator', {1,1,0})
 	end
@@ -141,18 +141,18 @@ end)
 
 
 -- ----- Remote Interface for /measured-command benchmarking -----
--- Usage: /measured-command remote.call('mlc', 'run', 1234, 100)
+-- Usage: /measured-command remote.call('ai-combinator', 'run', 1234, 100)
 
 local remote_err = function(msg, ...) for n, p in pairs(game.players)
-	do p.print(('Moon-Logic remote-call error: '..msg):format(...), {1,1,0}) end end
-remote.add_interface('mlc', {run = function(uid_raw, count)
+	do p.print(('AI Combinator remote-call error: '..msg):format(...), {1,1,0}) end end
+remote.add_interface('ai-combinator', {run = function(uid_raw, count)
 	local uid = tonumber(uid_raw)
-	local mlc, mlc_env = storage.combinators[uid], memory.combinators[uid]
-	if not mlc or not mlc_env then
+	local combinator, combinator_env = storage.combinators[uid], memory.combinators[uid]
+	if not combinator or not combinator_env then
 		return remote_err('cannot find combinator with uid=%s', uid_raw) end
 	local err_n, st, err, err_last = 0
 	for n = 1, tonumber(count) or 1 do
-		st, err = pcall(mlc_env._func)
+		st, err = pcall(combinator_env._func)
 		if not st then err_n, err_last = err_n + 1, err or '[unspecified lua error]' end
 	end
 	if err_n > 0 then remote_err( '%d/%d run(s)'..
@@ -209,8 +209,8 @@ end
 
 local function update_recipes()
 	for _, force in pairs(game.forces) do
-		if force.technologies['mlc'].researched then
-			force.recipes['mlc'].enabled = true
+		if force.technologies['ai-combinator'].researched then
+			force.recipes['ai-combinator'].enabled = true
 	end end
 end
 

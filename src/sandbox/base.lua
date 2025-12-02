@@ -69,13 +69,13 @@ sandbox.env_base = {
 		lshift = bit32.lshift, rrotate = bit32.rrotate, rshift = bit32.rshift }
 }
 
-local function mlc_log(...) log(...) end -- to avoid logging func code
+local function combinator_log(...) log(...) end -- to avoid logging func code
 
 event_handler.add_handler(defines.events.on_tick, function(event)
 	if not sandbox.env_base._init then
 		-- This is likely to cause mp desyncs
 		sandbox.env_base.game = {
-			tick=game.tick, log=mlc_log,
+			tick=game.tick, log=combinator_log,
 			print=sandbox.game_print, print_color=game.print }
 		sandbox.env_base._api = { game=game, script=script,
 			remote=remote, commands=commands, settings=settings,

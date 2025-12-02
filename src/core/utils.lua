@@ -33,7 +33,7 @@ function utils.deep_copy(object)
 end
 
 function utils.console_warn(p, text)
-	p.print(('[Moon Logic mod] %s'):format(text), {0.957, 0.710, 0.659})
+	p.print(('[AI Combinator mod] %s'):format(text), {0.957, 0.710, 0.659})
 end
 
 function utils.format_number(num)

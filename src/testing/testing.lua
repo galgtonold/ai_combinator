@@ -75,11 +75,11 @@ local function wrap_signal_table(signals)
 end
 
 function testing.evaluate_test_case(uid, red, green, options)
-  local ai_combinator = storage.combinators[uid]
+  local combinator = storage.combinators[uid]
   local captured_print = ""
 
   -- Handle case where there's no code to run
-  if not ai_combinator or not ai_combinator.code or ai_combinator.code == "" then
+  if not combinator or not combinator.code or combinator.code == "" then
     return {}, ""
   end
 
@@ -116,7 +116,7 @@ function testing.evaluate_test_case(uid, red, green, options)
     captured_print = captured_print .. table.concat(str_args, "\t")
   end
 	setmetatable(env_ro, {__index=testing.env})
-  func, err = load(ai_combinator.code, ai_combinator.code, 't', env_ro)
+  func, err = load(combinator.code, combinator.code, 't', env_ro)
   
   if func then
     local success, result = pcall(func)
@@ -292,10 +292,10 @@ local function variables_to_associative(variables_array)
 end
 
 function testing.on_test_case_updated(event)
-  local mlc = storage.combinators[event.uid]
-  if not mlc or not mlc.test_cases or not mlc.test_cases[event.test_index] then return end
+  local combinator = storage.combinators[event.uid]
+  if not combinator or not combinator.test_cases or not combinator.test_cases[event.test_index] then return end
 
-  local test_case = mlc.test_cases[event.test_index]
+  local test_case = combinator.test_cases[event.test_index]
 
   -- Prepare advanced options
   local options = {

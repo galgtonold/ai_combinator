@@ -4,14 +4,14 @@ local dialog = {}
 
 function dialog.show(pn, toggle_on)
 	local player = game.players[pn]
-	local gui_exists = player.gui.screen['mlc-ai-warning']
+	local gui_exists = player.gui.screen['ai-combinator-ai-warning']
 	if gui_exists and not toggle_on then return gui_exists.destroy()
 	elseif toggle_on == false then return end
 	local dw, dh, dsf = player.display_resolution.width,
 		player.display_resolution.height, 1 / player.display_scale
 
 	local gui = player.gui.screen.add{ type='frame',
-		name='mlc-ai-warning', caption='AI Combinator - Launcher Required', direction='vertical' }
+		name='ai-combinator-ai-warning', caption='AI Combinator - Launcher Required', direction='vertical' }
 	gui.location = {math.max(50, (dw - 600) * dsf / 2), math.max(50, (dh - 400) * dsf / 2)}
 	
 	-- Main content area with light gray background (similar to AI combinator)
@@ -21,7 +21,7 @@ function dialog.show(pn, toggle_on)
 	content_frame.style.padding = 8
 	content_frame.style.minimal_width = 450
 	
-	local scroll = content_frame.add{type='scroll-pane', name='mlc-ai-warning-scroll', direction='vertical'}
+	local scroll = content_frame.add{type='scroll-pane', name='ai-combinator-ai-warning-scroll', direction='vertical'}
 	scroll.style.maximal_height = (dh - 250) * dsf
 	
 	-- Status with red light (similar to status bar)
@@ -65,13 +65,13 @@ function dialog.show(pn, toggle_on)
 	download_header.style.top_margin = 12
 	
 	-- Add selectable download link with wider width
-	local link_textfield = scroll.add{type='text-box', name='mlc-ai-warning-link', text='https://github.com/galgtonold/ai_combinator/releases'}
+	local link_textfield = scroll.add{type='text-box', name='ai-combinator-ai-warning-link', text='https://github.com/galgtonold/ai_combinator/releases'}
 	link_textfield.read_only = true
 	link_textfield.style.width = 450
 	link_textfield.style.top_margin = 4
 
   -- Single button spanning full width with green style - inside the content frame
-	local button = content_frame.add{type='button', name='mlc-ai-warning-close', caption='I Understand', style='green_button'}
+	local button = content_frame.add{type='button', name='ai-combinator-ai-warning-close', caption='I Understand', style='green_button'}
 	button.style.horizontally_stretchable = true
 	button.style.top_margin = 16
 	button.style.height = 35
@@ -82,10 +82,10 @@ local function on_gui_click(event)
 
   if not el.valid then return end
 
-	if el.name == 'mlc-ai-warning-close' then 
+	if el.name == 'ai-combinator-ai-warning-close' then 
 		-- Find and destroy the warning window by name
 		local player = game.players[event.player_index]
-		local warning_window = player.gui.screen['mlc-ai-warning']
+		local warning_window = player.gui.screen['ai-combinator-ai-warning']
 		if warning_window then
 			return warning_window.destroy()
 		end

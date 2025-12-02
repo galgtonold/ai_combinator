@@ -9,8 +9,8 @@ local component = {}
 
 function component.show(parent, uid, test_index)
   local gui_t = storage.guis[uid]
-  local mlc = storage.combinators[uid]
-  local test_case = mlc.test_cases[test_index]
+  local combinator = storage.combinators[uid]
+  local test_case = combinator.test_cases[test_index]
 
   local name_heading = parent.add{ type = 'frame', style = 'subheader_frame_with_text_on_the_right', direction ='horizontal' }
   name_heading.style.top_margin = -12
@@ -47,8 +47,8 @@ local function on_gui_click(event)
   if not element.valid or not element.tags then return end
 
   if element.tags.edit_test_case_name then
-    local mlc = storage.combinators[element.tags.uid]
-    local current_name = mlc.test_cases[element.tags.test_index].name
+    local combinator = storage.combinators[element.tags.uid]
+    local current_name = combinator.test_cases[element.tags.test_index].name
     local location = gui_utils.get_position_relative_to_window(element, 25, 100)
     set_test_case_name_dialog.show(event.player_index, element.tags.uid, location, current_name, {uid = element.tags.uid, test_index = element.tags.test_index})
   end
@@ -58,8 +58,8 @@ local function on_test_case_name_updated(event)
   local gui_t = storage.guis[event.uid]
   gui_t.test_case_name_label.caption = event.test_name
 
-  local mlc = storage.combinators[event.uid]
-  local test_case = mlc.test_cases[event.test_index]
+  local combinator = storage.combinators[event.uid]
+  local test_case = combinator.test_cases[event.test_index]
 
   test_case.name = event.test_name
 end

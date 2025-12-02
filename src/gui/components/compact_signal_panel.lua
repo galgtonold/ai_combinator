@@ -68,9 +68,9 @@ end
 
 
 local function get_signal_array(uid, test_index, signal_type)
-  local mlc = storage.combinators[uid]
-  if not mlc or not mlc.test_cases or not mlc.test_cases[test_index] then return {} end
-  local test_case = mlc.test_cases[test_index]
+  local combinator = storage.combinators[uid]
+  if not combinator or not combinator.test_cases or not combinator.test_cases[test_index] then return {} end
+  local test_case = combinator.test_cases[test_index]
   if signal_type == "red" then
     return test_case.red_input
   elseif signal_type == "green" then

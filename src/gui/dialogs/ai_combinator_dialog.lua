@@ -32,14 +32,14 @@ end
 
 local function update_signals(uid)
   local gui_t = storage.guis[uid]
-	local mlc = storage.combinators[uid]
+	local combinator = storage.combinators[uid]
 
   if not gui_t or gui_t.input_signal_frame == nil then
     return
   end
 
-  red_network = mlc.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_red)
-  green_network = mlc.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_green)
+  red_network = combinator.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_red)
+  green_network = combinator.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_green)
   draw_signals(
     gui_t.input_signal_frame,
     {},
@@ -48,7 +48,7 @@ local function update_signals(uid)
   )
 
   local signals = {}
-  for _, sig in pairs(mlc.out_red.get_control_behavior().sections[1].filters or {}) do
+  for _, sig in pairs(combinator.out_red.get_control_behavior().sections[1].filters or {}) do
     local new_sig = {signal=sig.value, count=sig.min}
     new_sig.signal.comparator = nil
     if new_sig.count ~= 0 then
@@ -75,26 +75,26 @@ local function update_ai_buttons(uid)
   local ai_operation_in_progress = ai_operation_manager.is_operation_active(uid)
   
   -- Update Set Task button if it exists
-  if gui_t.mlc_set_task then
-    gui_t.mlc_set_task.enabled = not ai_operation_in_progress
+  if gui_t.ai_combinator_set_task then
+    gui_t.ai_combinator_set_task.enabled = not ai_operation_in_progress
   end
   
   -- Update Cancel AI button if it exists
-  if gui_t.mlc_cancel_ai then
-    gui_t.mlc_cancel_ai.enabled = ai_operation_in_progress
+  if gui_t.ai_combinator_cancel_ai then
+    gui_t.ai_combinator_cancel_ai.enabled = ai_operation_in_progress
   end
 end
 
 local function update_status(uid)
   local gui_t = storage.guis[uid]
-  local mlc = storage.combinators[uid]
-  local status_flow = gui_t.mlc_status_flow
+  local combinator = storage.combinators[uid]
+  local status_flow = gui_t.status_flow
   if not status_flow then
     return
   end
   
   -- Get entity status code
-  local status_code = mlc.e.status
+  local status_code = combinator.e.status
   local status_text = "Unknown"
   local sprite = "utility/status_working"
   
@@ -130,8 +130,8 @@ local function update_status(uid)
     sprite = "utility/status_yellow"
   end
 
-  if mlc.state == "error" then
-    status_text = "Error: " .. (mlc.err_parse or mlc.errun or "unknown error")
+  if combinator.state == "error" then
+    status_text = "Error: " .. (combinator.err_parse or combinator.errun or "unknown error")
     sprite = "utility/status_not_working"
   end
 
@@ -139,7 +139,7 @@ local function update_status(uid)
   status_indicator.update(status_flow, sprite, status_text)
 
   -- Update task request progress_bar using the new manager
-  local progress_bar = gui_t.mlc_progressbar
+  local progress_bar = gui_t.progressbar
   local ai_operation_in_progress = ai_operation_manager.is_operation_active(uid)
   
   if ai_operation_in_progress then
@@ -158,8 +158,8 @@ end
 
 function dialog.show(player, entity)
   local uid = entity.unit_number
-	local mlc = storage.combinators[uid]
-	local mlc_err = mlc.err_parse or mlc.errun
+	local combinator = storage.combinators[uid]
+	local combinator_err = combinator.err_parse or combinator.errun
 	local dw, dh, dsf = player.display_resolution.width,
 		player.display_resolution.height, 1 / player.display_scale
 	local max_height = (dh - 350) * dsf
@@ -181,65 +181,66 @@ function dialog.show(player, entity)
 	end
 
 	local gui = elc( player.gui.screen,
-		{ type='frame', name='mlc-gui', direction='vertical'})
+		{ type='frame', name='ai-combinator-gui', direction='vertical'})
+  gui_t.gui = gui
 	gui.location = {20 * dsf, 150 * dsf} -- doesn't work from initial props
 
   local extra_buttons = {{
       type = "sprite-button",
       style = "frame_action_button",
-      sprite = "mlc-help",
+      sprite = "ai-combinator-help",
       tooltip = "Show help",
       tags = {show_ai_combinator_help_button = true}
     }
   }
   titlebar.show(gui, "AI combinator", {uid = uid, close_combinator_ui = true}, nil, extra_buttons)
 
-  local entity_frame = elc(gui, {type='frame', name='mlc-entity-frame', style='entity_frame', direction='vertical'})
+  local entity_frame = elc(gui, {type='frame', name='ai-combinator-entity-frame', style='entity_frame', direction='vertical'})
 
   local connections_frame = elc(entity_frame,
-    { type = 'frame', name = 'mlc-connections-frame', style = 'subheader_frame_with_text_on_the_right', direction ='horizontal' },
+    { type = 'frame', name = 'ai-combinator-connections-frame', style = 'subheader_frame_with_text_on_the_right', direction ='horizontal' },
     { top_margin = -8, left_margin = -12, right_margin = -12, horizontally_stretchable = true, horizontally_squashable = true })
 
-  elc(connections_frame, {type='flow', name='mlc-connections-flow', direction='horizontal', style = "player_input_horizontal_flow"})
+  elc(connections_frame, {type='flow', name='ai-combinator-connections-flow', direction='horizontal', style = "player_input_horizontal_flow"})
 
   -- Status light and text
   local status_flow = status_indicator.show(entity_frame, "utility/status_working", "Working")
-  gui_t.mlc_status_flow = status_flow
+  gui_t.status_flow = status_flow
   
   -- Entity preview
-  local entity_frame_border = elc(entity_frame, {type='frame', name='mlc-entity-frame-border', style='deep_frame_in_shallow_frame'})
+  local entity_frame_border = elc(entity_frame, {type='frame', name='ai-combinator-entity-frame-border', style='deep_frame_in_shallow_frame'})
 
-  local entity_preview = elc(entity_frame_border, {type='entity-preview', name='mlc-entity-preview'})
+  local entity_preview = elc(entity_frame_border, {type='entity-preview', name='ai-combinator-entity-preview'})
   entity_preview.entity = entity
   entity_preview.style.natural_height = 152
   entity_preview.style.horizontally_stretchable = true
   
   
   -- Progress bar with cancel button
-  local progress_flow = elc(entity_frame, {type='flow', name='mlc-progress-flow', direction='horizontal'}, {horizontally_stretchable=true, height=30})
-  local progress_bar = elc(progress_flow, {type='progressbar', name='mlc-progressbar', value=0, style='production_progressbar', caption=''}, {horizontally_stretchable=true})
+  local progress_flow = elc(entity_frame, {type='flow', name='ai-combinator-progress-flow', direction='horizontal'}, {horizontally_stretchable=true, height=30})
+  local progress_bar = elc(progress_flow, {type='progressbar', name='progressbar', value=0, style='production_progressbar', caption=''}, {horizontally_stretchable=true})
   progress_bar.style.horizontal_align = "center"
-  elc(progress_flow, {type='button', name='mlc-cancel-ai', caption='Cancel', style='red_button', tooltip='Cancel the current AI operation'}, {width=80, left_margin=4, height=25})
+  elc(progress_flow, {type='button', name='ai-combinator-cancel-ai', caption='Cancel', style='red_button', tooltip='Cancel the current AI operation'}, {width=80, left_margin=4, height=25})
   
-  elc(entity_frame, {type='label', name='mlc-task-title-label', caption='Task', style="semibold_label"})
+  elc(entity_frame, {type='label', name='ai-combinator-task-title-label', caption='Task', style="semibold_label"})
 
-  local task_label = elc(entity_frame, {type='label', name='mlc-task-label'}, {horizontally_squashable=true, single_line=false})
-  task_label.caption = mlc.task or NO_TASK_SET_DESCRIPTION
+  local task_label = elc(entity_frame, {type='label', name='task_label'}, {horizontally_squashable=true, single_line=false})
+  task_label.caption = combinator.task or NO_TASK_SET_DESCRIPTION
   task_label.style.maximal_width = 828
 
-  elc(entity_frame, {type="button", style="green_button", name='mlc-set-task', caption='Set Task'}, {horizontally_stretchable=true})
+  elc(entity_frame, {type="button", style="green_button", name='ai-combinator-set-task', caption='Set Task'}, {horizontally_stretchable=true})
 
-  elc(entity_frame, {type="button", style="button", name='mlc-edit-code', caption='Edit Source Code'}, {horizontally_stretchable=true})
+  elc(entity_frame, {type="button", style="button", name='ai-combinator-edit-code', caption='Edit Source Code'}, {horizontally_stretchable=true})
 
   elc(entity_frame, {type='line', direction='horizontal'}, {horizontally_stretchable=true})
 
   -- input and output signals
-  local input_output_flow = elc(entity_frame, {type='flow', name='mlc-input-output-flow', direction='horizontal', style="inset_frame_container_horizontal_flow"})
-  local input_flow = elc(input_output_flow, {type='flow', name='mlc-input-flow', direction='vertical'})
-  local output_flow = elc(input_output_flow, {type='flow', name='mlc-output-flow', direction='vertical'})
+  local input_output_flow = elc(entity_frame, {type='flow', name='ai-combinator-input-output-flow', direction='horizontal', style="inset_frame_container_horizontal_flow"})
+  local input_flow = elc(input_output_flow, {type='flow', name='ai-combinator-input-flow', direction='vertical'})
+  local output_flow = elc(input_output_flow, {type='flow', name='ai-combinator-output-flow', direction='vertical'})
 
-  elc(input_flow, {type='label', name='mlc-input-label', caption='Input Signals', style="semibold_label"})
-  elc(output_flow, {type='label', name='mlc-output-label', caption='Output Signals', style="semibold_label"})
+  elc(input_flow, {type='label', name='ai-combinator-input-label', caption='Input Signals', style="semibold_label"})
+  elc(output_flow, {type='label', name='ai-combinator-output-label', caption='Output Signals', style="semibold_label"})
 
   elc(input_flow, {type="frame", direction="vertical", style="ugg_deep_frame", name='input-signal-frame'})
   elc(output_flow, {type="frame", direction="vertical", style="ugg_deep_frame", name='output-signal-frame'})
@@ -255,8 +256,8 @@ function dialog.show(player, entity)
 
   elc(entity_frame, {type='line', direction='horizontal'}, {horizontally_stretchable=true})
 
-  local desc_container = elc(entity_frame, {type='flow', name='mlc-description-container', direction='vertical'})
-  gui_t.mlc_description_container = desc_container
+  local desc_container = elc(entity_frame, {type='flow', name='description_container', direction='vertical'})
+  gui_t.description_container = desc_container
 
   -- Initialize AI button states
   update_ai_buttons(uid)

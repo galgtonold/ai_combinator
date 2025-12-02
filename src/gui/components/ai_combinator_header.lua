@@ -8,9 +8,9 @@ end
 
 function component.update(uid)
   local gui_t = storage.guis[uid]
-	local mlc = storage.combinators[uid]
+	local combinator = storage.combinators[uid]
 
-  frame = gui_t.mlc_connections_flow
+  frame = gui_t.ai_combinator_connections_flow
   if not frame then
     return
   end
@@ -21,8 +21,8 @@ function component.update(uid)
     caption = "Input:",
     style = "subheader_caption_label"
   }
-  red_network = mlc.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_red)
-  green_network = mlc.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_green)
+  red_network = combinator.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_red)
+  green_network = combinator.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_green)
   circuit_connection_header.show(frame, red_network, green_network)
 
   local spacer = frame.add{
@@ -36,8 +36,8 @@ function component.update(uid)
     style = "subheader_caption_label"
   }
 
-  red_network = mlc.out_red.get_control_behavior().get_circuit_network(defines.wire_connector_id.circuit_red)
-  green_network = mlc.out_green.get_control_behavior().get_circuit_network(defines.wire_connector_id.circuit_green)
+  red_network = combinator.out_red.get_control_behavior().get_circuit_network(defines.wire_connector_id.circuit_red)
+  green_network = combinator.out_green.get_control_behavior().get_circuit_network(defines.wire_connector_id.circuit_green)
   if red_network and red_network.connected_circuit_count < 3 then
     red_network = nil
   end

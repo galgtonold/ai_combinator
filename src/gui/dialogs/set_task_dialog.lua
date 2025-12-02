@@ -11,7 +11,7 @@ function dialog.show(player_index, uid)
   local player = game.players[player_index]
 	local gui_t = storage.guis[uid]
 
-  local combinator_frame = gui_t.mlc_gui
+  local combinator_frame = gui_t.ai_combinator_gui
   local popup_location = {
     x = combinator_frame.location.x + 28,
     y = combinator_frame.location.y + 500
@@ -31,14 +31,14 @@ function dialog.show(player_index, uid)
     tags = {uid = uid, dialog = true},
   }
 
-  local task_text = gui_t.mlc_task_label.caption
+  local task_text = gui_t.task_label.caption
   if task_text == NO_TASK_SET_DESCRIPTION then
     task_text = ""
   end
 
   local task_textbox = content_flow.add{
     type = "text-box",
-    name = "mlc-task-input",
+    name = "ai-combinator-task-input",
     text = task_text,
     style = "edit_blueprint_description_textbox",
     tags = {uid = uid, dialog = true},

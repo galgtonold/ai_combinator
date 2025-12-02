@@ -35,11 +35,11 @@ end
 function dialog.show(player_index, uid)
   local player = game.players[player_index]
 	local gui_t = storage.guis[uid]
-	local mlc = storage.combinators[uid]
-	local mlc_err = mlc.err_parse or mlc.errun
+	local combinator = storage.combinators[uid]
+	local combinator_err = combinator.err_parse or combinator.errun
 
 
-  local combinator_frame = gui_t.mlc_gui
+  local combinator_frame = gui_t.ai_combinator_gui
   local popup_location = {
     x = combinator_frame.location.x + 28,
     y = combinator_frame.location.y + 500
@@ -55,7 +55,7 @@ function dialog.show(player_index, uid)
   local extra_buttons = {{
       type = "sprite-button",
       style = "frame_action_button",
-      sprite = "mlc-help",
+      sprite = "ai-combinator-help",
       tooltip = "Show help",
       tags = {show_help_button = true}
     }
@@ -69,22 +69,22 @@ function dialog.show(player_index, uid)
   }
 
   -- Get current code from the combinator
-  local current_code = mlc.code or ""
+  local current_code = combinator.code or ""
   
   -- Set current history index to the latest version if not already set
-  local history = mlc.code_history or {}
-  if not mlc.code_history_index or mlc.code_history_index < 1 then
-    mlc.code_history_index = #history
+  local history = combinator.code_history or {}
+  if not combinator.code_history_index or combinator.code_history_index < 1 then
+    combinator.code_history_index = #history
   end
 
   local code_textbox = content_flow.add{
     type = "text-box",
-    name = "mlc-edit-code-input",
+    name = "ai-combinator-edit-code-input",
     text = current_code,
     style = "edit_blueprint_description_textbox",
     tags = {uid = uid, dialog = true, edit_code_dialog = true},
   }
-  code_textbox.text = code_error_highlight(code_textbox.text, mlc_err)
+  code_textbox.text = code_error_highlight(code_textbox.text, combinator_err)
 
   code_textbox.word_wrap = true
   code_textbox.style.width = 600
@@ -110,7 +110,7 @@ function dialog.show(player_index, uid)
   
   local prev_button = history_flow.add{
     type = "sprite-button",
-    name = "mlc-history-prev",
+    name = "ai-combinator-history-prev",
     sprite = "utility/left_arrow",
     tooltip = "Previous version",
     style = "tool_button",
@@ -121,7 +121,7 @@ function dialog.show(player_index, uid)
   
   local history_info_label = history_flow.add{
     type = "label",
-    name = "mlc-history-info",
+    name = "ai-combinator-history-info",
     caption = "1/1",
     style = "label",
     tags = {uid = uid, dialog = true, edit_code_dialog = true},
@@ -131,7 +131,7 @@ function dialog.show(player_index, uid)
   
   local next_button = history_flow.add{
     type = "sprite-button",
-    name = "mlc-history-next",
+    name = "ai-combinator-history-next",
     sprite = "utility/right_arrow",
     tooltip = "Next version",
     style = "tool_button",
@@ -143,7 +143,7 @@ function dialog.show(player_index, uid)
   -- Version info
   local version_info = history_flow.add{
     type = "label",
-    name = "mlc-version-info",
+    name = "ai-combinator-version-info",
     caption = "",
     style = "label",
     tags = {uid = uid, dialog = true, edit_code_dialog = true},
@@ -190,14 +190,14 @@ end
 
 function dialog.update_history_navigation(uid)
   local gui_t = storage.guis[uid]
-  local mlc = storage.combinators[uid]
+  local combinator = storage.combinators[uid]
   
-  if not gui_t or not mlc or not gui_t.edit_code_prev_button then
+  if not gui_t or not combinator or not gui_t.edit_code_prev_button then
     return
   end
   
-  local history = mlc.code_history or {}
-  local current_index = mlc.code_history_index or #history
+  local history = combinator.code_history or {}
+  local current_index = combinator.code_history_index or #history
   
   -- Ensure current_index is valid
   if current_index < 1 then current_index = #history end
@@ -243,15 +243,15 @@ function dialog.update_history_navigation(uid)
 end
 
 function dialog.navigate_history(uid, direction)
-  local mlc = storage.combinators[uid]
+  local combinator = storage.combinators[uid]
   local gui_t = storage.guis[uid]
   
-  if not mlc or not gui_t or not gui_t.edit_code_textbox then
+  if not combinator or not gui_t or not gui_t.edit_code_textbox then
     return
   end
   
-  local history = mlc.code_history or {}
-  local current_index = mlc.code_history_index or #history
+  local history = combinator.code_history or {}
+  local current_index = combinator.code_history_index or #history
   
   if direction == "prev" and current_index > 1 then
     current_index = current_index - 1
@@ -261,7 +261,7 @@ function dialog.navigate_history(uid, direction)
     return -- No change
   end
   
-  mlc.code_history_index = current_index
+  combinator.code_history_index = current_index
   
   -- Update textbox with the selected version
   local selected_version = history[current_index]
