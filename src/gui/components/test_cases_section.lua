@@ -33,18 +33,15 @@ function update_ai_buttons(uid)
     
     local all_tests_pass = total_tests > 0 and passed_tests == total_tests
     local ai_operation_running = ai_operation_manager.is_operation_active(uid)
-    local max_attempts_reached = combinator.fix_attempt_count and combinator.fix_attempt_count >= 3
     
-    -- Disable button if all tests pass, AI is running, or max attempts reached
-    fix_button.enabled = not (all_tests_pass or ai_operation_running or max_attempts_reached)
+    -- Disable button if all tests pass or AI is running
+    fix_button.enabled = not (all_tests_pass or ai_operation_running)
     
     -- Update tooltip based on state
     if all_tests_pass then
       fix_button.tooltip = "All tests are passing - no fixes needed"
     elseif ai_operation_running then
       fix_button.tooltip = "AI operation in progress..."
-    elseif max_attempts_reached then
-      fix_button.tooltip = "Maximum fix attempts (3) reached"
     else
       fix_button.tooltip = "Automatically fix implementation to make all tests pass"
     end
@@ -358,6 +355,15 @@ local function on_test_generation_completed(event)
 end
 
 local function delete_test_case(uid, test_index)
+  local gui_t = storage.guis[uid]
+  if gui_t and gui_t.test_case_dialog and gui_t.test_case_dialog.valid then
+    local dialog_tags = gui_t.test_case_dialog.tags
+    -- Close the dialog if it's for the deleted test case or any subsequent one (due to index shift)
+    if dialog_tags and dialog_tags.test_index >= test_index then
+      gui_t.test_case_dialog.destroy()
+      gui_t.test_case_dialog = nil
+    end
+  end
   combinator_service.remove_test_case(uid, test_index)
 end
 
@@ -389,33 +395,18 @@ local function fix_failing_tests(uid)
   if not combinator then return end
   
   -- Check if any tests are failing
-  local failed_tests = {}
-  local passed_tests = 0
-  
-  for i, test_case in ipairs(combinator.test_cases or {}) do
-    if test_case.success then
-      passed_tests = passed_tests + 1
-    else
-      table.insert(failed_tests, {index = i, test_case = test_case})
+  local has_failures = false
+  for _, test_case in ipairs(combinator.test_cases or {}) do
+    if not test_case.success then
+      has_failures = true
+      break
     end
   end
   
-  if #failed_tests == 0 then
+  if not has_failures then
     game.print("[color=green]All tests are already passing![/color]")
     return
   end
-  
-  -- Initialize fix attempt counter if not present
-  if not combinator.fix_attempt_count then
-    combinator.fix_attempt_count = 0
-  end
-  
-  if combinator.fix_attempt_count >= 3 then
-    game.print("[color=red]Maximum fix attempts (3) reached. Cannot fix tests automatically.[/color]")
-    return
-  end
-  
-  combinator.fix_attempt_count = combinator.fix_attempt_count + 1
   
   -- Start AI operation
   local success, correlation_id = ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TEST_FIXING)
@@ -426,10 +417,9 @@ local function fix_failing_tests(uid)
     local current_code = combinator.code or ""
     
     -- Send fix request via bridge
-    bridge.send_fix_request(uid, task_description, current_code, failed_tests)
+    bridge.send_fix_request(uid, task_description, current_code, combinator.test_cases)
     
   else
-    combinator.fix_attempt_count = combinator.fix_attempt_count - 1  -- Rollback the attempt count
     game.print("[color=red]Failed to start test fixing operation[/color]")
   end
 end
@@ -437,18 +427,19 @@ end
 local function on_gui_click(event)
   if not event.element or not event.element.valid or not event.element.tags then return end
 
-  if event.element.tags.delete_test_case ~= nil then
-    delete_test_case(event.element.tags.uid, event.element.tags.delete_test_case)
-    component.update(event.element.tags.uid)
-  elseif event.element.tags.add_test_case then
+  if event.element.valid and event.element.tags.delete_test_case ~= nil then
+    local uid = event.element.tags.uid
+    delete_test_case(uid, event.element.tags.delete_test_case)
+    component.update(uid)
+  elseif event.element.valid and event.element.tags.add_test_case then
     local uid = event.element.tags.uid
     add_test_case(uid)
     component.update(uid)
-  elseif event.element.tags.auto_generate_tests then
+  elseif event.element.valid and event.element.tags.auto_generate_tests then
     auto_generate_test_cases(event.element.tags.uid)
-  elseif event.element.tags.fix_tests then
+  elseif event.element.valid and event.element.tags.fix_tests then
     fix_failing_tests(event.element.tags.uid)
-  elseif event.element.tags.edit_test_case then
+  elseif event.element.valid and event.element.tags.edit_test_case then
     test_case_dialog.show(event.player_index, event.element.tags.uid, event.element.tags.edit_test_case)
   end
 end

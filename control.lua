@@ -23,6 +23,8 @@ local vars_dialog = require('src/gui/dialogs/vars_dialog')
 local util = require('src/core/utils')
 local runtime = require('src/ai_combinator/runtime')
 local gui_updater = require('src/gui/gui_updater')
+---@diagnostic disable-next-line: unused-local
+local testing = require('src/testing/testing')
 
 
 -- ----- AI Combinator update processing -----
@@ -135,8 +137,8 @@ script.on_event(defines.events.on_gui_opened, function(ev)
 	if not gui_t then guis.open(player, e)
 	else
 		e = game.players[gui_t.gui.player_index or 0]
-		e = e and e.name or 'Another player'
-		player.print(e..' already opened this combinator', {1,1,0})
+		local player_name = e and e.name or 'Another player'
+		player.print(player_name..' already opened this combinator', {1,1,0})
 	end
 end)
 
@@ -151,7 +153,7 @@ remote.add_interface('ai-combinator', {run = function(uid_raw, count)
 	local combinator, combinator_env = storage.combinators[uid], memory.combinators[uid]
 	if not combinator or not combinator_env then
 		return remote_err('cannot find combinator with uid=%s', uid_raw) end
-	local err_n, st, err, err_last = 0
+	local err_n, st, err, err_last = 0, nil, nil, nil
 	for n = 1, tonumber(count) or 1 do
 		st, err = pcall(combinator_env._func)
 		if not st then err_n, err_last = err_n + 1, err or '[unspecified lua error]' end
@@ -182,22 +184,31 @@ local function update_signal_types_table()
 	local sig_str, sig
 	for k, sig in pairs(prototypes.virtual_signal) do
 		if sig.special then goto skip end -- anything/everything/each
+		---@diagnostic disable-next-line: missing-fields
 		sig_str, sig = circuit_network.cn_sig_str('virtual', k), {type='virtual', name=k, quality="normal"}
-		storage.signals_short[k], storage.signals[sig_str] = sig_str, sig
+		if sig_str then
+			storage.signals_short[k], storage.signals[sig_str] = sig_str, sig
+		end
 	::skip:: end
 	for t, protos in pairs{ fluid=prototypes.fluid,
 			item=prototypes.get_item_filtered{{filter='hidden', invert=true}} } do
 		for k, _ in pairs(protos) do
+			---@diagnostic disable-next-line: missing-fields
 			sig_str, sig = circuit_network.cn_sig_str(t, k), {type=t, name=k, quality="normal"}
-			storage.signals_short[k] = storage.signals_short[k] == nil and sig_str or false
-			storage.signals[sig_str] = sig
+			if sig_str then
+				storage.signals_short[k] = storage.signals_short[k] == nil and sig_str or false
+				storage.signals[sig_str] = sig
+			end
 	end end
 	for t, k in pairs(prototypes.recipe) do
+		---@diagnostic disable-next-line: missing-fields
 		sig_str, sig = circuit_network.cn_sig_str('recipe', t), {type='recipe', name=t, quality="normal"}
-		if storage.signals_short[t] == nil then
-			storage.signals_short[t] = sig_str
+		if sig_str then
+			if storage.signals_short[t] == nil then
+				storage.signals_short[t] = sig_str
+			end
+			storage.signals[sig_str] = sig
 		end
-		storage.signals[sig_str] = sig
 	end
 end
 

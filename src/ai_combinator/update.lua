@@ -38,12 +38,11 @@ function update.update_output(combinator, output_raw)
 		if not (ecc and ecc.valid) then goto skip end
 		n = 1
 		for sig, v in pairs(signals[k]) do
-			local qname = ""
-			sig,qname = cn.cn_sig_quality(sig)
+			local signal, quality = cn.cn_sig_quality(sig)
 			ps[n] = {value={name = "", quality = "", type = ""}, min=v}
-			ps[n].value.name = storage.signals[sig].name
-			ps[n].value.type = storage.signals[sig].type
-			ps[n].value.quality = qname or "normal"
+			ps[n].value.name = storage.signals[signal].name
+			ps[n].value.type = storage.signals[signal].type
+			ps[n].value.quality = quality or "normal"
 			n = n + 1
 		end
 		ecc.enabled = true
@@ -62,7 +61,7 @@ function update.update_led(combinator, combinator_env)
 	local st, cb = combinator.state, combinator.e.get_or_create_control_behavior()
 	if not (cb and cb.valid) then return end
 
-	local op, a, b, out = '*', combinator_env._uid, 0
+	local op, a, b, out = '*', combinator_env._uid, 0, nil
 	-- uid is uint, signal is int (signed), so must be negative if >=2^31
 	if a >= constants.INT32_SIGN_BIT then a = a - constants.INT32_TO_UINT32_OFFSET end
 	if not st then op = '*'
@@ -77,7 +76,7 @@ end
 
 function update.update_code(combinator, combinator_env, lua_env)
 	combinator.next_tick, combinator.state, combinator.err_parse, combinator.err_run, combinator.err_out = 0, nil, nil, nil, nil
-	local code, err = (combinator.code or '')
+	local code, err = (combinator.code or ''), nil
 	if code:match('^%s*(.-)%s*$') ~= '' then -- Check if not just whitespace
 		combinator_env._func, err = load(code, code, 't', lua_env)
 		if not combinator_env._func then combinator.err_parse, combinator.state = err, 'error' end

@@ -76,11 +76,15 @@ local function ensure_event_registered(event_name_or_id)
     end
     if type(event_key) == "number" or normal_event then
          -- Standard defines.events ID, register with script.on_event
+         ---@diagnostic disable-next-line: param-type-mismatch
          script.on_event(event_key, function(event)
              -- Validity checks
              if event then
+                 ---@diagnostic disable-next-line: undefined-field
                  if event.element and not event.element.valid then return end
+                 ---@diagnostic disable-next-line: undefined-field
                  if event.entity and not event.entity.valid then return end
+                 ---@diagnostic disable-next-line: undefined-field
                  if event.player_index and game.players[event.player_index] and not game.players[event.player_index].connected then return end
              end
              local handler_list = handlers[event_key]
@@ -181,6 +185,7 @@ function event_handler.remove_handler(events, handler)
                   -- else: It was a custom event, no script unregistration needed.
                   end
               elseif type(event_key) == "number" then
+                  ---@diagnostic disable-next-line: param-type-mismatch
                   script.on_event(event_key, nil) -- Unregister standard event
                   -- log(string.format("DEBUG [EventHandler]: Unregistered script.on_event for ID %d", event_key))
               end

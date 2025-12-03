@@ -15,6 +15,7 @@ local COMBINATOR_CORE_FILTER = {{filter='name', name='ai-combinator'}, {filter='
 --- Handle entity built event - initialize new combinator
 ---@param ev EventData Event data
 function entity_events.on_built(ev)
+	---@diagnostic disable-next-line: undefined-field
 	local e = ev.created_entity or ev.entity -- latter for revive event
 	if not e.valid then return end
 	local combinator = init.out_wire_connect_combinator{e=e}
@@ -27,7 +28,9 @@ function entity_events.on_built(ev)
 
 	-- Blueprints - try to restore settings from tags stored there on setup,
 	-- or fallback to old method with uid stored in a constant for simple copy-paste if tags fail
+	---@diagnostic disable-next-line: undefined-field
 	if ev.tags then
+		---@diagnostic disable-next-line: undefined-field
 		local deserialized_data = blueprint_serialization.deserialize_combinator(ev.tags)
 		combinator = blueprint_serialization.merge_combinator_data(combinator, deserialized_data)
 		storage.combinators[e.unit_number] = combinator
@@ -70,33 +73,42 @@ end
 --- Handle entity copy/clone event
 ---@param ev EventData Event data
 function entity_events.on_entity_copy(ev)
-	if ev.destination.name == 'ai-combinator-core' then return ev.destination.destroy() end -- for clone event
-	if not (ev.source.name == 'ai-combinator' and ev.destination.name == 'ai-combinator') then return end
-	local uid_src, uid_dst = ev.source.unit_number, ev.destination.unit_number
+	---@diagnostic disable-next-line: undefined-field
+	local destination = ev.destination
+	---@diagnostic disable-next-line: undefined-field
+	local source = ev.source
+
+	if destination.name == 'ai-combinator-core' then return destination.destroy() end -- for clone event
+	if not (source.name == 'ai-combinator' and destination.name == 'ai-combinator') then return end
+	local uid_src, uid_dst = source.unit_number, destination.unit_number
 	local combinator_old_outs = storage.combinators[uid_dst]
 	init.combinator_remove(uid_dst, true)
 	if combinator_old_outs
 		then combinator_old_outs = {combinator_old_outs.out_red, combinator_old_outs.out_green}
 		-- For cloned entities, ai-combinator-core's might not yet exist - create/register them here, remove clones above
 		-- It'd give zero-outputs for one tick, but probably not an issue, easier to handle it like this
-		else combinator_old_outs = {init.out_wire_connect_both(ev.destination)} end
+		else combinator_old_outs = {init.out_wire_connect_both(destination)} end
 	storage.combinators[uid_dst] = util.deep_copy(storage.combinators[uid_src])
 	local combinator_dst = storage.combinators[uid_dst]
-	combinator_dst.e, combinator_dst.next_tick, combinator_dst.core = ev.destination, 0, nil
+	combinator_dst.e, combinator_dst.next_tick, combinator_dst.core = destination, 0, nil
 	combinator_dst.out_red, combinator_dst.out_green = table.unpack(combinator_old_outs)
 end
 
 --- Handle entity destroyed event
 ---@param ev EventData Event data
 function entity_events.on_destroyed(ev)
-	init.combinator_remove(ev.entity.unit_number)
+	---@diagnostic disable-next-line: undefined-field
+	local entity = ev.entity
+	init.combinator_remove(entity.unit_number)
 end
 
 --- Handle entity mined event
 ---@param ev EventData Event data
 function entity_events.on_mined(ev)
-	storage.combinators[ev.entity.unit_number].removed_by_player = true
-	init.combinator_remove(ev.entity.unit_number, nil, true)
+	---@diagnostic disable-next-line: undefined-field
+	local entity = ev.entity
+	storage.combinators[entity.unit_number].removed_by_player = true
+	init.combinator_remove(entity.unit_number, nil, true)
 end
 
 --- Register all entity-related event handlers

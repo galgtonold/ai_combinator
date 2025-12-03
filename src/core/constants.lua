@@ -56,7 +56,6 @@ constants.events = {
   on_ai_operation_state_changed = script.generate_event_name(),
   on_fix_completed = script.generate_event_name(),
   
-  -- New events for separation of concerns
   on_task_updated = script.generate_event_name(),
   on_code_history_changed = script.generate_event_name(),
   on_code_changed = script.generate_event_name(),

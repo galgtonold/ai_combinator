@@ -45,7 +45,7 @@ function bridge.send_test_generation_request(uid, task_description, source_code)
   send_message(payload)
 end
 
-function bridge.send_fix_request(uid, task_description, current_code, test_failures)
+function bridge.send_fix_request(uid, task_description, current_code, test_cases)
   -- Get correlation ID from the operation manager
   local operation_info = ai_operation_manager.get_operation_info(uid)
   local correlation_id = operation_info and operation_info.correlation_id or uid
@@ -57,63 +57,71 @@ function bridge.send_fix_request(uid, task_description, current_code, test_failu
   
   fix_prompt = fix_prompt .. "CURRENT CODE TO FIX:\n" .. (current_code or "No code available") .. "\n\n"
   
-  if test_failures and #test_failures > 0 then
-    fix_prompt = fix_prompt .. "FAILING TESTS:\n"
-    for i, failure in ipairs(test_failures) do
-      failure = failure.test_case
-      fix_prompt = fix_prompt .. string.format("Test %d: %s\n", i, failure.name or "Unnamed Test")
+  if test_cases and #test_cases > 0 then
+    fix_prompt = fix_prompt .. "TEST RESULTS:\n"
+    for i, test_case in ipairs(test_cases) do
+      local status = test_case.success and "PASSED" or "FAILED"
+      fix_prompt = fix_prompt .. string.format("Test %d: %s [%s]\n", i, test_case.name or "Unnamed Test", status)
       
-      if failure.red_input and #failure.red_input > 0 then
-        fix_prompt = fix_prompt .. "  Red inputs: "
-        for _, signal in ipairs(failure.red_input) do
+      fix_prompt = fix_prompt .. "  Red inputs: "
+      if test_case.red_input and #test_case.red_input > 0 then
+        for _, signal in ipairs(test_case.red_input) do
           fix_prompt = fix_prompt .. string.format("%s=%d ", signal.signal.name or signal.signal, signal.count)
         end
-        fix_prompt = fix_prompt .. "\n"
+      else
+        fix_prompt = fix_prompt .. "None"
       end
+      fix_prompt = fix_prompt .. "\n"
       
-      if failure.green_input and #failure.green_input > 0 then
-        fix_prompt = fix_prompt .. "  Green inputs: "
-        for _, signal in ipairs(failure.green_input) do
+      fix_prompt = fix_prompt .. "  Green inputs: "
+      if test_case.green_input and #test_case.green_input > 0 then
+        for _, signal in ipairs(test_case.green_input) do
           fix_prompt = fix_prompt .. string.format("%s=%d ", signal.signal.name or signal.signal, signal.count)
         end
-        fix_prompt = fix_prompt .. "\n"
+      else
+        fix_prompt = fix_prompt .. "None"
       end
+      fix_prompt = fix_prompt .. "\n"
       
-      if failure.expected_output and #failure.expected_output > 0 then
-        fix_prompt = fix_prompt .. "  Expected outputs: "
-        for _, signal in ipairs(failure.expected_output) do
+      fix_prompt = fix_prompt .. "  Expected outputs: "
+      if test_case.expected_output and #test_case.expected_output > 0 then
+        for _, signal in ipairs(test_case.expected_output) do
           fix_prompt = fix_prompt .. string.format("%s=%d ", signal.signal.name or signal.signal, signal.count)
         end
-        fix_prompt = fix_prompt .. "\n"
+      else
+        fix_prompt = fix_prompt .. "None"
       end
+      fix_prompt = fix_prompt .. "\n"
       
-      if failure.actual_output and #failure.actual_output > 0 then
-        fix_prompt = fix_prompt .. "  Actual outputs: "
-        for _, signal in ipairs(failure.actual_output) do
+      fix_prompt = fix_prompt .. "  Actual outputs: "
+      if test_case.actual_output and #test_case.actual_output > 0 then
+        for _, signal in ipairs(test_case.actual_output) do
           fix_prompt = fix_prompt .. string.format("%s=%d ", signal.signal.name or signal.signal, signal.count)
         end
-        fix_prompt = fix_prompt .. "\n"
+      else
+        fix_prompt = fix_prompt .. "None"
+      end
+      fix_prompt = fix_prompt .. "\n"
+      
+      if test_case.expected_print and test_case.expected_print ~= "" then
+        fix_prompt = fix_prompt .. "  Expected print: " .. test_case.expected_print .. "\n"
       end
       
-      if failure.expected_print and failure.expected_print ~= "" then
-        fix_prompt = fix_prompt .. "  Expected print: " .. failure.expected_print .. "\n"
+      if test_case.actual_print and test_case.actual_print ~= "" then
+        fix_prompt = fix_prompt .. "  Actual print: " .. test_case.actual_print .. "\n"
       end
       
-      if failure.actual_print and failure.actual_print ~= "" then
-        fix_prompt = fix_prompt .. "  Actual print: " .. failure.actual_print .. "\n"
-      end
-      
-      if failure.variables and #failure.variables > 0 then
-        fix_prompt = fix_prompt .. "  Variables: "
-        for _, var in ipairs(failure.variables) do
+      fix_prompt = fix_prompt .. "  Variables: "
+      if test_case.variables and #test_case.variables > 0 then
+        for _, var in ipairs(test_case.variables) do
           fix_prompt = fix_prompt .. string.format("%s=%s ", var.name, tostring(var.value))
         end
-        fix_prompt = fix_prompt .. "\n"
+      else
+        fix_prompt = fix_prompt .. "None"
       end
+      fix_prompt = fix_prompt .. "\n"
       
-      if failure.game_tick then
-        fix_prompt = fix_prompt .. "  Game tick: " .. failure.game_tick .. "\n"
-      end
+      fix_prompt = fix_prompt .. "  Game tick: " .. (test_case.game_tick or 1) .. "\n"
       
       fix_prompt = fix_prompt .. "\n"
     end

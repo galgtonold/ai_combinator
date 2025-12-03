@@ -183,7 +183,9 @@ function value_parser.parse_value(str)
           return false, "Invalid value: " .. value
         end
         
-        result[parsed_key] = parsed_val
+        if parsed_key ~= nil then
+          result[parsed_key] = parsed_val
+        end
         current = ""
       else
         current = current .. char
@@ -215,7 +217,9 @@ function value_parser.parse_value(str)
         return false, "Invalid value: " .. value
       end
       
-      result[parsed_key] = parsed_val
+      if parsed_key ~= nil then
+        result[parsed_key] = parsed_val
+      end
     end
     
     return true, result

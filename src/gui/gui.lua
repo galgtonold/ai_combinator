@@ -20,9 +20,6 @@ local edit_code_dialog = require('src/gui/dialogs/edit_code_dialog')
 local ai_combinator_dialog = require('src/gui/dialogs/ai_combinator_dialog')
 local help_dialog = require('src/gui/dialogs/help_dialog')
 
-
-local testing = require('src/testing/testing')
-
 local guis = {}
 
 local function vars_window_uid(gui)

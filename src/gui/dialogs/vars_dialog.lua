@@ -7,7 +7,7 @@ function dialog.show(pn, uid, paused, toggle_on)
 	if gui_exists then
 		if toggle_on or (toggle_on == nil and storage.guis_player[gui_k] ~= uid) then
 			storage.guis_player[gui_k] = uid
-			return vars_window_update(player, uid, paused)
+			return dialog.update(player, uid, paused)
 		elseif not toggle_on then return gui_exists.destroy() end
 	elseif toggle_on == false then return end -- force off toggle
 
@@ -53,11 +53,10 @@ function dialog.update(player, uid, pause_update)
 		vars_box.selectable, vars_box.read_only, vars_box.tooltip = false, true, ''
 	end
 
-    gui_vars_serpent_opts = {metatostring=true, nocode=true}
-
 	if not combinator then vars_box.text = '--- [color=#911818]AI Combinator is Offline[/color] ---'
 	else
-		local text, esc, vs, c = '', function(s) return tostring(s):gsub('%[', '[ ') end
+		local text, esc, vs, c = '', function(s) return tostring(s):gsub('%[', '[ ') end, nil, nil
+		local gui_vars_serpent_opts = {metatostring=true, nocode=true}
 		for k, v in pairs(combinator.vars) do
 			if k:match('^__') then goto skip end
 			if text ~= '' then text = text..'\n' end

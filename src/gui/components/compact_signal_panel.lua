@@ -97,7 +97,7 @@ local function on_gui_elem_changed(event)
   local slot_index = element.tags.slot_index
       
   -- Get a copy of the signal array to modify
-  local signal_array = util.shallow_copy(get_signal_array(uid, test_index, signal_type))
+  local signal_array = utils.shallow_copy(get_signal_array(uid, test_index, signal_type))
 
   -- Ensure the array is large enough
   while #signal_array < slot_index do
@@ -154,7 +154,7 @@ end
 local function on_quantity_set(event)
   if not event.edit_test_signal_quantity then return end
 
-  local signal_array = util.shallow_copy(get_signal_array(event.uid, event.test_index, event.signal_type))
+  local signal_array = utils.shallow_copy(get_signal_array(event.uid, event.test_index, event.signal_type))
   if not signal_array then return end
 
   signal_array[event.slot_index] = signal_array[event.slot_index] or {}

@@ -44,7 +44,7 @@ function runtime.run_combinator_tick(combinator, combinator_env, tick, guis)
 	local out_tick, out_diff = combinator.next_tick, util.shallow_copy(combinator_env._out)
 	local dbg = combinator.vars.debug and function(fmt, ...)
 		log((' -- ai-combinator [%s]: %s'):format(combinator_env._uid, fmt:format(...))) end
-	combinator.vars.delay, combinator.vars.var, combinator.vars.debug, combinator.vars.irq, combinator.irq = 1, combinator.vars.var or {}
+	combinator.vars.delay, combinator.vars.var, combinator.vars.debug, combinator.vars.irq, combinator.irq = 1, combinator.vars.var or {}, nil, nil, nil
 
 	if combinator.e.energy < constants.ENERGY_FAIL_LEVEL then
 		combinator.state = 'no-power'
@@ -68,7 +68,7 @@ function runtime.run_combinator_tick(combinator, combinator_env, tick, guis)
 		local st, err = pcall(combinator_env._func)
 		if not st then combinator.err_run = err or '[unspecified lua error]'
 		else
-			combinator.state, combinator.err_run = 'run'
+			combinator.state, combinator.err_run = 'run', nil
 			if combinator_env._out['ai-combinator-error'] ~= 0 then -- can be used to stop combinator
 				combinator.err_run = 'Internal ai-combinator-error signal set'
 				combinator_env._out['ai-combinator-error'] = nil -- signal will be emitted via combinator.state

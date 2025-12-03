@@ -55,6 +55,7 @@ end
 --- Handle blueprint setup event - store combinator settings in blueprint tags
 ---@param ev EventData Event data from on_player_setup_blueprint
 function blueprint_events.on_setup_blueprint(ev)
+	---@diagnostic disable-next-line: undefined-field
 	local p = game.players[ev.player_index]
 	if not (p and p.valid) then return end
 
@@ -66,10 +67,12 @@ function blueprint_events.on_setup_blueprint(ev)
 
 	local bp_es = bp.get_blueprint_entities()
 	if not bp_es then return end -- tiles-only blueprint, no combinators
+	---@diagnostic disable-next-line: undefined-field
 	local bp_map = ev.mapping.valid and ev.mapping.get() or {}
 	local bp_combinator_uids = blueprint_map_validate(bp_es, bp_map) -- try using ev.mapping first
 	if not bp_combinator_uids then -- fallback - map entities via blueprint_match_position
 		-- Entity name filters are not used because both ghost/real entities must be matched
+		---@diagnostic disable-next-line: undefined-field
 		local map_es = p.surface.find_entities(ev.area)
 		bp_combinator_uids = blueprint_match_positions(bp_es, map_es)
 	end

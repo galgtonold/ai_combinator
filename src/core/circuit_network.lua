@@ -42,6 +42,7 @@ end
 function circuit_network.cn_sig_name(sig_str)
 	-- Returns abbreviated signal name without prefix
 	local signame, qname = circuit_network.cn_sig_quality(sig_str)
+	if not signame then return sig_str end
 	local k = signame:sub(2)
 	local sig_str2 = storage.signals_short[k]
 	if sig_str2 == false then return sig_str

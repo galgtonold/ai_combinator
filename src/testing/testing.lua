@@ -38,19 +38,19 @@ function testing.test_case_matches(expected, actual)
 end
 
 local function expand_signal_short_names_and_remove_zeroes(signals)
+  local new_signals = {}
   for signal, count in pairs(signals) do
-    if count == 0 then
-      signals[signal] = nil
-    else
+    if count ~= 0 then
       local new_name = circuit_network.cn_sig_str(signal)
-      signals[new_name] = count
-      if new_name ~= signal then
-        signals[signal] = nil
+      if new_name then
+        new_signals[new_name] = count
+      else
+        new_signals[signal] = count
       end
     end
   end
   
-  return signals
+  return new_signals
 end
 
 -- Wrap a signal table to translate key lookups like the live environment does
@@ -198,9 +198,11 @@ local function signals_to_associative(signal_array)
   for i, signal in ipairs(signal_array) do
     if signal and signal.signal then
       local signal_name = circuit_network.cn_sig_str(signal.signal)
-      result[signal_name] = signal.count or 0
-      if result[signal_name] == 0 then
-        result[signal_name] = nil
+      if signal_name then
+        result[signal_name] = signal.count or 0
+        if result[signal_name] == 0 then
+          result[signal_name] = nil
+        end
       end
     end
   end
