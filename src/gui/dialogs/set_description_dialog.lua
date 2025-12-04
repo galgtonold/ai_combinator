@@ -11,6 +11,11 @@ function dialog.show(player_index, uid)
 	local gui_t = storage.guis[uid]
   local combinator = storage.combinators[uid]
 
+  if gui_t.description_dialog and gui_t.description_dialog.valid then
+    gui_t.description_dialog.destroy()
+    gui_t.description_dialog = nil
+  end
+
   local combinator_frame = gui_t.ai_combinator_gui
   local popup_location = {
     x = combinator_frame.location.x + 28,

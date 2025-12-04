@@ -11,6 +11,11 @@ function dialog.show(player_index, uid)
   local player = game.players[player_index]
 	local gui_t = storage.guis[uid]
 
+  if gui_t.task_dialog and gui_t.task_dialog.valid then
+    gui_t.task_dialog.destroy()
+    gui_t.task_dialog = nil
+  end
+
   local combinator_frame = gui_t.ai_combinator_gui
   local popup_location = {
     x = combinator_frame.location.x + 28,

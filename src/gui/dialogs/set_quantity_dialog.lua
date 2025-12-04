@@ -81,7 +81,6 @@ function dialog.show(player_index, uid, default_value, tags)
   ok_btn.style.left_margin = 8
   
   -- Store references for later access
-  local gui_t = storage.guis[uid]
   gui_t.quantity_dialog = quantity_frame
   gui_t.quantity_input = quantity_input
 end
