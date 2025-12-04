@@ -55,7 +55,9 @@ local function on_gui_click(event)
   if not el.valid or not el.tags then return end
 
   if event.element.tags.close_button then
-    dialog_manager.close_dialog(event.player_index)
+    -- Find the dialog frame (parent of titlebar flow)
+    local dialog_frame = event.element.parent.parent
+    dialog_manager.close_dialog(event.player_index, dialog_frame)
   end
 end
 

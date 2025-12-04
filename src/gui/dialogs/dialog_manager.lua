@@ -91,11 +91,54 @@ function dialog_manager.close_all_dialogs(player_index)
   dialog_manager.dialog_stacks[player_index] = {}
 end
 
+-- Close all dialogs associated with a specific combinator UID
+function dialog_manager.close_dialogs_by_uid(player_index, uid)
+  ensure_dialog_stack(player_index)
+  local stack = dialog_manager.dialog_stacks[player_index]
+  for i = #stack, 1, -1 do
+    local dialog = stack[i]
+    if dialog and dialog.valid and dialog.tags and dialog.tags.uid == uid then
+      dialog.destroy()
+      table.remove(stack, i)
+    end
+  end
+end
+
 -- Clean up dialog stack when player is removed
 function dialog_manager.cleanup_player(player_index)
   if dialog_manager.dialog_stacks[player_index] then
     dialog_manager.close_all_dialogs(player_index)
     dialog_manager.dialog_stacks[player_index] = nil
+  end
+end
+
+-- Close a specific dialog and all dialogs above it in the stack
+function dialog_manager.close_dialog_and_children(player_index, dialog_element)
+  ensure_dialog_stack(player_index)
+  local stack = dialog_manager.dialog_stacks[player_index]
+  
+  -- Find the index of the dialog in the stack
+  local index = -1
+  for i = #stack, 1, -1 do
+    if stack[i] == dialog_element then
+      index = i
+      break
+    end
+  end
+  
+  -- If found, pop everything from the top down to (and including) this dialog
+  if index ~= -1 then
+    for i = #stack, index, -1 do
+      local dialog = table.remove(stack)
+      if dialog and dialog.valid then
+        dialog.destroy()
+      end
+    end
+  else
+    -- If not found in stack but valid, just destroy it (fallback)
+    if dialog_element and dialog_element.valid then
+      dialog_element.destroy()
+    end
   end
 end
 
@@ -105,9 +148,12 @@ function dialog_manager.set_current_dialog(player_index, dialog)
   dialog_manager.push_dialog(player_index, dialog)
 end
 
-function dialog_manager.close_dialog(player_index)
-  -- For backward compatibility, this will pop the topmost dialog
-  dialog_manager.pop_dialog(player_index)
+function dialog_manager.close_dialog(player_index, dialog_element)
+  if dialog_element then
+    dialog_manager.close_dialog_and_children(player_index, dialog_element)
+  else
+    dialog_manager.pop_dialog(player_index)
+  end
 end
 
 function dialog_manager.close_background_dialogs(event)

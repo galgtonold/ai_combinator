@@ -427,20 +427,23 @@ end
 local function on_gui_click(event)
   if not event.element or not event.element.valid or not event.element.tags then return end
 
-  if event.element.valid and event.element.tags.delete_test_case ~= nil then
-    local uid = event.element.tags.uid
-    delete_test_case(uid, event.element.tags.delete_test_case)
+  local tags = event.element.tags
+  local uid = tags.uid
+  
+  if not uid then return end
+
+  if tags.delete_test_case ~= nil then
+    delete_test_case(uid, tags.delete_test_case)
     component.update(uid)
-  elseif event.element.valid and event.element.tags.add_test_case then
-    local uid = event.element.tags.uid
+  elseif tags.add_test_case then
     add_test_case(uid)
     component.update(uid)
-  elseif event.element.valid and event.element.tags.auto_generate_tests then
-    auto_generate_test_cases(event.element.tags.uid)
-  elseif event.element.valid and event.element.tags.fix_tests then
-    fix_failing_tests(event.element.tags.uid)
-  elseif event.element.valid and event.element.tags.edit_test_case then
-    test_case_dialog.show(event.player_index, event.element.tags.uid, event.element.tags.edit_test_case)
+  elseif tags.auto_generate_tests then
+    auto_generate_test_cases(uid)
+  elseif tags.fix_tests then
+    fix_failing_tests(uid)
+  elseif tags.edit_test_case then
+    test_case_dialog.show(event.player_index, uid, tags.edit_test_case)
   end
 end
 

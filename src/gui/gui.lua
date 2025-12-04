@@ -63,21 +63,26 @@ function guis.open(player, e)
 end
 
 function guis.close(uid)
+  -- Find player index for this uid
+  local player_index
+  for pid, p_uid in pairs(storage.guis_player) do
+    if p_uid == uid then
+      player_index = pid
+      break
+    end
+  end
+
 	local gui_t = storage.guis[uid]
 	local gui = gui_t and (gui_t.gui or gui_t.gui)
 	if gui then gui.destroy() end
 
-  -- Also destroy any open dialogs
-  if gui_t then
-    if gui_t.edit_code_dialog and gui_t.edit_code_dialog.valid then
-      gui_t.edit_code_dialog.destroy()
-    end
-    if gui_t.test_case_dialog and gui_t.test_case_dialog.valid then
-      gui_t.test_case_dialog.destroy()
-    end
+  -- Close all dialogs managed by dialog_manager
+  if player_index then
+    dialog_manager.close_dialogs_by_uid(player_index, uid)
+    storage.guis_player[player_index] = nil
   end
 
-	storage.guis[uid] = nil
+  storage.guis[uid] = nil
 end
 
 event_handler.add_handler(constants.events.on_description_updated, function(event)
