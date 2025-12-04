@@ -11,7 +11,7 @@ function component.update(uid)
 	local combinator = storage.combinators[uid]
 
   frame = gui_t.ai_combinator_connections_flow
-  if not frame then
+  if not frame or not frame.valid then
     return
   end
 
