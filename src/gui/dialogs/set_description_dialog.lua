@@ -12,8 +12,7 @@ function dialog.show(player_index, uid)
   local combinator = storage.combinators[uid]
 
   if gui_t.description_dialog and gui_t.description_dialog.valid then
-    gui_t.description_dialog.destroy()
-    gui_t.description_dialog = nil
+    dialog_manager.close_dialog_and_children(player_index, gui_t.description_dialog)
   end
 
   local combinator_frame = gui_t.ai_combinator_gui

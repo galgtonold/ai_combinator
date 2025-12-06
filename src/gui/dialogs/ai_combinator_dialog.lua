@@ -37,6 +37,10 @@ local function update_signals(uid)
   if not gui_t or not gui_t.input_signal_frame or not gui_t.input_signal_frame.valid then
     return
   end
+  
+  if not gui_t.output_signal_frame or not gui_t.output_signal_frame.valid then
+    return
+  end
 
   red_network = combinator.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_red)
   green_network = combinator.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_green)
@@ -56,14 +60,12 @@ local function update_signals(uid)
     end
   end
 
-  if gui_t.output_signal_frame and gui_t.output_signal_frame.valid then
-    draw_signals(
-      gui_t.output_signal_frame,
-      signals,
-      {},
-      {}
-    )
-  end
+  draw_signals(
+    gui_t.output_signal_frame,
+    signals,
+    {},
+    {}
+  )
 end
 
 local function update_ai_buttons(uid)
@@ -76,12 +78,12 @@ local function update_ai_buttons(uid)
   -- Check if any AI operation is in progress
   local ai_operation_in_progress = ai_operation_manager.is_operation_active(uid)
   
-  -- Update Set Task button if it exists
+  -- Update Set Task button if it exists and is valid
   if gui_t.ai_combinator_set_task and gui_t.ai_combinator_set_task.valid then
     gui_t.ai_combinator_set_task.enabled = not ai_operation_in_progress
   end
   
-  -- Update Cancel AI button if it exists
+  -- Update Cancel AI button if it exists and is valid
   if gui_t.ai_combinator_cancel_ai and gui_t.ai_combinator_cancel_ai.valid then
     gui_t.ai_combinator_cancel_ai.enabled = ai_operation_in_progress
   end
@@ -90,6 +92,11 @@ end
 local function update_status(uid)
   local gui_t = storage.guis[uid]
   local combinator = storage.combinators[uid]
+  
+  if not gui_t then
+    return
+  end
+  
   local status_flow = gui_t.status_flow
   if not status_flow or not status_flow.valid then
     return
@@ -142,18 +149,20 @@ local function update_status(uid)
 
   -- Update task request progress_bar using the new manager
   local progress_bar = gui_t.progressbar
+  if not progress_bar or not progress_bar.valid then
+    return
+  end
+  
   local ai_operation_in_progress = ai_operation_manager.is_operation_active(uid)
   
-  if progress_bar and progress_bar.valid then
-    if ai_operation_in_progress then
-      local operation_progress = ai_operation_manager.get_operation_progress(uid)
-      local operation_text = ai_operation_manager.get_operation_progress_text(uid) or "Processing..."
-      progress_bar.value = operation_progress
-      progress_bar.caption = operation_text
-    else
-      progress_bar.value = 0
-      progress_bar.caption = ""
-    end
+  if ai_operation_in_progress then
+    local operation_progress = ai_operation_manager.get_operation_progress(uid)
+    local operation_text = ai_operation_manager.get_operation_progress_text(uid) or "Processing..."
+    progress_bar.value = operation_progress
+    progress_bar.caption = operation_text
+  else
+    progress_bar.value = 0
+    progress_bar.caption = ""
   end
   
   -- Update AI operation buttons

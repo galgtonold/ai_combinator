@@ -93,14 +93,12 @@ function dialog.show(player_index, uid, test_index)
     return
   end
 
-  -- Close existing dialogs of this type or conflicting types
+  -- Close existing dialogs of this type or conflicting types (and their children)
   if gui_t.edit_code_dialog and gui_t.edit_code_dialog.valid then
-    gui_t.edit_code_dialog.destroy()
-    gui_t.edit_code_dialog = nil
+    dialog_manager.close_dialog_and_children(player_index, gui_t.edit_code_dialog)
   end
   if gui_t.test_case_dialog and gui_t.test_case_dialog.valid then
-    gui_t.test_case_dialog.destroy()
-    gui_t.test_case_dialog = nil
+    dialog_manager.close_dialog_and_children(player_index, gui_t.test_case_dialog)
   end
   
   local combinator_frame = gui_t.ai_combinator_gui

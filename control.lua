@@ -136,9 +136,15 @@ script.on_event(defines.events.on_gui_opened, function(ev)
 	local gui_t = storage.guis[e.unit_number]
 	if not gui_t then guis.open(player, e)
 	else
-		e = game.players[gui_t.gui.player_index or 0]
-		local player_name = e and e.name or 'Another player'
-		player.print(player_name..' already opened this combinator', {1,1,0})
+		if gui_t.gui and gui_t.gui.valid then
+			local other_player = game.players[gui_t.gui.player_index or 0]
+			local player_name = other_player and other_player.name or 'Another player'
+			player.print(player_name..' already opened this combinator', {1,1,0})
+		else
+			-- GUI reference is stale, clean up and reopen
+			guis.close(e.unit_number, ev.player_index)
+			guis.open(player, e)
+		end
 	end
 end)
 

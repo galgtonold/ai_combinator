@@ -40,7 +40,7 @@ local function on_code_commit(ev)
   local uid, gui_t = next(storage.guis)
   if not uid then return end
   combinator_service.save_code(uid)
-  guis.close(uid)
+  guis.close(uid, ev.player_index)
 end
 
 -- Close all dialogs and combinator GUI
@@ -49,7 +49,7 @@ local function on_code_close(ev)
   help_dialog.show(ev.player_index, false)
   local uid, gui_t = next(storage.guis)
   if not uid then return end
-  guis.close(uid)
+  guis.close(uid, ev.player_index)
 end
 
 -- Toggle variables window

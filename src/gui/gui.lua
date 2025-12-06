@@ -51,7 +51,7 @@ end
 
 function guis.open(player, e)
 	local uid_old = storage.guis_player[player.index]
-	if uid_old then player.opened = guis.close(uid_old) end
+	if uid_old then player.opened = guis.close(uid_old, player.index) end
 	local gui_t = ai_combinator_dialog.show(player, e)
 	player.opened = gui_t.gui
 	storage.guis_player[player.index] = e.unit_number
@@ -62,24 +62,44 @@ function guis.open(player, e)
 	return gui_t
 end
 
-function guis.close(uid)
-  -- Find player index for this uid
-  local player_index
-  for pid, p_uid in pairs(storage.guis_player) do
-    if p_uid == uid then
-      player_index = pid
-      break
-    end
+function guis.close(uid, player_index)
+	local gui_t = storage.guis[uid]
+	local gui = gui_t and gui_t.gui
+	
+	-- Try to get player_index from the GUI if not provided
+	if not player_index and gui and gui.valid then
+		player_index = gui.player_index
+	end
+	
+	if gui and gui.valid then
+		gui.destroy()
+	end
+
+  -- Close all open dialogs in the stack for this player
+  if player_index then
+    dialog_manager.close_all_dialogs(player_index)
   end
 
-	local gui_t = storage.guis[uid]
-	local gui = gui_t and (gui_t.gui or gui_t.gui)
-	if gui then gui.destroy() end
-
-  -- Close all dialogs managed by dialog_manager
-  if player_index then
-    dialog_manager.close_dialogs_by_uid(player_index, uid)
-    storage.guis_player[player_index] = nil
+  -- Also destroy any open dialogs that might have been tracked separately (fallback)
+  if gui_t then
+    if gui_t.edit_code_dialog and gui_t.edit_code_dialog.valid then
+      gui_t.edit_code_dialog.destroy()
+    end
+    if gui_t.test_case_dialog and gui_t.test_case_dialog.valid then
+      gui_t.test_case_dialog.destroy()
+    end
+    if gui_t.task_dialog and gui_t.task_dialog.valid then
+      gui_t.task_dialog.destroy()
+    end
+    if gui_t.quantity_dialog and gui_t.quantity_dialog.valid then
+      gui_t.quantity_dialog.destroy()
+    end
+    if gui_t.description_dialog and gui_t.description_dialog.valid then
+      gui_t.description_dialog.destroy()
+    end
+    if gui_t.test_name_dialog and gui_t.test_name_dialog.valid then
+      gui_t.test_name_dialog.destroy()
+    end
   end
 
   storage.guis[uid] = nil
@@ -312,7 +332,7 @@ function guis.on_gui_click(event)
 	end
 
   if element.tags and element.tags.close_combinator_ui then
-    guis.close(element.tags.uid)
+    guis.close(element.tags.uid, event.player_index)
     return
   end
 
@@ -328,7 +348,7 @@ function guis.on_gui_click(event)
 	if not uid then return end
 
 	local combinator = storage.combinators[uid]
-	if not combinator then return guis.close(uid) end
+	if not combinator then return guis.close(uid, event.player_index) end
 	local el_id = element.name
 	local rmb = defines.mouse_button_type.right
 
@@ -339,8 +359,8 @@ function guis.on_gui_click(event)
   elseif el_id == 'ai-combinator-desc-btn-flow' then set_description_dialog.show(event.player_index, uid)
   elseif el_id == 'ai-combinator-edit-code' then edit_code_dialog.show(event.player_index, uid)
 	elseif el_id == 'ai-combinator-save' then combinator_service.save_code(uid)
-	elseif el_id == 'ai-combinator-commit' then combinator_service.save_code(uid); guis.close(uid)
-	elseif el_id == 'ai-combinator-close' then guis.close(uid)
+	elseif el_id == 'ai-combinator-commit' then combinator_service.save_code(uid); guis.close(uid, event.player_index)
+	elseif el_id == 'ai-combinator-close' then guis.close(uid, event.player_index)
 	elseif el_id == 'ai-combinator-vars' then
 		if event.button == rmb then
 			if event.shift then code_manager.clear_outputs(uid)
@@ -362,7 +382,7 @@ function guis.on_gui_close(ev)
 	local uid, gui_t = find_gui(ev)
 	if not uid then return end
 	local p = game.players[ev.player_index]
-	guis.close(uid)
+	guis.close(uid, ev.player_index)
 end
 
 function guis.vars_window_toggle(pn, toggle_on)

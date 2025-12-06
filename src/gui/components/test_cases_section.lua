@@ -4,6 +4,7 @@ local circuit_network = require('src/core/circuit_network')
 local test_case_dialog = require('src/gui/dialogs/test_case_dialog')
 local bridge = require("src/services/bridge")
 local ai_operation_manager = require('src/core/ai_operation_manager')
+local dialog_manager = require("src/gui/dialogs/dialog_manager")
 
 
 local combinator_service = require('src/ai_combinator/combinator_service')
@@ -354,14 +355,13 @@ local function on_test_generation_completed(event)
   end
 end
 
-local function delete_test_case(uid, test_index)
+local function delete_test_case(uid, test_index, player_index)
   local gui_t = storage.guis[uid]
   if gui_t and gui_t.test_case_dialog and gui_t.test_case_dialog.valid then
     local dialog_tags = gui_t.test_case_dialog.tags
-    -- Close the dialog if it's for the deleted test case or any subsequent one (due to index shift)
+    -- Close the dialog and its children if it's for the deleted test case or any subsequent one (due to index shift)
     if dialog_tags and dialog_tags.test_index >= test_index then
-      gui_t.test_case_dialog.destroy()
-      gui_t.test_case_dialog = nil
+      dialog_manager.close_dialog_and_children(player_index, gui_t.test_case_dialog)
     end
   end
   combinator_service.remove_test_case(uid, test_index)
@@ -427,23 +427,20 @@ end
 local function on_gui_click(event)
   if not event.element or not event.element.valid or not event.element.tags then return end
 
-  local tags = event.element.tags
-  local uid = tags.uid
-  
-  if not uid then return end
-
-  if tags.delete_test_case ~= nil then
-    delete_test_case(uid, tags.delete_test_case)
+  if event.element.valid and event.element.tags.delete_test_case ~= nil then
+    local uid = event.element.tags.uid
+    delete_test_case(uid, event.element.tags.delete_test_case, event.player_index)
     component.update(uid)
-  elseif tags.add_test_case then
+  elseif event.element.valid and event.element.tags.add_test_case then
+    local uid = event.element.tags.uid
     add_test_case(uid)
     component.update(uid)
-  elseif tags.auto_generate_tests then
-    auto_generate_test_cases(uid)
-  elseif tags.fix_tests then
-    fix_failing_tests(uid)
-  elseif tags.edit_test_case then
-    test_case_dialog.show(event.player_index, uid, tags.edit_test_case)
+  elseif event.element.valid and event.element.tags.auto_generate_tests then
+    auto_generate_test_cases(event.element.tags.uid)
+  elseif event.element.valid and event.element.tags.fix_tests then
+    fix_failing_tests(event.element.tags.uid)
+  elseif event.element.valid and event.element.tags.edit_test_case then
+    test_case_dialog.show(event.player_index, event.element.tags.uid, event.element.tags.edit_test_case)
   end
 end
 

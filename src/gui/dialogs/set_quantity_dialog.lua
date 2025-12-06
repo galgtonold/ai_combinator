@@ -12,12 +12,10 @@ function dialog.show(player_index, uid, default_value, tags)
 -- Simple quantity input dialog
   local player = game.players[player_index]
   local combinator = storage.combinators[uid]
-  -- Prevent multiple instances - close existing dialog if it exists
+  -- Prevent multiple instances - close existing dialog and its children if it exists
   local gui_t = storage.guis[uid]
   if gui_t and gui_t.quantity_dialog and gui_t.quantity_dialog.valid then
-    gui_t.quantity_dialog.destroy()
-    gui_t.quantity_dialog = nil
-    gui_t.quantity_input = nil
+    dialog_manager.close_dialog_and_children(player_index, gui_t.quantity_dialog)
   end
 
   tags.uid = uid

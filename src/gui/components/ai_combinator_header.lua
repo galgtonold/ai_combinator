@@ -8,9 +8,13 @@ end
 
 function component.update(uid)
   local gui_t = storage.guis[uid]
-	local combinator = storage.combinators[uid]
+  local combinator = storage.combinators[uid]
 
-  frame = gui_t.ai_combinator_connections_flow
+  if not gui_t then
+    return
+  end
+
+  local frame = gui_t.ai_combinator_connections_flow
   if not frame or not frame.valid then
     return
   end

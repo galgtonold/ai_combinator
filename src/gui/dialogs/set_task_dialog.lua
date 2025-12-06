@@ -12,8 +12,7 @@ function dialog.show(player_index, uid)
 	local gui_t = storage.guis[uid]
 
   if gui_t.task_dialog and gui_t.task_dialog.valid then
-    gui_t.task_dialog.destroy()
-    gui_t.task_dialog = nil
+    dialog_manager.close_dialog_and_children(player_index, gui_t.task_dialog)
   end
 
   local combinator_frame = gui_t.ai_combinator_gui
@@ -24,16 +23,16 @@ function dialog.show(player_index, uid)
   local popup_frame = player.gui.screen.add{
     type = "frame",
     direction = "vertical",
-    tags = {uid = uid, dialog = true},
+    tags = {uid = uid, dialog = true, task_dialog = true},
   }
   gui_t.task_dialog = popup_frame
   dialog_manager.set_current_dialog(player_index, popup_frame)
   popup_frame.location = popup_location
-  titlebar.show(popup_frame, "Set Task", {task_dialog_close = true}, {uid = uid, dialog = true})
+  titlebar.show(popup_frame, "Set Task", {task_dialog_close = true}, {uid = uid, dialog = true, task_dialog = true})
   local content_flow = popup_frame.add{
     type = "flow",
     direction = "vertical",
-    tags = {uid = uid, dialog = true},
+    tags = {uid = uid, dialog = true, task_dialog = true},
   }
 
   local task_text = gui_t.task_label.caption
@@ -46,7 +45,7 @@ function dialog.show(player_index, uid)
     name = "ai-combinator-task-input",
     text = task_text,
     style = "edit_blueprint_description_textbox",
-    tags = {uid = uid, dialog = true},
+    tags = {uid = uid, dialog = true, task_dialog = true},
   }
   task_textbox.word_wrap = true
   task_textbox.style.width = 400
@@ -56,7 +55,7 @@ function dialog.show(player_index, uid)
   local confirm_flow = content_flow.add{
     type = "flow",
     direction = "horizontal",
-    tags = {uid = uid, dialog = true},
+    tags = {uid = uid, dialog = true, task_dialog = true},
   }
   task_textbox.focus()
 
@@ -64,7 +63,7 @@ function dialog.show(player_index, uid)
     type = "empty-widget",
     style = "draggable_space",
     ignored_by_interaction = true,
-    tags = {uid = uid, dialog = true},
+    tags = {uid = uid, dialog = true, task_dialog = true},
   }
   filler.style.horizontally_stretchable = true
   filler.style.vertically_stretchable = true
@@ -73,7 +72,7 @@ function dialog.show(player_index, uid)
     type = "button",
     caption = "Set Task",
     style = "confirm_button",
-    tags = {uid = uid, set_task_button = true, dialog = true},
+    tags = {uid = uid, set_task_button = true, dialog = true, task_dialog = true},
   }
   confirm_button.style.left_margin = 8
 end

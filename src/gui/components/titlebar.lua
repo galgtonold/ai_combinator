@@ -55,9 +55,27 @@ local function on_gui_click(event)
   if not el.valid or not el.tags then return end
 
   if event.element.tags.close_button then
-    -- Find the dialog frame (parent of titlebar flow)
-    local dialog_frame = event.element.parent.parent
-    dialog_manager.close_dialog(event.player_index, dialog_frame)
+    -- If this is the main combinator UI close, let gui.lua handle it
+    if event.element.tags.close_combinator_ui then
+      return -- Handled by guis.on_gui_click
+    end
+    
+    -- Find the parent dialog frame (walk up until we find a frame)
+    local dialog_frame = el.parent
+    while dialog_frame and dialog_frame.valid do
+      if dialog_frame.type == "frame" and dialog_frame.parent and dialog_frame.parent.name == "screen" then
+        break
+      end
+      dialog_frame = dialog_frame.parent
+    end
+    
+    -- Close this dialog and all child dialogs (dialogs opened after this one)
+    if dialog_frame and dialog_frame.valid then
+      dialog_manager.close_dialog_and_children(event.player_index, dialog_frame)
+    else
+      -- Fallback to just closing the topmost dialog
+      dialog_manager.close_dialog(event.player_index)
+    end
   end
 end
 
