@@ -63,8 +63,8 @@ jobs:
           name: ai-combinator-launcher-windows
           path: |
             launcher/build/*.exe
-            launcher/build/*.exe.blockmap
-            launcher/build/latest.yml
+            launcher/build/*.nupkg
+            launcher/build/RELEASES
           retention-days: 7
       
       - name: Get version from tag
@@ -81,7 +81,8 @@ jobs:
           prerelease: false
           files: |
             launcher/build/*.exe
-            launcher/build/latest.yml
+            launcher/build/*.nupkg
+            launcher/build/RELEASES
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

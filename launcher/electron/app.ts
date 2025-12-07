@@ -12,18 +12,29 @@ import {
   createLogger 
 } from "../shared";
 
+// Handle Squirrel events on Windows (install, update, uninstall)
+// This must be at the top before any other code runs
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+if (require('electron-squirrel-startup')) app.quit();
+
 // Using require for update-electron-app as it doesn't have ES module exports
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { updateElectronApp } = require('update-electron-app');
 
 const log = createLogger('App');
+const updateLog = createLogger('AutoUpdater');
 
 let mainWindow: BrowserWindow;
 let configManager: ConfigManager;
 let factorioManager: FactorioManager;
 let aiBridgeManager: AIBridgeManager;
 
-updateElectronApp();
+// Only run auto-update in packaged app
+if (app.isPackaged) {
+  updateElectronApp({
+    logger: updateLog,
+  });
+}
 
 app.once("ready", main);
 
