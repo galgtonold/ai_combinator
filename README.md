@@ -53,7 +53,6 @@ Windows may show a SmartScreen warning because the launcher isn't code-signed. T
 - 🔓 **Fully open source** - all code is public in this repository
 - 🔨 **Built in public** - [GitHub Actions](https://github.com/galgtonold/ai_combinator/actions) builds the exe automatically from source
 - 🔍 **Verifiable** - compare the release with the source code yourself
-- 👥 **Community reviewed** - join our [Discord](https://discord.gg/HYVuqC8kdP) to discuss
 
 ### First Combinator
 
@@ -99,20 +98,20 @@ AI-generated code can be unpredictable. The test case system solves this by lett
 
 ![Test Case Interface](images/test-cases-ui.png)
 
-### Example: Items Per Minute Calculator
+### Example: Multi-Signal Threshold Detector
 
-You want a combinator that calculates throughput - items passing through per minute. This requires tracking values over time, which is tricky to get right.
+You want a combinator that outputs 1 when at least two signals exceed 1000. This requires checking multiple conditions, which AI can handle but might get wrong.
 
-**Task:** *"Calculate items per minute from iron-plate signal, output on signal-T"*
+**Task:** *"If at least two signals are above 1000, return 1"*
 
-| Test Case | Red Wire Input | Tick | Expected Output | Description |
-|-----------|---------------|------|-----------------|-------------|
-| Initial | iron-plate: 100 | 0 | signal-T: 0 | No data yet |
-| After 1 min | iron-plate: 200 | 3600 | signal-T: 100 | 100 items in 60s = 100/min |
-| Sustained | iron-plate: 500 | 7200 | signal-T: 300 | 300 more in next 60s |
-| Zero flow | iron-plate: 500 | 10800 | signal-T: 0 | No change = 0/min |
+| Test Case | Red Wire Input | Expected Output | Description |
+|-----------|---------------|-----------------|-------------|
+| None above | iron-plate: 500, copper-plate: 800 | signal-1: 0 | Both below threshold |
+| One above | iron-plate: 1500, copper-plate: 800 | signal-1: 0 | Only one exceeds 1000 |
+| Two above | iron-plate: 1500, copper-plate: 2000 | signal-1: 1 | Two signals exceed threshold |
+| Three above | iron-plate: 1500, copper-plate: 2000, steel-plate: 3000 | signal-1: 1 | More than two also works |
 
-This example shows how test cases can validate complex stateful logic - the combinator must remember previous values and calculate deltas correctly.
+This example shows how test cases catch edge cases - especially the boundary between "one above" and "two above" that AI might miscalculate.
 
 ![Test Case Validation](images/test-case-validation.gif)
 

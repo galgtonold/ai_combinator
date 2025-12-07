@@ -262,12 +262,11 @@ end
 
 event_handler.add_handler(constants.events.on_code_updated, function(event)
   combinator_service.save_code(event.uid, event.code, event.source_type)
-
-  update_all_test_cases(event.uid)
+  -- Test case update is triggered by on_code_changed event raised by save_code
 end)
 
-event_handler.add_handler(constants.events.on_task_request_completed, function(event) 
-  -- Regular task completion - update test cases
+-- When code changes (after being saved), re-evaluate all test cases
+event_handler.add_handler(constants.events.on_code_changed, function(event)
   update_all_test_cases(event.uid)
 end)
 
