@@ -5,7 +5,7 @@
   - frame_button_clicked.png
 -->
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   import FrameButton from '../buttons/FrameButton.svelte';
   import ipc from '../../utils/ipc';
   import draggableSpaceTop from '/graphics/draggable_space_top.png';
@@ -13,6 +13,12 @@
   import draggableSpaceBottom from '/graphics/draggable_space_bottom.png';
 
   const dispatch = createEventDispatcher();
+
+  let appVersion = $state("");
+
+  onMount(async () => {
+    appVersion = await ipc.getVersion("app");
+  });
 
   function minimizeWindow() {
     dispatch('minimize');
@@ -33,7 +39,12 @@
 
 <div class="title-bar">
   <div class="title-bar-inner">
-    <div class="title-bar-text">AI Combinator Launcher</div>
+    <div class="title-bar-text">
+      AI Combinator Launcher
+      {#if appVersion}
+        <span class="version">v{appVersion}</span>
+      {/if}
+    </div>
     <div class="title-bar-draggable">
       <div 
         class="title-bar-background"
@@ -102,6 +113,15 @@
     color: #ffe6c0; /* New heading color */
     font-weight: 600;
     padding: 0 15px 0 15px;
+    white-space: nowrap;
+  }
+
+  .version {
+    font-size: 12px;
+    color: #a0a0a0;
+    font-weight: 400;
+    margin-left: 8px;
+    vertical-align: middle;
   }
   
   .title-bar-draggable {

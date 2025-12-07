@@ -137,11 +137,11 @@ export interface FactorioStatusUpdate {
  */
 export interface ContextBridge {
   /**
-   * Get the version of Electron or Node.js
-   * @param opt - Version type to retrieve
-   * @returns Version string (e.g., "28.2.3")
+   * Get the version of the app, Electron, or Node.js
+   * @param opt - Version type to retrieve: 'app' for launcher version, 'electron' or 'node' for runtime versions
+   * @returns Version string (e.g., "0.1.1")
    */
-  getVersion: (opt: "electron" | "node") => Promise<string>;
+  getVersion: (opt: "app" | "electron" | "node") => Promise<string>;
   
   /**
    * Load the current application configuration

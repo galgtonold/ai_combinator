@@ -1,5 +1,5 @@
 // IPC handlers module - separates business logic from IPC communication
-import { ipcMain, dialog, BrowserWindow, shell } from "electron";
+import { app, ipcMain, dialog, BrowserWindow, shell } from "electron";
 import { ConfigManager } from "../managers/config-manager";
 import { FactorioManager } from "../managers/factorio-manager";
 import { AIBridgeManager } from "../managers/ai-bridge-manager";
@@ -137,7 +137,10 @@ export class IPCHandlers {
     });
 
     // System info handlers
-    ipcMain.handle("get-version", (_, key: "electron" | "node") => {
+    ipcMain.handle("get-version", (_, key: "electron" | "node" | "app") => {
+      if (key === "app") {
+        return app.getVersion();
+      }
       return String(process.versions[key]);
     });
 

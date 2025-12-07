@@ -6,7 +6,7 @@ import type { ContextBridge, FactorioStatusUpdate, LaunchResult, AIBridgeResult 
  * This implements the ContextBridge interface defined in shared/types.ts
  */
 const bridge: ContextBridge = {
-  getVersion: async (opt) => {
+  getVersion: async (opt: "app" | "electron" | "node") => {
     return await ipcRenderer.invoke("get-version", opt);
   },
 
