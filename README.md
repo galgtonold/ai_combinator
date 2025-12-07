@@ -41,16 +41,26 @@ The AI Combinator reads signals from red/green wires and outputs signals - just 
    - Select provider and enter your API key
    - Choose a model
 
-4. **Start Factorio through the launcher** - mod installation is automatic
+4. **Start Factorio through the launcher** - additionally you'll have to activate the mod in factorio
 
 ![Launcher Interface](images/launcher-setup.png)
+
+### Security Note
+
+Windows may show a SmartScreen warning because the launcher isn't code-signed. This is normal for open-source projects.
+
+**Why you can trust it:**
+- 🔓 **Fully open source** - all code is public in this repository
+- 🔨 **Built in public** - [GitHub Actions](https://github.com/galgtonold/ai_combinator/actions) builds the exe automatically from source
+- 🔍 **Verifiable** - compare the release with the source code yourself
+- 👥 **Community reviewed** - join our [Discord](https://discord.gg/HYVuqC8kdP) to discuss
 
 ### First Combinator
 
 1. Research **AI Combinator** in the circuit network tech tree
 2. Craft and place one, connect it to your circuit network
 3. Click to open the interface
-4. Describe what you want: *"Output signal A = 1 when iron-plate signal is below 1000"*
+4. Describe what you want: *"Output signal A = 1 when at least 3 input signals are below 1000"*
 5. Click **Generate** and wire the output to your system
 
 ![In-Game Usage](images/combinator-placement.gif)
@@ -66,7 +76,7 @@ The AI Combinator is a standard combinator with one key difference: you describe
 
 **Outputs:**
 - Calculated signals to connected devices
-- Optional console messages for debugging
+- Optional console messages for player communication
 
 **Persistent State:**
 - Variables survive between game ticks
@@ -74,7 +84,7 @@ The AI Combinator is a standard combinator with one key difference: you describe
 
 **Limitations:**
 - Cannot directly control entities - only circuit signals
-- Cannot read inventories - use circuit-connected sensors
+- Cannot read inventories
 - All interaction happens through the circuit network
 
 ## 🧪 Test Cases: Making AI Reliable
@@ -83,24 +93,26 @@ AI-generated code can be unpredictable. The test case system solves this by lett
 
 ### How It Works
 
-1. **Define test cases** with specific input signals and expected outputs
-2. **Generate code** - the AI sees your test cases and writes code to pass them
-3. **Run tests** - instantly verify the code works correctly
-4. **Auto-fix failures** - if tests fail, click "Fix with AI" to regenerate
+1. **Define test cases** with specific input signals and expected outputs - or autogenerate baseline test cases using AI
+2. **Run tests** - instantly verify the code works correctly
+3. **Auto-fix failures** - if tests fail, click "Fix with AI" to regenerate (might be needed multiple times)
 
 ![Test Case Interface](images/test-cases-ui.png)
 
-### Example: Low Resource Warning
+### Example: Items Per Minute Calculator
 
-You want a combinator that outputs a warning signal when iron is low:
+You want a combinator that calculates throughput - items passing through per minute. This requires tracking values over time, which is tricky to get right.
 
-| Test Case | Red Wire Input | Expected Output |
-|-----------|---------------|-----------------|
-| Iron OK | iron-plate: 5000 | (nothing) |
-| Iron Low | iron-plate: 500 | signal-A: 1 |
-| Iron Empty | iron-plate: 0 | signal-A: 1 |
+**Task:** *"Calculate items per minute from iron-plate signal, output on signal-T"*
 
-With these test cases defined, the AI generates code that handles all scenarios correctly - and you can verify it instantly.
+| Test Case | Red Wire Input | Tick | Expected Output | Description |
+|-----------|---------------|------|-----------------|-------------|
+| Initial | iron-plate: 100 | 0 | signal-T: 0 | No data yet |
+| After 1 min | iron-plate: 200 | 3600 | signal-T: 100 | 100 items in 60s = 100/min |
+| Sustained | iron-plate: 500 | 7200 | signal-T: 300 | 300 more in next 60s |
+| Zero flow | iron-plate: 500 | 10800 | signal-T: 0 | No change = 0/min |
+
+This example shows how test cases can validate complex stateful logic - the combinator must remember previous values and calculate deltas correctly.
 
 ![Test Case Validation](images/test-case-validation.gif)
 
