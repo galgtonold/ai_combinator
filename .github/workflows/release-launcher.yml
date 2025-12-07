@@ -47,17 +47,17 @@ jobs:
         working-directory: launcher
         run: npm run build:electron
       
-      # electron-builder handles publishing to GitHub releases directly
-      # via the "publish" config in package.json
-      - name: Package and publish
+      - name: Package application
         working-directory: launcher
         run: npm run package
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: List build artifacts
-        working-directory: launcher/build/squirrel-windows
-        run: dir
+        working-directory: launcher/build
+        run: |
+          dir
+          dir squirrel-windows
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -68,3 +68,17 @@ jobs:
             launcher/build/squirrel-windows/*.nupkg
             launcher/build/squirrel-windows/RELEASES
           retention-days: 7
+      
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: false
+          prerelease: false
+          files: |
+            launcher/build/squirrel-windows/*.exe
+            launcher/build/squirrel-windows/*.nupkg
+            launcher/build/squirrel-windows/RELEASES
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

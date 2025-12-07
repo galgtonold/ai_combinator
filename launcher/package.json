@@ -1,6 +1,6 @@
 {
   "name": "ai-combinator-launcher",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Launcher for Factorio AI Combinator mod",
   "main": "dist/electron/app.js",
   "scripts": {
@@ -41,11 +41,7 @@
       "en-US"
     ],
     "compression": "maximum",
-    "publish": {
-      "provider": "github",
-      "owner": "galgtonold",
-      "repo": "ai_combinator"
-    },
+    "publish": null,
     "squirrelWindows": {
       "iconUrl": "https://raw.githubusercontent.com/galgtonold/ai_combinator/main/launcher/assets/icon.ico"
     },
