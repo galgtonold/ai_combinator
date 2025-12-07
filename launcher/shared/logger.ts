@@ -138,6 +138,16 @@ class Logger {
   }
 
   /**
+   * Generic log method (alias for info)
+   * Provided for compatibility with libraries expecting console-like interface
+   * @param message - Message to log
+   * @param args - Additional arguments to log
+   */
+  log(message: string, ...args: unknown[]): void {
+    this.info(message, ...args);
+  }
+
+  /**
    * Create a child logger with an additional prefix
    * 
    * Useful for creating module-specific loggers while maintaining
