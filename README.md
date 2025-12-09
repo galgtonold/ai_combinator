@@ -23,6 +23,10 @@ The AI Combinator reads signals from red/green wires and outputs signals - just 
 
 ![AI Code Generation](images/code-generation-demo.gif)
 
+
+<video width="630" height="300" src="https://github.com/user-attachments/assets/004219f9-826c-4fdb-a1be-fdc3b156ff01"></video>
+
+
 ## 🚀 Getting Started
 
 ### Requirements
