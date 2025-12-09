@@ -34,16 +34,20 @@ function update_ai_buttons(uid)
         end
 
         local all_tests_pass = total_tests > 0 and passed_tests == total_tests
+        local has_code_errors = combinator.err_parse or combinator.err_run or combinator.err_out
         local ai_operation_running = ai_operation_manager.is_operation_active(uid)
 
-        -- Disable button if all tests pass or AI is running
-        fix_button.enabled = not (all_tests_pass or ai_operation_running)
+        -- Enable button if there are failing tests OR code errors, and AI is not running
+        local needs_fix = (not all_tests_pass) or has_code_errors
+        fix_button.enabled = needs_fix and not ai_operation_running
 
         -- Update tooltip based on state
-        if all_tests_pass then
-            fix_button.tooltip = "All tests are passing - no fixes needed"
-        elseif ai_operation_running then
+        if ai_operation_running then
             fix_button.tooltip = "AI operation in progress..."
+        elseif has_code_errors then
+            fix_button.tooltip = "Fix code errors with AI"
+        elseif all_tests_pass then
+            fix_button.tooltip = "All tests are passing - no fixes needed"
         else
             fix_button.tooltip = "Automatically fix implementation to make all tests pass"
         end
@@ -411,8 +415,11 @@ local function fix_failing_tests(uid)
         end
     end
 
-    if not has_failures then
-        game.print("[color=green]All tests are already passing![/color]")
+    -- Check if there are code errors
+    local has_code_errors = combinator.err_parse or combinator.err_run or combinator.err_out
+
+    if not has_failures and not has_code_errors then
+        game.print("[color=green]All tests are already passing and no errors![/color]")
         return
     end
 
