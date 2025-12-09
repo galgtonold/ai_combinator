@@ -113,10 +113,10 @@ You want a combinator that outputs 1 when at least two signals exceed 1000. This
 
 | Test Case | Red Wire Input | Expected Output | Description |
 |-----------|---------------|-----------------|-------------|
-| None above | iron-plate: 500, copper-plate: 800 | signal-1: 0 | Both below threshold |
-| One above | iron-plate: 1500, copper-plate: 800 | signal-1: 0 | Only one exceeds 1000 |
-| Two above | iron-plate: 1500, copper-plate: 2000 | signal-1: 1 | Two signals exceed threshold |
-| Three above | iron-plate: 1500, copper-plate: 2000, steel-plate: 3000 | signal-1: 1 | More than two also works |
+| None above | iron-plate: 500, copper-plate: 800 | signal-A: 0 | Both below threshold |
+| One above | iron-plate: 1500, copper-plate: 800 | signal-A: 0 | Only one exceeds 1000 |
+| Two above | iron-plate: 1500, copper-plate: 2000 | signal-A: 1 | Two signals exceed threshold |
+| Three above | iron-plate: 1500, copper-plate: 2000, steel-plate: 3000 | signal-A: 1 | More than two also works |
 
 This example shows how test cases catch edge cases - especially the boundary between "one above" and "two above" that AI might miscalculate.
 
