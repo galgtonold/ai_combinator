@@ -2,53 +2,51 @@ local circuit_connection_header = require("src/gui/components/circuit_connection
 
 local component = {}
 
-function component.show()
-
-end
+function component.show() end
 
 function component.update(uid)
-  local gui_t = storage.guis[uid]
-  local combinator = storage.combinators[uid]
+    local gui_t = storage.guis[uid]
+    local combinator = storage.combinators[uid]
 
-  if not gui_t then
-    return
-  end
+    if not gui_t then
+        return
+    end
 
-  local frame = gui_t.ai_combinator_connections_flow
-  if not frame or not frame.valid then
-    return
-  end
+    local frame = gui_t.ai_combinator_connections_flow
+    if not frame or not frame.valid then
+        return
+    end
 
-  frame.clear()
-  frame.add{
-    type = "label",
-    caption = "Input:",
-    style = "subheader_caption_label"
-  }
-  red_network = combinator.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_red)
-  green_network = combinator.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_green)
-  circuit_connection_header.show(frame, red_network, green_network)
+    frame.clear()
+    frame.add({
+        type = "label",
+        caption = "Input:",
+        style = "subheader_caption_label",
+    })
+    red_network = combinator.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_red)
+    green_network = combinator.e.get_or_create_control_behavior().get_circuit_network(defines.wire_connector_id.combinator_input_green)
+    circuit_connection_header.show(frame, red_network, green_network)
 
-  local spacer = frame.add{
-    type = "empty-widget",
-  }
-  spacer.style.horizontally_stretchable = true
+    local spacer = frame.add({
+        type = "empty-widget",
+    })
+    spacer.style.horizontally_stretchable = true
 
-  frame.add{
-    type = "label",
-    caption = "Output:",
-    style = "subheader_caption_label"
-  }
+    frame.add({
+        type = "label",
+        caption = "Output:",
+        style = "subheader_caption_label",
+    })
 
-  red_network = combinator.out_red.get_control_behavior().get_circuit_network(defines.wire_connector_id.circuit_red)
-  green_network = combinator.out_green.get_control_behavior().get_circuit_network(defines.wire_connector_id.circuit_green)
-  if red_network and red_network.connected_circuit_count < 3 then
-    red_network = nil
-  end
-  if green_network and green_network.connected_circuit_count < 3 then
-    green_network = nil
-  end
-  circuit_connection_header.show(frame, red_network, green_network)
+    red_network = combinator.out_red.get_control_behavior().get_circuit_network(defines.wire_connector_id.circuit_red)
+    green_network = combinator.out_green.get_control_behavior().get_circuit_network(defines.wire_connector_id.circuit_green)
+    if red_network and red_network.connected_circuit_count < 3 then
+        red_network = nil
+    end
+    if green_network and green_network.connected_circuit_count < 3 then
+        green_network = nil
+    end
+    circuit_connection_header.show(frame, red_network, green_network)
 end
 
 return component

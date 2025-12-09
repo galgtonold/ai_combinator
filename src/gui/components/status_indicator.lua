@@ -1,28 +1,30 @@
 local component = {
-  status = {
-    RED = "utility/status_not_working",
-    GREEN = "utility/status_working",
-    YELLOW = "utility/status_yellow"
-  }
+    status = {
+        RED = "utility/status_not_working",
+        GREEN = "utility/status_working",
+        YELLOW = "utility/status_yellow",
+    },
 }
 
 function component.show(parent, sprite, status_text)
-  local status_flow = parent.add{type='flow', name='ai-combinator-status-flow', direction='horizontal'}
-  status_flow.style.vertical_align = 'center'
-  component.update(status_flow, sprite, status_text)
+    local status_flow = parent.add({ type = "flow", name = "ai-combinator-status-flow", direction = "horizontal" })
+    status_flow.style.vertical_align = "center"
+    component.update(status_flow, sprite, status_text)
 
-  return status_flow
+    return status_flow
 end
 
 function component.update(parent, sprite, status_text)
-  if not parent or not parent.valid then return end
+    if not parent or not parent.valid then
+        return
+    end
 
-  parent.clear()
+    parent.clear()
 
-  -- Add status elements
-  local status_sprite = parent.add{type = 'sprite', style = 'status_image', sprite = sprite}
-  status_sprite.style.stretch_image_to_widget_size = true
-  parent.add{type = 'label', name='ai-combinator-status-text', caption=status_text}
+    -- Add status elements
+    local status_sprite = parent.add({ type = "sprite", style = "status_image", sprite = sprite })
+    status_sprite.style.stretch_image_to_widget_size = true
+    parent.add({ type = "label", name = "ai-combinator-status-text", caption = status_text })
 end
 
 return component

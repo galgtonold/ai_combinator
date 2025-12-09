@@ -4,61 +4,61 @@ local collapsible_section = {}
 
 -- Text formatting utilities
 local function format_variable(name)
-    return '[color=#ffe6c0]' .. name .. '[/color]'
+    return "[color=#ffe6c0]" .. name .. "[/color]"
 end
 
 local function format_code(code)
-    return '[font=default-listbox][color=#e6e6e6]' .. code .. '[/color][/font]'
+    return "[font=default-listbox][color=#e6e6e6]" .. code .. "[/color][/font]"
 end
 
 local function format_header(text)
-    return '[font=default-semibold]' .. text .. '[/font]'
+    return "[font=default-semibold]" .. text .. "[/font]"
 end
 
 local function format_subheader(text)
-    return '[font=default-semibold][color=#ffcc80]' .. text .. '[/color][/font]'
+    return "[font=default-semibold][color=#ffcc80]" .. text .. "[/color][/font]"
 end
 
 local function format_warning()
-    return '[color=#ffaa55]⚠[/color] '
+    return "[color=#ffaa55]⚠[/color] "
 end
 
 local function format_check()
-    return '[color=#90EE90]✓[/color] '
+    return "[color=#90EE90]✓[/color] "
 end
 
 -- Content builder functions
 function collapsible_section.add_text(parent, text)
-    parent.add{type='label', caption=text}
+    parent.add({ type = "label", caption = text })
 end
 
 function collapsible_section.add_variable_desc(parent, var_name, description, indent)
-    local indent_str = indent and '    ' or ''
-    parent.add{type='label', caption=indent_str .. format_variable(var_name) .. ' ' .. description}
+    local indent_str = indent and "    " or ""
+    parent.add({ type = "label", caption = indent_str .. format_variable(var_name) .. " " .. description })
 end
 
 function collapsible_section.add_code_example(parent, code, description)
     if description then
-        parent.add{type='label', caption=format_header(description)}
+        parent.add({ type = "label", caption = format_header(description) })
     end
     if code then
-        parent.add{type='label', caption=format_code(code)}
+        parent.add({ type = "label", caption = format_code(code) })
     end
 end
 
 function collapsible_section.add_tip(parent, text)
-    parent.add{type='label', caption=format_check() .. text}
+    parent.add({ type = "label", caption = format_check() .. text })
 end
 
 function collapsible_section.add_warning_section(parent, title, items)
-    parent.add{type='label', caption=format_warning() .. format_header(title)}
+    parent.add({ type = "label", caption = format_warning() .. format_header(title) })
     for _, item in ipairs(items) do
-        parent.add{type='label', caption='  • ' .. item}
+        parent.add({ type = "label", caption = "  • " .. item })
     end
 end
 
 function collapsible_section.add_subheader(parent, text, top_margin)
-    local label = parent.add{type='label', caption=format_subheader(text)}
+    local label = parent.add({ type = "label", caption = format_subheader(text) })
     if top_margin then
         label.style.top_margin = top_margin
     end
@@ -66,13 +66,13 @@ function collapsible_section.add_subheader(parent, text, top_margin)
 end
 
 function collapsible_section.add_indented_section(parent, items, left_margin)
-    local section = parent.add{type='flow', direction='vertical'}
+    local section = parent.add({ type = "flow", direction = "vertical" })
     section.style.left_margin = left_margin or 12
     section.style.top_margin = 2
-    
+
     for _, item in ipairs(items) do
         if type(item) == "string" then
-            section.add{type='label', caption=item}
+            section.add({ type = "label", caption = item })
         elseif type(item) == "table" then
             if item.type == "variable" then
                 collapsible_section.add_variable_desc(section, item.name, item.desc, item.indent)
@@ -84,12 +84,12 @@ function collapsible_section.add_indented_section(parent, items, left_margin)
             end
         end
     end
-    
+
     return section
 end
 
 function collapsible_section.add_spacer(parent)
-    parent.add{type='label', caption=' '}
+    parent.add({ type = "label", caption = " " })
 end
 
 -- Render content based on content structure
@@ -131,62 +131,64 @@ end
 
 -- Create a collapsible section with its own event handling
 function collapsible_section.show(parent, section_id, title, is_expanded)
-    local section = parent.add{type='flow', direction='vertical'}
+    local section = parent.add({ type = "flow", direction = "vertical" })
     section.style.top_margin = 8
-    
+
     -- Create a frame for more Factorio-like appearance
-    local section_frame = section.add{type='frame', direction='vertical', style='deep_frame_in_shallow_frame'}
+    local section_frame = section.add({ type = "frame", direction = "vertical", style = "deep_frame_in_shallow_frame" })
     section_frame.style.padding = 4
     section_frame.style.horizontally_stretchable = true
-    
+
     -- Clickable header with expand/collapse indicator
-    local header_flow = section_frame.add{type='flow', direction='horizontal'}
+    local header_flow = section_frame.add({ type = "flow", direction = "horizontal" })
     header_flow.style.vertical_align = "center"
     header_flow.style.horizontally_stretchable = true
-    
+
     local expand_icon = is_expanded and "▼" or "▶"
-    local header_btn = header_flow.add{
-        type='button',
-        caption='[color=#87CEEB]' .. expand_icon .. '[/color] [font=default-bold][color=#ffffff]' .. title .. '[/color][/font]',
-        style='transparent_button',
-        tags={collapsible_section_toggle=section_id}
-    }
+    local header_btn = header_flow.add({
+        type = "button",
+        caption = "[color=#87CEEB]" .. expand_icon .. "[/color] [font=default-bold][color=#ffffff]" .. title .. "[/color][/font]",
+        style = "transparent_button",
+        tags = { collapsible_section_toggle = section_id },
+    })
     header_btn.style.font = "default-bold"
     header_btn.style.height = 32
     header_btn.style.horizontally_stretchable = true
     header_btn.style.horizontal_align = "left"
-    header_btn.style.padding = {4, 8}
-    
+    header_btn.style.padding = { 4, 8 }
+
     -- Content container (visible/hidden based on expanded state)
-    local content = section_frame.add{type='flow', direction='vertical', name='content_' .. section_id}
+    local content = section_frame.add({ type = "flow", direction = "vertical", name = "content_" .. section_id })
     content.style.left_margin = 12
     content.style.top_margin = 4
     content.style.bottom_margin = 4
     content.visible = is_expanded
-    
+
     return section, content
 end
 
 -- Handle collapsible section toggle events
 local function on_gui_click(event)
     local el = event.element
-    
-    if not el.valid or not el.tags then return end
-    
+
+    if not el.valid or not el.tags then
+        return
+    end
+
     -- Handle section toggle
     if el.tags.collapsible_section_toggle then
         local section_id = el.tags.collapsible_section_toggle
         local content = el.parent.parent["content_" .. section_id]
-        
+
         if content then
             -- Toggle visibility
             content.visible = not content.visible
-            
+
             -- Update button caption with new arrow
             local expand_icon = content.visible and "▼" or "▶"
             local title = el.caption:match("%[font=default%-bold%]%[color=#ffffff%](.+)%[/color%]%[/font%]")
             if title then
-                el.caption = '[color=#87CEEB]' .. expand_icon .. '[/color] [font=default-bold][color=#ffffff]' .. title .. '[/color][/font]'
+                el.caption = "[color=#87CEEB]" .. expand_icon .. "[/color] [font=default-bold][color=#ffffff]" .. title .. "[/color][/font]"
             end
         end
     end

@@ -66,7 +66,8 @@ function runtime.run_combinator_tick(combinator, combinator_env, tick, guis)
       combinator_env._out[k] = nil
     end
 		local st, err = pcall(combinator_env._func)
-		if not st then combinator.err_run = err or '[unspecified lua error]'
+		if not st then
+            combinator.err_run = err or '[unspecified lua error]'
 		else
 			combinator.state, combinator.err_run = 'run', nil
 			if combinator_env._out['ai-combinator-error'] ~= 0 then -- can be used to stop combinator
