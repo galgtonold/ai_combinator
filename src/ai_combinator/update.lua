@@ -90,6 +90,14 @@ end
 
 function update.update_code(combinator, combinator_env, lua_env)
 	combinator.next_tick, combinator.state, combinator.err_parse, combinator.err_run, combinator.err_out = 0, nil, nil, nil, nil
+	
+	-- Clear internal 'var' variables to avoid inconsistent state with new code
+	if combinator.vars and combinator.vars.var then
+		for k in pairs(combinator.vars.var) do
+			combinator.vars.var[k] = nil
+		end
+	end
+	
 	local code, err = (combinator.code or ''), nil
 	if code:match('^%s*(.-)%s*$') ~= '' then -- Check if not just whitespace
 		combinator_env._func, err = load(code, '@combinator', 't', lua_env)
