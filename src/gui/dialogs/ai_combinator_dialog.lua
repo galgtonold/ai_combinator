@@ -196,7 +196,7 @@ function dialog.show(player, entity)
 	local gui = elc( player.gui.screen,
 		{ type='frame', name='ai-combinator-gui', direction='vertical'})
   gui_t.gui = gui
-	gui.location = {20 * dsf, 150 * dsf} -- doesn't work from initial props
+	gui.auto_center = true
 
   local extra_buttons = {{
       type = "sprite-button",
