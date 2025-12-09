@@ -424,8 +424,15 @@ local function fix_failing_tests(uid)
         local task_description = combinator.task or "No task description available"
         local current_code = combinator.code or ""
 
+        -- Collect any syntax/runtime errors to help AI understand issues
+        local errors = {
+            parse = combinator.err_parse,
+            run = combinator.err_run,
+            out = combinator.err_out
+        }
+
         -- Send fix request via bridge
-        bridge.send_fix_request(uid, task_description, current_code, combinator.test_cases)
+        bridge.send_fix_request(uid, task_description, current_code, combinator.test_cases, errors)
     else
         game.print("[color=red]Failed to start test fixing operation[/color]")
     end

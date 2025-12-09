@@ -45,7 +45,7 @@ function bridge.send_test_generation_request(uid, task_description, source_code)
     send_message(payload)
 end
 
-function bridge.send_fix_request(uid, task_description, current_code, test_cases)
+function bridge.send_fix_request(uid, task_description, current_code, test_cases, errors)
     -- Get correlation ID from the operation manager
     local operation_info = ai_operation_manager.get_operation_info(uid)
     local correlation_id = operation_info and operation_info.correlation_id or uid
@@ -54,6 +54,21 @@ function bridge.send_fix_request(uid, task_description, current_code, test_cases
     local fix_prompt = "FIX REQUEST - Please fix the following Lua code to make all tests pass.\n\n"
 
     fix_prompt = fix_prompt .. "ORIGINAL TASK:\n" .. (task_description or "No task description available") .. "\n\n"
+
+    -- Include any syntax or runtime errors
+    if errors and (errors.parse or errors.run or errors.out) then
+        fix_prompt = fix_prompt .. "CODE ERRORS (must be fixed):\n"
+        if errors.parse then
+            fix_prompt = fix_prompt .. "  Syntax Error: " .. errors.parse .. "\n"
+        end
+        if errors.run then
+            fix_prompt = fix_prompt .. "  Runtime Error: " .. errors.run .. "\n"
+        end
+        if errors.out then
+            fix_prompt = fix_prompt .. "  Output Error: " .. errors.out .. "\n"
+        end
+        fix_prompt = fix_prompt .. "\n"
+    end
 
     fix_prompt = fix_prompt .. "CURRENT CODE TO FIX:\n" .. (current_code or "No code available") .. "\n\n"
 
