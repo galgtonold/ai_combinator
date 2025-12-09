@@ -6,7 +6,8 @@
 
 The AI Combinator reads signals from red/green wires and outputs signals - just like any other combinator. The difference? You describe what you want in plain English instead of building complex arithmetic/decider logic.
 
-![AI Combinator Interface](images/ai-combinator-ui.png)
+<img width="570" height="590" alt="image" src="https://github.com/user-attachments/assets/64cc46a5-f045-43d1-95a9-734cbc538f0f" />
+
 
 ## Why Use It?
 
@@ -22,6 +23,10 @@ The AI Combinator reads signals from red/green wires and outputs signals - just 
 - **Game Tick Access** - Time-based operations and delays
 
 ![AI Code Generation](images/code-generation-demo.gif)
+
+
+<video width="630" height="300" src="https://github.com/user-attachments/assets/004219f9-826c-4fdb-a1be-fdc3b156ff01"></video>
+
 
 ## 🚀 Getting Started
 
@@ -43,7 +48,8 @@ The AI Combinator reads signals from red/green wires and outputs signals - just 
 
 4. **Start Factorio through the launcher** - additionally you'll have to activate the mod in factorio
 
-![Launcher Interface](images/launcher-setup.png)
+<img width="770" height="730" alt="image" src="https://github.com/user-attachments/assets/901fa091-d7f4-4c14-b109-707b0b811b5a" />
+
 
 ### Security Note
 
@@ -96,7 +102,8 @@ AI-generated code can be unpredictable. The test case system solves this by lett
 2. **Run tests** - instantly verify the code works correctly
 3. **Auto-fix failures** - if tests fail, click "Fix with AI" to regenerate (might be needed multiple times)
 
-![Test Case Interface](images/test-cases-ui.png)
+<img width="559" height="607" alt="image" src="https://github.com/user-attachments/assets/5f9ddaff-316a-4687-9b5d-d2d80e12f562" />
+
 
 ### Example: Multi-Signal Threshold Detector
 
@@ -113,7 +120,8 @@ You want a combinator that outputs 1 when at least two signals exceed 1000. This
 
 This example shows how test cases catch edge cases - especially the boundary between "one above" and "two above" that AI might miscalculate.
 
-![Test Case Validation](images/test-case-validation.gif)
+<video width="630" height="300" src="https://github.com/user-attachments/assets/8b4d6509-7f24-47a7-b5fe-bbbb51da9569"></video>
+
 
 ### Why This Matters
 
@@ -127,7 +135,7 @@ This example shows how test cases catch edge cases - especially the boundary bet
 ### Low Resource Alert
 *"Output signal-A = 1 when iron-plate < 1000 or copper-plate < 1000"*
 
-Wire to a speaker or warning lamp. Combine with other combinators for complex alert systems.
+Wire to a speaker or warning lamp.
 
 ### Production Counter
 *"Add all incoming iron-plate signals to a running total, output on signal-I"*
@@ -135,21 +143,14 @@ Wire to a speaker or warning lamp. Combine with other combinators for complex al
 Tracks cumulative production. Wire to a display or use for milestone detection.
 
 ### Throughput Calculator
-*"Calculate items per minute from the incoming signal, output on signal-T"*
+*"Calculate items per minute (measured over 5 seconds) from the iron plate signal, output on signal-T"*
 
 Measures flow rate over time using persistent variables and game tick.
 
 ### Priority Switcher
 *"Output the signal type with the highest value, set to 1"*
 
-Useful for selecting which resource needs attention most.
-
-### Threshold Gate
-*"Pass through all signals only when signal-C > 0"*
-
-Creates a circuit-controlled gate for signal routing.
-
-![Example Circuits](images/example-circuits.png)
+Useful for selecting which resource needs attention most like for smart asteroid chunk reprocessing
 
 ## 💡 Prompt Tips
 
