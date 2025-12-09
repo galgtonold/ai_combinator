@@ -4,258 +4,282 @@ Welcome to the AI Combinator development documentation! This guide covers the te
 
 ## 🏗️ Project Architecture
 
-The AI Combinator consists of three main components:
+The AI Combinator consists of two main components:
 
 ### 1. Factorio Mod (`/`)
-The core mod that runs inside Factorio, handling the combinator entity, UI, and game logic.
+The core mod that runs inside Factorio, handling the combinator entity, UI, circuit networks, and AI code execution.
 
-**Key Files:**
-- `control.lua` - Main mod logic, combinator behavior, and game event handling
-- `gui.lua` - User interface for the AI combinator configuration window
-- `bridge.lua` - UDP communication with the AI Bridge
-- `data.lua` - Entity definitions, items, recipes, and graphics
-- `event_handler.lua` - Custom event system for decoupled component communication
+**Directory Structure:**
+```
+/
+├── control.lua          # Main entry point, tick handling, event registration
+├── data.lua             # Entity, item, recipe, and graphics definitions
+├── info.json            # Mod metadata
+├── src/
+│   ├── ai_combinator/   # Core combinator logic
+│   │   ├── init.lua           # Combinator initialization
+│   │   ├── runtime.lua        # Tick-by-tick code execution
+│   │   ├── update.lua         # State updates, LED indicators
+│   │   ├── code_manager.lua   # Code loading, history management
+│   │   ├── combinator_service.lua  # Business logic layer
+│   │   └── memory.lua         # Runtime memory management
+│   ├── core/            # Shared utilities
+│   │   ├── constants.lua      # Configuration, custom events
+│   │   ├── circuit_network.lua    # Signal I/O handling
+│   │   ├── ai_operation_manager.lua  # AI request state tracking
+│   │   ├── utils.lua          # Helper functions
+│   │   └── blueprint_serialization.lua  # Blueprint data handling
+│   ├── events/          # Event handlers
+│   │   ├── event_handler.lua  # Custom event system
+│   │   ├── entity_events.lua  # Build/destroy handlers
+│   │   ├── blueprint_events.lua   # Blueprint copy/paste
+│   │   └── hotkey_events.lua  # Keyboard shortcuts
+│   ├── gui/             # User interface
+│   │   ├── gui.lua            # Main GUI controller
+│   │   ├── gui_updater.lua    # Reactive UI updates
+│   │   ├── gui_utils.lua      # UI helper functions
+│   │   ├── components/        # Reusable UI components
+│   │   └── dialogs/           # Modal dialogs
+│   ├── sandbox/         # Lua sandbox environment
+│   │   └── base.lua           # Safe function whitelist
+│   ├── services/        # External communication
+│   │   └── bridge.lua         # UDP communication with launcher
+│   └── testing/         # Test framework
+│       └── testing.lua        # Test case execution
+└── locale/              # Translations
+```
 
-
-### 3. Launcher (`/launcher`)
-Electron application that configures and launches Factorio with the mod enabled.
+### 2. Launcher (`/launcher`)
+Electron application that configures Factorio, manages the AI Bridge, and handles AI provider integration.
 
 **Structure:**
-- `electron/` - Main Electron process (Node.js/TypeScript)
-- `renderer/` - Frontend UI (Svelte/TypeScript)
-- `build/` - Distribution builds
+```
+launcher/
+├── electron/            # Main Electron process
+│   ├── app.ts                 # Application entry point
+│   ├── preload.ts             # Context bridge for renderer
+│   ├── managers/              # Feature managers
+│   │   ├── ai-bridge-manager.ts   # AI Bridge lifecycle
+│   │   ├── config-manager.ts      # Settings persistence
+│   │   └── factorio-manager.ts    # Factorio detection/launch
+│   └── services/              # Business logic
+│       ├── ai-bridge.ts           # AI provider integration
+│       └── ipc-handlers.ts        # IPC message handlers
+├── renderer/            # Frontend UI (Svelte)
+│   └── src/
+│       ├── App.svelte             # Root component
+│       ├── components/            # UI components
+│       ├── stores/                # Svelte stores
+│       └── styles/                # CSS/theming
+├── shared/              # Shared types and utilities
+│   ├── types.ts               # TypeScript interfaces
+│   ├── constants.ts           # Shared constants
+│   └── logger.ts              # Logging utility
+└── build/               # Distribution builds
+```
 
 ## 🔄 Data Flow
 
 ```
-[Factorio Mod] --UDP:8889--> [AI Bridge] <--HTTPS--> [OpenAI API]
-       ↑              |            ↑
-       |              └─UDP:9001───┘
-       └────── [Launcher] ──────────┘
+[Factorio Mod] ──UDP:8889──► [Launcher AI Bridge] ◄──HTTPS──► [AI Provider API]
+       ▲                              │
+       └────────UDP:9001──────────────┘
 ```
 
-The communication uses two separate UDP channels:
+### Request Flow (Factorio → AI)
+1. **User Input**: Player enters task description in combinator UI
+2. **Mod → Bridge**: `bridge.lua` sends JSON request via UDP (port 8889)
+3. **Bridge → AI**: Launcher processes with configured AI provider (OpenAI, Anthropic, etc.)
+4. **Code Generation**: AI generates Lua code following sandbox constraints
 
-### Request Flow (Factorio → Launcher)
-1. **User Input**: Player enters natural language prompt in combinator UI
-2. **Mod → Bridge**: Mod sends request via UDP to AI Bridge (port 8889)
-3. **Bridge → OpenAI**: Launcher's AI Bridge processes request with OpenAI API
-4. **Code Generation**: AI generates Lua code following safety constraints
+### Response Flow (AI → Factorio)
+5. **Bridge → Mod**: Launcher sends response via UDP (port 9001)
+6. **Execution**: `runtime.lua` executes code in sandboxed environment
 
-### Response Flow (Launcher → Factorio)
-5. **Bridge → Mod**: AI Bridge sends response via UDP to Factorio (port 9001, configurable)
-6. **Execution**: Mod executes generated code in sandboxed Lua environment
+### Request Types
+- **`task_request`**: Generate code from natural language description
+- **`test_generation_request`**: Auto-generate test cases for existing code
+- **`fix_request`**: Fix code to pass failing tests (includes error context)
+- **`ping_request`**: Check AI Bridge availability
 
-**UDP Ports:**
-- **8889**: Launcher listens for incoming requests from Factorio mod
-- **9001**: Factorio listens for responses from launcher (configured via `--enable-lua-udp` argument)
+## 🧩 Key Components Deep Dive
+
+### Lua Sandbox Environment
+
+AI-generated code runs in a restricted environment defined in `src/sandbox/base.lua`:
+
+**Available Variables:**
+| Variable | Type | Description |
+|----------|------|-------------|
+| `red` | table | Red wire signals (read-only) |
+| `green` | table | Green wire signals (read-only) |
+| `out` | table | Output signals (write) |
+| `var` | table | Persistent variables across ticks |
+| `delay` | number | Ticks until next execution (default: 1) |
+| `game.tick` | number | Current game tick (read-only) |
+| `game.print()` | function | Print to game console |
+| `game.log()` | function | Write to log file |
+
+**Available Libraries:**
+- `string.*` - String manipulation
+- `table.*` - Table operations  
+- `math.*` - Mathematical functions
+- `bit32.*` - Bitwise operations
+- `serpent.line/block` - Table serialization
+- `pairs`, `ipairs`, `next` - Iteration
+- `tonumber`, `tostring`, `type` - Type conversion
+- `pcall`, `assert`, `error` - Error handling
+
+**Blocked Operations:**
+- File system access
+- Network operations
+- `loadstring`, `dofile`, `loadfile`
+- `os.*`, `io.*`, `debug.*`
+- `rawget`, `rawset`, `setmetatable` (on protected tables)
+
+### Event System
+
+Custom event system for decoupled component communication:
+
+```lua
+local event_handler = require("src/events/event_handler")
+local constants = require("src/core/constants")
+
+-- Register for built-in Factorio events
+event_handler.add_handler(defines.events.on_built_entity, function(event)
+    -- Handle entity placement
+end)
+
+-- Register for custom events
+event_handler.add_handler(constants.events.on_code_changed, function(event)
+    -- event.uid, event.code, event.source_type
+end)
+
+-- Raise custom events
+event_handler.raise_event(constants.events.on_code_changed, {
+    uid = combinator_uid,
+    code = new_code,
+    source_type = "ai_generation"
+})
+```
+
+### AI Operation Manager
+
+Tracks async AI requests to prevent duplicate operations:
+
+```lua
+local ai_operation_manager = require("src/core/ai_operation_manager")
+
+-- Start an operation (returns false if one is already running)
+local success, correlation_id = ai_operation_manager.start_operation(
+    uid, 
+    ai_operation_manager.OPERATION_TYPES.CODE_GENERATION
+)
+
+-- Check operation state
+if ai_operation_manager.is_operation_active(uid) then
+    -- Show loading indicator
+end
+
+-- Complete operation (called when response received)
+ai_operation_manager.complete_operation(uid)
+```
+
+### Test Framework
+
+Built-in test case system for validating combinator code:
+
+```lua
+-- Test case structure
+{
+    name = "Test name",
+    red_input = { {signal = {type="virtual", name="signal-A"}, count = 10} },
+    green_input = { },
+    expected_output = { {signal = {type="virtual", name="signal-B"}, count = 20} },
+    variables = { {name = "counter", value = 5} },
+    game_tick = 100,
+    success = true/false,  -- Set after evaluation
+    actual_output = { }    -- Set after evaluation
+}
+```
 
 ## 🛠️ Development Setup
 
 ### Prerequisites
 
 - **Factorio 2.0+** with mod development enabled
-- **Node.js 18+** and npm for launcher development
-- **OpenAI API key** for testing AI functionality
+- **Node.js 18+** and npm
+- **API key** for your chosen AI provider (OpenAI, Anthropic, Google, xAI, or DeepSeek)
 
-### Environment Setup
+### Quick Start
 
-1. **Clone the repository** to your Factorio mods directory:
+1. **Clone to mods directory:**
    ```powershell
-   cd "C:\Users\[USER]\AppData\Roaming\Factorio\mods"
+   cd "$env:APPDATA\Factorio\mods"
    git clone https://github.com/galgtonold/ai_combinator.git
    ```
 
-2. **Set up the launcher development environment**:
+2. **Install launcher dependencies:**
    ```powershell
    cd ai_combinator\launcher
    npm install
    ```
 
-3. **Set up the AI Bridge**:
+3. **Run launcher in development mode:**
    ```powershell
-   cd ..\ai_bridge
-   pip install -r requirements.txt
+   npm run dev
    ```
 
 ### Development Workflow
 
 #### Mod Development
-
-Use FMTK for easy development and debugging.
+- Edit Lua files directly - Factorio reloads on game restart
+- Use `/c game.print(serpent.block(storage.combinators))` for debugging
+- Check `factorio-current.log` for error messages
 
 #### Launcher Development
 ```powershell
 cd launcher
-npm run dev  # Starts Electron with hot reload
+npm run dev      # Start with hot reload
+npm run build    # Build for production
+npm run package  # Create distributable
 ```
 
-## 🧩 Key Components Deep Dive
+#### Code Style
 
-### Lua Sandbox Environment
+**Lua:**
+- Use `snake_case` for variables and functions
+- Prefer `local` over global scope
+- Use StyLua for formatting (config in `stylua.toml`)
 
-The AI-generated code runs in a carefully controlled environment with these available variables:
-
-- **`red`** - Red wire circuit signals (read-only table)
-- **`green`** - Green wire circuit signals (read-only table)  
-- **`out`** - Output signals table (write-only)
-- **`var`** - Persistent variables across ticks
-- **`delay`** - Signal delay configuration
-- **`game.tick`** - Current game tick (read-only)
-
-**Safety Constraints:**
-- No file system access
-- No network operations
-- No dangerous Lua functions (`loadstring`, `dofile`, etc.)
-- Memory and execution time limits
-- Restricted global namespace
-
-### Event System
-
-Custom event handler provides decoupled communication:
-
-```lua
-local event_handler = require("event_handler")
-
--- Register event handler
-event_handler.add_handler(defines.events.on_built_entity, function(event)
-    -- Handle entity built
-end)
-
--- Create custom events
-local custom_event = script.generate_event_name()
-event_handler.add_handler(custom_event, handler_function)
-```
-
-### UDP Communication Protocol
-
-**Request Format:**
-```json
-{
-    "type": "generate_code",
-    "prompt": "user description",
-    "context": {
-        "signals": {...},
-        "tick": 12345
-    }
-}
-```
-
-**Response Format:**
-```json
-{
-    "status": "success|error",
-    "code": "-- Generated Lua code",
-    "error": "error message if failed"
-}
-```
-
-### Launcher Architecture
-
-**Main Process (`electron/`):**
-- Factorio detection via registry and Steam library parsing
-- Configuration management (stored in userData)
-- AI Bridge process management
-- IPC handlers for renderer communication
-
-**Renderer Process (`renderer/`):**
-- Svelte-based UI with Factorio-inspired styling
-- Real-time configuration and status updates
-- Custom components in `src/components/`
-
-## 🧪 Testing
-
-### Manual Testing Checklist
-
-**Mod Functionality:**
-- [ ] Combinator places and connects to circuits correctly
-- [ ] UI opens and responds to user input
-- [ ] Generated code executes without errors
-- [ ] Signals flow correctly through circuit networks
-- [ ] Error handling displays appropriate messages
-
-**Launcher Functionality:**
-- [ ] Factorio detection works on clean system
-- [ ] OpenAI API key configuration persists
-- [ ] Factorio launches with mod enabled
-- [ ] AI Bridge starts and connects successfully
-
-**AI Bridge:**
-- [ ] UDP server starts on correct port
-- [ ] OpenAI API calls succeed with valid key
-- [ ] Generated code follows safety constraints
-- [ ] Error handling for API failures
+**TypeScript:**
+- Use `camelCase` for variables, `PascalCase` for types
+- Prefer `async/await` over raw promises
+- Document with JSDoc comments
 
 ## 📦 Building and Distribution
 
-### Development Builds
-```powershell
-cd launcher
-npm run dev  # Development with hot reload
-```
-
-### Production Builds
+### Production Build
 ```powershell
 cd launcher
 npm run build     # Build renderer
-npm run package   # Package Electron app
+npm run package   # Create installer
 ```
 
-**Output:** Distributable installer in `launcher/build/`
+Output: `launcher/build/AI Combinator Launcher Setup X.X.X.exe`
 
-### Mod Packaging
-Factorio automatically packages the mod from the mods directory. For manual distribution:
-
-1. Create zip archive of mod directory
-2. Rename to `ai_combinator_[version].zip`
-3. Upload to mod portal or distribute directly
-
-## 🤝 Contributing
-
-### Code Style
-
-**Lua (Factorio Mod):**
-- Use snake_case for variables and functions
-- Prefer local variables over global
-- Comment complex logic blocks
-- Follow Factorio modding best practices
-
-**TypeScript (Launcher):**
-- Use camelCase for variables and functions
-- Prefer interfaces over types for object shapes
-- Use async/await over promises
-- Document public APIs with JSDoc
-
-### Pull Request Process
-
-1. **Fork** the repository and create a feature branch
-2. **Test** your changes thoroughly using the manual checklist
-3. **Document** any new features or API changes
-4. **Submit** PR with clear description of changes
-5. **Respond** to code review feedback promptly
-
-### Issue Reporting
-
-When reporting issues, please include:
-- Factorio version and mod version
-- Launcher version (if applicable)
-- Steps to reproduce the issue
-- Error messages or logs
-- Operating system and relevant system info
+### Mod Distribution
+The mod is loaded directly from the Factorio mods directory. For portal distribution:
+1. Zip the mod folder (excluding `launcher/`, `.git/`, etc.)
+2. Rename to `ai_combinator_X.X.X.zip`
+3. Upload to [mods.factorio.com](https://mods.factorio.com)
 
 ## 📚 Additional Resources
 
-- **Factorio Modding API**: [lua-api.factorio.com](https://lua-api.factorio.com)
-- **Electron Documentation**: [electronjs.org/docs](https://electronjs.org/docs)
-- **Svelte Guide**: [svelte.dev/tutorial](https://svelte.dev/tutorial)
-- **OpenAI API Reference**: [platform.openai.com/docs](https://platform.openai.com/docs)
+- **Factorio Lua API**: [lua-api.factorio.com](https://lua-api.factorio.com)
+- **Electron Docs**: [electronjs.org/docs](https://electronjs.org/docs)
+- **Svelte Tutorial**: [svelte.dev/tutorial](https://svelte.dev/tutorial)
 
-## 🏷️ Project History
-
-Based on the Moon Logic 2 mod with significant enhancements:
-- AI integration for code generation
-- Modern Electron launcher
-- Enhanced UI and user experience
 ---
 
-Happy coding! 🚀 Feel free to reach out in the GitHub issues if you need help getting started with development.
+Happy coding! 🚀
