@@ -74,12 +74,26 @@ function update.update_led(combinator, combinator_env)
 		first_constant=a, second_constant=b, output_signal=out }
 end
 
+-- Formats Lua error messages into more readable format
+-- Transforms: '[string "@combinator"]:15: attempt to index field...' into 'Line 15: attempt to index field...'
+function update.format_lua_error(err)
+	if not err then return nil end
+	-- Match patterns like: [string "@combinator"]:15: message  or  @combinator:15: message
+	local line, msg = err:match('%]?:(%d+):%s*(.+)$')
+	if line and msg then
+		return ('Line %s: %s'):format(line, msg)
+	end
+	-- If no line number found, just clean up the chunk name prefix
+	local cleaned = err:gsub('^%[string ".-"%]:%s*', ''):gsub('^@%S+:%s*', '')
+	return cleaned ~= '' and cleaned or err
+end
+
 function update.update_code(combinator, combinator_env, lua_env)
 	combinator.next_tick, combinator.state, combinator.err_parse, combinator.err_run, combinator.err_out = 0, nil, nil, nil, nil
 	local code, err = (combinator.code or ''), nil
 	if code:match('^%s*(.-)%s*$') ~= '' then -- Check if not just whitespace
-		combinator_env._func, err = load(code, code, 't', lua_env)
-		if not combinator_env._func then combinator.err_parse, combinator.state = err, 'error' end
+		combinator_env._func, err = load(code, '@combinator', 't', lua_env)
+		if not combinator_env._func then combinator.err_parse, combinator.state = update.format_lua_error(err), 'error' end
 	else
 		combinator_env._func = nil
 		cn.cn_output_table_replace(combinator_env._out)

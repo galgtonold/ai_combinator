@@ -4,6 +4,9 @@ local circuit_network = require('src/core/circuit_network')
 local util = require('src/core/utils')
 local combinator_service = require('src/ai_combinator/combinator_service')
 
+-- Re-use the error formatting function from update module
+local format_lua_error = update.format_lua_error
+
 local runtime = {}
 
 local error_signal = {type='virtual', name='ai-combinator-error'}
@@ -67,7 +70,7 @@ function runtime.run_combinator_tick(combinator, combinator_env, tick, guis)
     end
 		local st, err = pcall(combinator_env._func)
 		if not st then
-            combinator.err_run = err or '[unspecified lua error]'
+            combinator.err_run = format_lua_error(err) or '[unspecified lua error]'
 		else
 			combinator.state, combinator.err_run = 'run', nil
 			if combinator_env._out['ai-combinator-error'] ~= 0 then -- can be used to stop combinator
