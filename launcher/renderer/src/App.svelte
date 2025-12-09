@@ -43,13 +43,17 @@
     appEffects.handleProviderChange();
   });
 
-  // Handle model changes
+  // Handle model changes - track $config.aiModel to trigger on model changes
   $effect(() => {
+    // Read the reactive value to track it
+    void $config.aiModel;
     appEffects.handleModelChange();
   });
 
-  // Handle API key changes
+  // Handle API key changes - track providerApiKeys to trigger on key changes
   $effect(() => {
+    // Read the reactive value to track it
+    void $config.providerApiKeys;
     appEffects.handleApiKeyChange();
   });
 
@@ -123,7 +127,7 @@
 
           <AIConfigSection
             config={$config}
-            {currentApiKeyInput}
+            bind:currentApiKeyInput
             onProviderChange={handleProviderChange}
             onModelChange={handleModelChange}
             onApiKeyChange={handleApiKeyChange}

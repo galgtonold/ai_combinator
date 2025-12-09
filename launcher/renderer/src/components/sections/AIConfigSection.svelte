@@ -14,7 +14,7 @@
     onApiKeyChange: () => Promise<void>;
   }
 
-  let { config, currentApiKeyInput, onProviderChange, onModelChange, onApiKeyChange }: Props = $props();
+  let { config, currentApiKeyInput = $bindable(), onProviderChange, onModelChange, onApiKeyChange }: Props = $props();
   
   // Function to open API key URL in default browser
   async function openApiKeyUrl() {

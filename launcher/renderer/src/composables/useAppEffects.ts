@@ -89,17 +89,23 @@ export function useAppEffects() {
   /**
    * Handle API key changes for the current provider
    */
-  function handleApiKeyChange(): void {
+  async function handleApiKeyChange(): Promise<void> {
     const currentConfig = get(config);
     const currentApiKey = configService.getCurrentProviderApiKey(currentConfig);
     if (previousApiKey !== currentApiKey) {
+      const wasEmpty = !previousApiKey;
       previousApiKey = currentApiKey;
 
       // Update AI bridge enabled status
       configService.updateConfig({ aiBridgeEnabled: !!currentApiKey });
 
-      // Manage bridge based on new key status
-      aiBridgeService.manageAIBridge();
+      // If key changed (not just set for first time), restart to use new key
+      if (!wasEmpty && currentApiKey) {
+        await aiBridgeService.restartAIBridge();
+      } else {
+        // Otherwise just manage (start/stop) based on key presence
+        await aiBridgeService.manageAIBridge();
+      }
     }
   }
 
