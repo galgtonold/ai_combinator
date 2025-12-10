@@ -47,7 +47,7 @@ The AI Combinator reads signals from red/green wires and outputs signals - just 
    - Select provider and enter your API key
    - Choose a model
 
-4. **Start Factorio through the launcher** - additionally you'll have to activate the mod in factorio
+4. **Start Factorio through the launcher** - additionally you'll have to activate the [mod](https://mods.factorio.com/mod/ai_combinator)
 
 <img width="400"  alt="image" src="https://github.com/user-attachments/assets/901fa091-d7f4-4c14-b109-707b0b811b5a" />
 
