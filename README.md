@@ -2,6 +2,9 @@
 
 [![Download Launcher](https://img.shields.io/badge/Download-AI%20Combinator%20Launcher-orange?style=for-the-badge&logo=windows)](https://github.com/galgtonold/ai_combinator/releases/latest)
 
+![Overview Graphic](https://github.com/user-attachments/assets/814f8c38-8bd5-42db-823b-ea25fe34ef69)
+
+
 **A combinator you program with words, not wires.**
 
 The AI Combinator reads signals from red/green wires and outputs signals - just like any other combinator. The difference? You describe what you want in plain English instead of building complex arithmetic/decider logic.
