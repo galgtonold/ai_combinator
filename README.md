@@ -49,7 +49,7 @@ The AI Combinator reads signals from red/green wires and outputs signals - just 
 
 4. **Start Factorio through the launcher** - additionally you'll have to activate the mod in factorio
 
-<img width="770" height="730" alt="image" src="https://github.com/user-attachments/assets/901fa091-d7f4-4c14-b109-707b0b811b5a" />
+<img width="400"  alt="image" src="https://github.com/user-attachments/assets/901fa091-d7f4-4c14-b109-707b0b811b5a" />
 
 
 ### Security Note
