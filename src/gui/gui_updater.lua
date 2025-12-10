@@ -98,11 +98,10 @@ function gui_updater.update_signals_in_guis(format_error_message)
                     combinator_out_err[("%s/%s"):format(label, sig)] = nil
                 end
                 if cbs.min ~= 0 then
-                    ---@diagnostic disable-next-line: need-check-nil
                     if not combinator_out[sig] then
+                        ---@diagnostic disable-next-line: need-check-nil
                         combinator_out_idx[#combinator_out_idx + 1], combinator_out[sig] = sig, {}
                     end
-                    ---@diagnostic disable-next-line: need-check-nil
                     combinator_out[sig][k] = cbs.min
                 end
             end

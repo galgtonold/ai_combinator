@@ -42,7 +42,7 @@ function runtime.alert_clear(combinator_env)
 	combinator_env._alert = nil
 end
 
-function runtime.run_combinator_tick(combinator, combinator_env, tick, guis)
+function runtime.run_combinator_tick(combinator, combinator_env, tick)
 	-- Runs logic of the specified combinator, reading its input and setting outputs
 	local out_tick, out_diff = combinator.next_tick, util.shallow_copy(combinator_env._out)
 	local dbg = combinator.vars.debug and function(fmt, ...)
@@ -103,7 +103,7 @@ function runtime.run_combinator_tick(combinator, combinator_env, tick, guis)
 	local out_sync = next(out_diff) or out_tick == 0 -- force sync after reset
 
 	if dbg then -- debug
-		for sig, v in pairs(out_diff) do
+		for sig, _ in pairs(out_diff) do
 			if not combinator_env._out[sig] then out_diff[sig] = '-'
 		end end
 		dbg('out-sync=%s out-diff :: %s', out_sync and true, serpent.line(out_diff)) end

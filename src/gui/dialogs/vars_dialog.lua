@@ -65,9 +65,9 @@ function dialog.update(player, uid, pause_update)
     if not combinator then
         vars_box.text = "--- [color=#911818]AI Combinator is Offline[/color] ---"
     else
-        local text, esc, vs, c = "", function(s)
+        local text, esc, vs = "", function(s)
             return tostring(s):gsub("%[", "[ ")
-        end, nil, nil
+        end, nil
         local gui_vars_serpent_opts = { metatostring = true, nocode = true }
         for k, v in pairs(combinator.vars) do
             if k:match("^__") then

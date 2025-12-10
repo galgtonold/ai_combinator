@@ -1,6 +1,5 @@
 local event_handler = require("src/events/event_handler")
 local titlebar = require("src/gui/components/titlebar")
-local constants = require("src/core/constants")
 local utils = require("src/core/utils")
 local dialog_manager = require("src/gui/dialogs/dialog_manager")
 local combinator_service = require("src/ai_combinator/combinator_service")

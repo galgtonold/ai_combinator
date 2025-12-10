@@ -36,8 +36,6 @@ function component.show(parent, uid, test_index)
     })
 end
 
-function component.update(parent, uid, test_index) end
-
 local function on_gui_click(event)
     local element = event.element
 

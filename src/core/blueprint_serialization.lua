@@ -155,7 +155,7 @@ function serialization._restore_test_case_signals(test_cases)
     end
 
     -- Test cases should be restored to their proper format
-    for i, test_case in ipairs(test_cases) do
+    for _, test_case in ipairs(test_cases) do
         test_case.red_input = serialization._restore_signal_array(test_case.red_input)
         test_case.green_input = serialization._restore_signal_array(test_case.green_input)
         test_case.expected_output = serialization._restore_signal_array(test_case.expected_output)

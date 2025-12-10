@@ -65,10 +65,6 @@ function init.out_wire_connect_combinator(combinator)
     return combinator
 end
 
-local function combinator_log(...)
-    log(...)
-end -- to avoid logging func code
-
 function init.combinator_init(e)
     -- Inits *local* combinator_env state for combinator - builds env, evals lua code, etc
     -- *storage* (previously `global`) state will be used for init values if it exists, otherwise empty defaults

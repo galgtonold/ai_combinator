@@ -12,7 +12,6 @@ local hotkey_events = {}
 
 local guis = require("src/gui/gui")
 local help_dialog = require("src/gui/dialogs/help_dialog")
-local vars_dialog = require("src/gui/dialogs/vars_dialog")
 local combinator_service = require("src/ai_combinator/combinator_service")
 
 -- Get the single active GUI (if only one is open)
@@ -30,8 +29,8 @@ local function get_active_gui()
 end
 
 -- Save code in active combinator
-local function on_code_save(ev)
-    local uid, gui_t = get_active_gui()
+local function on_code_save(_)
+    local uid, _ = get_active_gui()
     if uid then
         combinator_service.save_code(uid)
     end
@@ -39,7 +38,7 @@ end
 
 -- Save and close combinator GUI
 local function on_code_commit(ev)
-    local uid, gui_t = next(storage.guis)
+    local uid, _ = next(storage.guis)
     if not uid then
         return
     end
@@ -51,7 +50,7 @@ end
 local function on_code_close(ev)
     guis.vars_window_toggle(ev.player_index, false)
     help_dialog.show(ev.player_index, false)
-    local uid, gui_t = next(storage.guis)
+    local uid, _ = next(storage.guis)
     if not uid then
         return
     end

@@ -164,7 +164,7 @@ end
 
 function circuit_network.cn_input_signal_len(wenv)
     local n, sigs = 0, circuit_network.cn_input_signal(wenv, defines.wire_type[wenv._wire])
-    for sig, c in pairs(sigs) do
+    for _, c in pairs(sigs) do
         if c ~= 0 then
             n = n + 1
         end
@@ -174,7 +174,7 @@ end
 function circuit_network.cn_input_signal_iter(wenv)
     -- This returns shortened signal names for simplicity and compatibility
     local signals, sig_cache = {}, circuit_network.cn_input_signal(wenv, defines.wire_type[wenv._wire])
-    for k, v in pairs(sig_cache) do
+    for k, _ in pairs(sig_cache) do
         signals[circuit_network.cn_sig_name(k)] = sig_cache[k]
     end
     if wenv._debug then
@@ -192,7 +192,7 @@ end
 
 function circuit_network.cn_output_table_len(out) -- rawlen won't skip 0 and doesn't work anyway
     local n = 0
-    for k, v in pairs(out) do
+    for _, v in pairs(out) do
         if v ~= 0 then
             n = n + 1
         end
@@ -209,7 +209,7 @@ end
 
 function circuit_network.cn_output_table_replace(out, new_tbl)
     -- Note: validation for sig_names/values is done when output table is used later
-    for sig, v in pairs(out) do
+    for sig, _ in pairs(out) do
         out[sig] = nil
     end
     for sig, v in pairs(new_tbl or {}) do

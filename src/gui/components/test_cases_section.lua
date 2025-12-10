@@ -390,7 +390,7 @@ local function auto_generate_test_cases(uid)
     local source_code = combinator.code or "No source code available"
 
     -- Start AI operation using the new manager
-    local success, correlation_id = ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TEST_GENERATION)
+    local success, _ = ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TEST_GENERATION)
 
     if success then
         -- Send test generation request via bridge
@@ -424,7 +424,7 @@ local function fix_failing_tests(uid)
     end
 
     -- Start AI operation
-    local success, correlation_id = ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TEST_FIXING)
+    local success, _ = ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TEST_FIXING)
 
     if success then
         -- Get required data for fix request

@@ -297,7 +297,7 @@ function gui_utils.get_element_position(element)
         y = y + spacing.top
 
         -- Calculate layout for parent's children
-        local child_sizes, stretchable_size, flow_direction = calculate_layout(parent)
+        local child_sizes, _, flow_direction = calculate_layout(parent)
 
         -- Find position of current element among siblings
         local offset_x = 0

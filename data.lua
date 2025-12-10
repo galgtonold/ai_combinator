@@ -34,7 +34,7 @@ ai_combinator.active_energy_usage = "6kW" -- base=1KW, lamp=5KW
 
 -- Spritesheet here has all same offsets and dimensions as normal (previously hr) version, so copy and change filename
 ai_combinator.sprites = table.deepcopy(decider.sprites)
-for k, spec in pairs(ai_combinator.sprites) do
+for _, spec in pairs(ai_combinator.sprites) do
     for n, layer in pairs(spec.layers) do
         spec.layers[n] = layer
         if not layer.filename:match("^__base__/graphics/entity/combinator/decider%-combinator") then

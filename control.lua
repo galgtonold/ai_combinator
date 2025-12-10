@@ -22,12 +22,9 @@ local vars_dialog = require("src/gui/dialogs/vars_dialog")
 local util = require("src/core/utils")
 local runtime = require("src/ai_combinator/runtime")
 local gui_updater = require("src/gui/gui_updater")
----@diagnostic disable-next-line: unused-local
-local testing = require("src/testing/testing")
 
--- ----- AI Combinator update processing -----
-
-local error_signal = { type = "virtual", name = "ai-combinator-error" }
+-- Include for registering of event handlers
+require("src/testing/testing")
 
 -- ----- Register entity and blueprint event handlers -----
 
@@ -169,7 +166,7 @@ end)
 -- Usage: /measured-command remote.call('ai-combinator', 'run', 1234, 100)
 
 local remote_err = function(msg, ...)
-    for n, p in pairs(game.players) do
+    for _, p in pairs(game.players) do
         p.print(("AI Combinator remote-call error: " .. msg):format(...), { 1, 1, 0 })
     end
 end
@@ -180,11 +177,11 @@ remote.add_interface("ai-combinator", {
         if not combinator or not combinator_env then
             return remote_err("cannot find combinator with uid=%s", uid_raw)
         end
-        local err_n, st, err, err_last = 0, nil, nil, nil
-        for n = 1, tonumber(count) or 1 do
+        local err_n, st, err = 0, nil, nil
+        for _ = 1, tonumber(count) or 1 do
             st, err = pcall(combinator_env._func)
             if not st then
-                err_n, err_last = err_n + 1, err or "[unspecified lua error]"
+                err_n = err_n + 1
             end
         end
         if err_n > 0 then
@@ -194,25 +191,6 @@ remote.add_interface("ai-combinator", {
 })
 
 -- ----- Init -----
-
-local strict_mode = false
-local function strict_mode_enable()
-    if strict_mode then
-        return
-    end
-    setmetatable(_ENV, {
-        __newindex = function(self, key, value)
-            error("\n\n[ENV Error] Forbidden global _ENV *write*:\n" .. serpent.line({ key = key or "<nil>", value = value or "<nil>" }) .. "\n", 2)
-        end,
-        __index = function(self, key)
-            if key == "game" then
-                return
-            end -- used in utils.log check
-            error("\n\n[ENV Error] Forbidden global _ENV *read*:\n" .. serpent.line({ key = key or "<nil>" }) .. "\n", 2)
-        end,
-    })
-    strict_mode = true
-end
 
 local function update_signal_types_table()
     storage.signals, storage.signals_short = {}, {} -- short=false for ambiguous ones
@@ -238,7 +216,7 @@ local function update_signal_types_table()
             end
         end
     end
-    for t, k in pairs(prototypes.recipe) do
+    for t, _ in pairs(prototypes.recipe) do
         ---@diagnostic disable-next-line: missing-fields
         sig_str, sig = circuit_network.cn_sig_str("recipe", t), { type = "recipe", name = t, quality = "normal" }
         if sig_str then
@@ -266,7 +244,6 @@ local function update_recipes()
 end
 
 script.on_init(function()
-    --strict_mode_enable()
     update_signal_quality_table()
     update_signal_types_table()
     for k, _ in pairs(util.tt("combinators presets guis guis_player")) do
@@ -280,12 +257,12 @@ script.on_load(function()
 end)
 
 script.on_configuration_changed(function(data) -- migration
-    --strict_mode_enable()
     update_signal_quality_table()
     update_signal_types_table()
 
     local update = data.mod_changes and data.mod_changes[script.mod_name]
     if update and update.old_version then
+        -- TODO add migration code here if needed
     end
 
     update_recipes()
@@ -321,7 +298,7 @@ event_handler.add_handler(constants.events.on_bridge_check_completed, function(p
 end)
 
 -- Check bridge availability when players join
-event_handler.add_handler(defines.events.on_player_joined_game, function(event)
+event_handler.add_handler(defines.events.on_player_joined_game, function(_)
     bridge.check_bridge_availability()
 end)
 

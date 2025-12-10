@@ -9,7 +9,6 @@ local dialog = {}
 function dialog.show(player_index, uid, default_value, tags)
     -- Simple quantity input dialog
     local player = game.players[player_index]
-    local combinator = storage.combinators[uid]
     -- Prevent multiple instances - close existing dialog and its children if it exists
     local gui_t = storage.guis[uid]
     if gui_t and gui_t.quantity_dialog and gui_t.quantity_dialog.valid then
@@ -61,7 +60,7 @@ function dialog.show(player_index, uid, default_value, tags)
         direction = "horizontal",
     })
 
-    local cancel_btn = button_flow.add({
+    button_flow.add({
         type = "button",
         caption = "Cancel",
         style = "back_button",

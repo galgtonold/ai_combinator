@@ -1,24 +1,18 @@
 local event_handler = require("src/events/event_handler")
 local bridge = require("src/services/bridge")
-local utils = require("src/core/utils")
 local constants = require("src/core/constants")
 local ai_operation_manager = require("src/core/ai_operation_manager")
 
-local memory = require("src/ai_combinator/memory")
-local update = require("src/ai_combinator/update")
 local code_manager = require("src/ai_combinator/code_manager")
-local init = require("src/ai_combinator/init")
 local combinator_service = require("src/ai_combinator/combinator_service")
 
 local dialog_manager = require("src/gui/dialogs/dialog_manager")
-local variable_row = require("src/gui/components/variable_row")
 
 local vars_dialog = require("src/gui/dialogs/vars_dialog")
 local set_task_dialog = require("src/gui/dialogs/set_task_dialog")
 local set_description_dialog = require("src/gui/dialogs/set_description_dialog")
 local edit_code_dialog = require("src/gui/dialogs/edit_code_dialog")
 local ai_combinator_dialog = require("src/gui/dialogs/ai_combinator_dialog")
-local help_dialog = require("src/gui/dialogs/help_dialog")
 
 local guis = {}
 
@@ -292,11 +286,9 @@ function guis.handle_task_dialog_click(event)
     if event.element.tags.set_task_button then
         local task_input = gui.task_textbox
         combinator_service.set_task(uid, task_input.text)
-        -- Check bridge availability before sending task request
         bridge.check_bridge_availability()
 
-        -- Start AI operation and get correlation ID
-        local success, correlation_id = ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TASK_EVALUATION)
+        local success, _ = ai_operation_manager.start_operation(uid, ai_operation_manager.OPERATION_TYPES.TASK_EVALUATION)
         if success then
             bridge.send_task_request(uid, task_input.text)
         end
@@ -326,8 +318,6 @@ function guis.on_gui_click(event)
         return
     end
 
-    --dialog_manager.close_background_dialogs(event)
-
     local element = event.element
 
     if not element.valid then
@@ -356,7 +346,7 @@ function guis.on_gui_click(event)
         end
     end
 
-    local uid, gui_t = find_gui(event)
+    local uid, _ = find_gui(event)
     if not uid then
         return
     end
@@ -404,17 +394,16 @@ function guis.on_gui_close(ev)
         return
     end
 
-    local uid, gui_t = find_gui(ev)
+    local uid, _ = find_gui(ev)
     if not uid then
         return
     end
-    local p = game.players[ev.player_index]
     guis.close(uid, ev.player_index)
 end
 
 function guis.vars_window_toggle(pn, toggle_on)
     local gui = game.players[pn].gui.screen["ai-combinator-gui"]
-    local uid, gui_t = find_gui({ element = gui })
+    local uid, _ = find_gui({ element = gui })
     if not uid then
         uid = storage.guis_player["vars." .. pn]
     end

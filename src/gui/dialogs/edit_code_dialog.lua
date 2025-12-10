@@ -52,11 +52,6 @@ function dialog.show(player_index, uid)
         dialog_manager.close_dialog_and_children(player_index, gui_t.test_case_dialog)
     end
 
-    local combinator_frame = gui_t.ai_combinator_gui
-    local popup_location = {
-        x = combinator_frame.location.x + 28,
-        y = combinator_frame.location.y + 500,
-    }
     local popup_frame = player.gui.screen.add({
         type = "frame",
         direction = "vertical",

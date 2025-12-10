@@ -27,7 +27,7 @@ function value_parser.format_value(value)
         local max_index = 0
         local count = 0
 
-        for k, v in pairs(value) do
+        for k, _ in pairs(value) do
             count = count + 1
             if type(k) ~= "number" or k < 1 or k ~= math.floor(k) then
                 is_array = false

@@ -160,9 +160,6 @@ end
 function dialog.show(player, entity)
     local uid = entity.unit_number
     local combinator = storage.combinators[uid]
-    local combinator_err = combinator.err_parse or combinator.err_run
-    local dw, dh, dsf = player.display_resolution.width, player.display_resolution.height, 1 / player.display_scale
-    local max_height = (dh - 350) * dsf
 
     -- Main frame
     local el_map = {} -- map is to check if el belonds to this gui
@@ -300,7 +297,7 @@ function dialog.update()
     end
 
     -- Update header
-    for uid, gui_t in pairs(storage.guis) do
+    for uid, _ in pairs(storage.guis) do
         update_signals(uid)
         update_status(uid)
         ai_combinator_header.update(uid)

@@ -119,7 +119,7 @@ function testing.evaluate_test_case(uid, red, green, options)
     func, err = load(combinator.code, combinator.code, "t", env_ro)
 
     if func then
-        local success, result = pcall(func)
+        local success, _ = pcall(func)
         if not success then
             env_ro.out = {}
         end
@@ -201,7 +201,7 @@ end
 
 local function signals_to_associative(signal_array)
     local result = {}
-    for i, signal in ipairs(signal_array) do
+    for _, signal in ipairs(signal_array) do
         if signal and signal.signal then
             local signal_name = circuit_network.cn_sig_str(signal.signal)
             if signal_name then
@@ -226,7 +226,7 @@ end
 local function variables_to_associative(variables_array)
     local result = {}
     if variables_array then
-        for i, var in ipairs(variables_array) do
+        for _, var in ipairs(variables_array) do
             if var and var.name and var.name ~= "" then
                 local name = var.name
                 local value = var.value or 0
