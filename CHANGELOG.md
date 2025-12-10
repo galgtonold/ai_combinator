@@ -4,6 +4,11 @@ All notable changes to the AI Combinator project will be documented in this file
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.7] - 2024-12-10
+
+### Fixed
+- Internal Github pipeline problems
+
 ## [0.1.6] - 2024-12-10
 
 ### Added

@@ -75,7 +75,7 @@ function dialog.show(pn, toggle_on)
 
     -- Add selectable download link with wider width
     local link_textfield =
-        scroll.add({ type = "text-box", name = "ai-combinator-ai-warning-link", text = "https://github.com/galgtonold/ai_combinator/releases" })
+        scroll.add({ type = "text-box", name = "ai-combinator-ai-warning-link", text = "https://github.com/galgtonold/ai_combinator" })
     link_textfield.read_only = true
     link_textfield.style.width = 450
     link_textfield.style.top_margin = 4

@@ -1,10 +1,9 @@
-# AI Combinator
+![Overview Graphic](https://github.com/user-attachments/assets/814f8c38-8bd5-42db-823b-ea25fe34ef69)
 
 **A combinator you program with words, not wires.**
 
 The AI Combinator reads signals from red/green wires and outputs signals - just like any other combinator. The difference? You describe what you want in plain English instead of building complex arithmetic/decider logic.
 
-<img width="570" height="590" alt="image" src="https://github.com/user-attachments/assets/64cc46a5-f045-43d1-95a9-734cbc538f0f" />
 
 ---
 
@@ -40,7 +39,6 @@ The AI Combinator reads signals from red/green wires and outputs signals - just 
 3. **Configure your AI provider:** Select provider and enter your API key
 4. **Start Factorio through the launcher** and activate the mod
 
-<img width="770" height="730" alt="image" src="https://github.com/user-attachments/assets/901fa091-d7f4-4c14-b109-707b0b811b5a" />
 
 ### First Combinator
 
@@ -85,7 +83,6 @@ AI-generated code can be unpredictable. The test case system solves this by lett
 2. **Run tests** - instantly verify the code works correctly
 3. **Auto-fix failures** - if tests fail, click "Fix with AI" to regenerate
 
-<img width="559" height="607" alt="image" src="https://github.com/user-attachments/assets/5f9ddaff-316a-4687-9b5d-d2d80e12f562" />
 
 **Why This Matters:**
 - **Reproducible results** - same test cases = same behavior
