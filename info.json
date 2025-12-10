@@ -1,9 +1,9 @@
 {
 	"name": "ai_combinator",
-	"version": "0.1.5",
+	"version": "0.1.6",
 	"factorio_version": "2.0",
 	"dependencies": ["base >= 2.0", "? SchallCircuitGroup"],
 	"title": "AI Combinator",
-	"author": "galgtonod, OwnlyMe, IWTDU, mk-fg, smartguy1196, Chilla55",
-	"description": "Adds an AI combinator. Needs additional programm running to run successfully. Based on Moon Logic 2"
+	"author": "galgtonold",
+	"description": "A combinator you program with words, not wires. Describe what you want in plain English and the AI generates the circuit logic. Requires external launcher for AI integration."
 }

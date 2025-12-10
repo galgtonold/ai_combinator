@@ -4,6 +4,29 @@ All notable changes to the AI Combinator project will be documented in this file
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.6] - 2024-12-10
+
+### Added
+- Added MIT license
+- Added demo video to README
+- Added mod portal description (MOD_PORTAL.md)
+- Added thumbnail for mod portal
+
+### Fixed
+- Fix API key binding and bridge restart on provider/key changes
+- Fix duplicate open warning in AI combinator GUI
+- Center dialog properly in AI combinator GUI
+- Fix "Fix with AI" button now works when code has errors even if tests pass
+- Include syntax and runtime errors in AI fix requests
+- Improve Lua error message formatting for better readability
+- Clear internal 'var' variables when code changes
+
+### Changed
+- Refactor code to remove unused variables and improve readability
+- Unify Lua code style with StyLua
+- Update DEVELOPMENT.md with current project structure
+- Update README with better examples and fix image links
+
 ## [0.1.5] - 2024-12-07
 
 ### Changed
