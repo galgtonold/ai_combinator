@@ -1,6 +1,6 @@
 # AI Combinator for Factorio
 
-[![Download Launcher](https://img.shields.io/badge/Download-AI%20Combinator%20Launcher-orange?style=for-the-badge&logo=windows)](https://github.com/galgtonold/ai_combinator/releases/latest)
+[![Download Launcher](https://img.shields.io/badge/Download-AI%20Combinator%20Launcher-orange?style=for-the-badge&logo=windows)](https://github.com/galgtonold/ai_combinator/releases/latest) [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/HYVuqC8kdP)
 
 ![Overview Graphic](https://github.com/user-attachments/assets/814f8c38-8bd5-42db-823b-ea25fe34ef69)
 
