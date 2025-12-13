@@ -28,8 +28,9 @@ export const aiProviderOptions: AIProviderOption[] = [
 // Model options for each provider
 export const modelsByProvider: ModelsByProvider = {
   openai: [
+    { value: "gpt-5.2-pro", label: "GPT-5.2 Pro" },
+    { value: "gpt-5.2", label: "GPT-5.2" },
     { value: "gpt-5.1", label: "GPT-5.1" },
-    { value: "gpt-5.1-codex", label: "GPT-5.1 Codex" },
     { value: "gpt-5-mini", label: "GPT-5 Mini" },
   ],
   anthropic: [

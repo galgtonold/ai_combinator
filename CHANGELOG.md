@@ -4,6 +4,20 @@ All notable changes to the AI Combinator project will be documented in this file
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.0.0] - 2024-12-13
+
+### 🎉 First Stable Release!
+
+AI Combinator is now production-ready for Factorio 2.0.
+
+### Added
+- Added video demos to mod portal documentation
+- Added new GPT-5.2 and GPT-5.2 Pro model options
+
+### Changed
+- Updated mod description to better explain test case features
+- Refined AI model selection options
+
 ## [0.1.8] - 2024-12-10
 
 ### Fixed
