@@ -49,6 +49,8 @@ The AI Combinator reads signals from red/green wires and outputs signals - just 
 5. Click **Generate** and wire the output to your system
 
 
+![Example combinator usage](https://pub-9645bce205344b639c5666a0559b5528.r2.dev/factorio_combinator_clip.mp4)
+
 ---
 
 ## How It Works
@@ -89,6 +91,9 @@ AI-generated code can be unpredictable. The test case system solves this by lett
 - **Catch edge cases** - define the tricky scenarios upfront
 - **Easy iteration** - modify tests, regenerate, verify
 - **Documentation** - test cases describe what the combinator does
+
+![Test caseusage](https://pub-9645bce205344b639c5666a0559b5528.r2.dev/factorio_tests.mp4)
+
 
 ---
 

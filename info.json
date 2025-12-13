@@ -1,9 +1,9 @@
 {
 	"name": "ai_combinator",
-	"version": "0.1.8",
+	"version": "1.0.0",
 	"factorio_version": "2.0",
 	"dependencies": ["base >= 2.0", "? SchallCircuitGroup"],
 	"title": "AI Combinator",
 	"author": "galgtonold",
-	"description": "A combinator you program with words, not wires. Describe what you want in plain English and the AI generates the circuit logic. Requires external launcher for AI integration."
+	"description": "A combinator you program with words. Describe what you want in plain English and the AI makes the combinator behave accordingly. Validate the logic using rigorous test cases to ensure reliability.\nRequires external launcher for AI integration (open mod portal link)."
 }
