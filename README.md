@@ -210,7 +210,7 @@ See `DEVELOPMENT.md` for technical details and development setup.
 
 ## 📜 License
 
-Based on the [Moon Logic 2](https://github.com/chilla55/Moon-Logic-2/) mod, distributed under MIT license.
+Based on the [Moon Logic 2](https://github.com/chilla55/Moon-Logic-2/) mod, distributed under the same license.
 
 ---
 
