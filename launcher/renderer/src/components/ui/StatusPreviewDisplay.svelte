@@ -9,6 +9,7 @@
   import googleLogo from '/graphics/providers/google.svg';
   import deepseekLogo from '/graphics/providers/deepseek.svg';
   import xaiLogo from '/graphics/providers/xai.svg';
+  import ollamaLogo from '/graphics/providers/ollama.svg';
 
   export let aiProvider: string = "openai";
   export let status: "success" | "warning" | "error" = "warning";
@@ -19,7 +20,8 @@
     anthropic: anthropicLogo,
     google: googleLogo,
     deepseek: deepseekLogo,
-    xai: xaiLogo
+    xai: xaiLogo,
+    ollama: ollamaLogo,
   };
   
   $: currentProviderLogo = providerLogos[aiProvider] || openaiLogo;

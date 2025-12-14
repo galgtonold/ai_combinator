@@ -110,7 +110,9 @@ export class IPCHandlers {
       const config = this.configManager.getConfig();
       const apiKey = this.configManager.getCurrentProviderApiKey();
       
-      if (!apiKey) {
+      // Ollama doesn't require an API key (it's a local service)
+      const requiresApiKey = config.aiProvider !== 'ollama';
+      if (requiresApiKey && !apiKey) {
         return { success: false, message: "API key not configured" };
       }
 

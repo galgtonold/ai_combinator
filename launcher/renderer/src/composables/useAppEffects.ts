@@ -1,7 +1,6 @@
 import ipc from "../utils/ipc";
 import type { FactorioStatusUpdate } from "@shared";
 import { config, configService, status, statusService, aiBridgeService, factorioService } from "../stores";
-import { isModelAvailableForProvider, getDefaultModelForProvider } from "../config/ai-config";
 import { get } from 'svelte/store';
 
 /**
@@ -59,13 +58,6 @@ export function useAppEffects() {
   function handleProviderChange(): void {
     const currentConfig = get(config);
     if (previousProvider !== null && currentConfig.aiProvider !== previousProvider) {
-      if (!isModelAvailableForProvider(currentConfig.aiProvider, currentConfig.aiModel)) {
-        const defaultModel = getDefaultModelForProvider(currentConfig.aiProvider);
-        configService.updateConfig({ aiModel: defaultModel });
-        const updatedConfig = get(config);
-        configService.saveConfig(updatedConfig);
-      }
-
       // Provider change always requires restart (new AI SDK client)
       aiBridgeService.restartAIBridge();
     }

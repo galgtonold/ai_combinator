@@ -30,7 +30,8 @@ export class ConfigManager {
       aiProvider: DEFAULT_AI_PROVIDER,
       aiModel: DEFAULT_AI_MODEL,
       udpPort: DEFAULT_UDP_PORT,
-      providerApiKeys: {}
+      providerApiKeys: {},
+      providerModels: {}
     };
   }
 
@@ -48,6 +49,11 @@ export class ConfigManager {
           providerApiKeys: {
             ...this.config.providerApiKeys,
             ...(loadedConfig.providerApiKeys || {})
+          },
+          // Ensure providerModels is properly preserved/merged
+          providerModels: {
+            ...this.config.providerModels,
+            ...(loadedConfig.providerModels || {})
           }
         };
         

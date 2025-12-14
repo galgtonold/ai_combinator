@@ -18,7 +18,9 @@ export class AIBridgeManager {
         this.stopBridge();
       }
       
-      if (!apiKey) {
+      // Ollama doesn't require an API key (it's a local service)
+      const requiresApiKey = provider !== 'ollama';
+      if (requiresApiKey && !apiKey) {
         log.warn("Cannot start AI Bridge: API key not set");
         return { success: false, message: "API key not set" };
       }

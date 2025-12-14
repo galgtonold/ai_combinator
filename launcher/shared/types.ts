@@ -19,7 +19,7 @@
  * const provider: AIProvider = 'openai';
  * ```
  */
-export type AIProvider = 'openai' | 'anthropic' | 'google' | 'xai' | 'deepseek';
+export type AIProvider = 'openai' | 'anthropic' | 'google' | 'xai' | 'deepseek' | 'ollama';
 
 /**
  * Application configuration stored in user data directory
@@ -60,6 +60,11 @@ export interface Config {
   
   /** Map of API keys for each provider. Only the current provider's key is used. */
   providerApiKeys: {
+    [key in AIProvider]?: string;
+  };
+  
+  /** Map of selected models for each provider. Persists model selection when switching providers. */
+  providerModels: {
     [key in AIProvider]?: string;
   };
 }

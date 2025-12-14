@@ -3,8 +3,9 @@
   import {
     aiProviderOptions,
     getModelOptionsForProvider,
+    isProviderWithFreeformModel,
   } from "../../config/ai-config";
-  import { Button, Dropdown, KeyToggleInput, Label, Row, Section } from "../index.js";
+  import { Button, Dropdown, InputField, KeyToggleInput, Label, Row, Section } from "../index.js";
 
   interface Props {
     config: Config;
@@ -16,6 +17,14 @@
 
   let { config, currentApiKeyInput = $bindable(), onProviderChange, onModelChange, onApiKeyChange }: Props = $props();
   
+  // Local state for free-form model input
+  let modelInput = $state(config.aiModel);
+  
+  // Sync modelInput when config changes (e.g., provider switch)
+  $effect(() => {
+    modelInput = config.aiModel;
+  });
+  
   // Function to open API key URL in default browser
   async function openApiKeyUrl() {
     const provider = aiProviderOptions.find(p => p.value === config.aiProvider);
@@ -23,9 +32,20 @@
       await window.bridge.openExternal(provider.apiKeyURL);
     }
   }
+  
+  // Handle free-form model input change
+  function handleModelInputChange() {
+    onModelChange(modelInput);
+  }
 
   // Get current model options based on selected provider
   const currentModelOptions = $derived(getModelOptionsForProvider(config.aiProvider));
+  
+  // Check if current provider uses free-form model input
+  const usesFreeformModel = $derived(isProviderWithFreeformModel(config.aiProvider));
+  
+  // Check if current provider requires an API key
+  const requiresApiKey = $derived(config.aiProvider !== 'ollama');
 </script>
 
 <Section title="AI Configuration">
@@ -40,30 +60,56 @@
   </Row>
   <Row justify="space-between">
     <Label size="small">Model</Label>
-    {#key config.aiProvider}
-      <Dropdown
-        value={config.aiModel}
-        options={currentModelOptions}
-        width="350px"
-        onChange={onModelChange}
-      />
-    {/key}
+    {#if usesFreeformModel}
+      <div style="width: 350px;">
+        <InputField
+          bind:value={modelInput}
+          placeholder="Enter model name (e.g., llama3.2, mistral, codellama)"
+          onChange={handleModelInputChange}
+          fullWidth={true}
+        />
+      </div>
+    {:else}
+      {#key config.aiProvider}
+        <Dropdown
+          value={config.aiModel}
+          options={currentModelOptions}
+          width="350px"
+          onChange={onModelChange}
+        />
+      {/key}
+    {/if}
   </Row>
-  <Row justify="space-between" marginBottom="30px">
-    <Label size="small">API Key</Label>
-    <div style="display: flex; gap: 10px;">
-      <KeyToggleInput
-        bind:value={currentApiKeyInput}
-        placeholder={`Enter your ${aiProviderOptions.find((p) => p.value === config.aiProvider)?.label || "API"} key...`}
-        onChange={onApiKeyChange}
-        width="233px"
-      />
-      <Button 
-        onClick={openApiKeyUrl}
-        primary={true}
-      >
-        Get Key
-      </Button>
-    </div>
-  </Row>
+  {#if requiresApiKey}
+    <Row justify="space-between" marginBottom="30px">
+      <Label size="small">API Key</Label>
+      <div style="display: flex; gap: 10px;">
+        <KeyToggleInput
+          bind:value={currentApiKeyInput}
+          placeholder={`Enter your ${aiProviderOptions.find((p) => p.value === config.aiProvider)?.label || "API"} key...`}
+          onChange={onApiKeyChange}
+          width="233px"
+        />
+        <Button 
+          onClick={openApiKeyUrl}
+          primary={true}
+        >
+          Get Key
+        </Button>
+      </div>
+    </Row>
+  {:else}
+    <Row justify="space-between" marginBottom="30px">
+      <Label size="small"></Label>
+      <div style="width: 350px;">
+        <Button 
+          onClick={openApiKeyUrl}
+          primary={true}
+          fullWidth={true}
+        >
+          Browse Models
+        </Button>
+      </div>
+    </Row>
+  {/if}
 </Section>

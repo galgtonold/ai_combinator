@@ -11,6 +11,7 @@ const initialConfig: Config = {
   aiModel: DEFAULT_AI_MODEL,
   udpPort: DEFAULT_UDP_PORT,
   providerApiKeys: {},
+  providerModels: {},
 };
 
 export const config = writable<Config>(initialConfig);
@@ -34,10 +35,19 @@ export class ConfigService {
         aiModel: loadedConfig.aiModel || DEFAULT_AI_MODEL,
         udpPort: loadedConfig.udpPort || DEFAULT_UDP_PORT,
         providerApiKeys: loadedConfig.providerApiKeys || {},
+        providerModels: loadedConfig.providerModels || {},
       };
 
+      // Set the model from providerModels if available for current provider
+      const savedModel = newConfig.providerModels[newConfig.aiProvider];
+      if (savedModel) {
+        newConfig.aiModel = savedModel;
+      }
+
       // Update AI bridge enabled status based on current provider's API key
-      newConfig.aiBridgeEnabled = !!this.getCurrentProviderApiKey(newConfig);
+      // Ollama doesn't require an API key (it's a local service)
+      const requiresApiKey = newConfig.aiProvider !== 'ollama';
+      newConfig.aiBridgeEnabled = !requiresApiKey || !!this.getCurrentProviderApiKey(newConfig);
 
       config.set(newConfig);
     } catch (error) {
@@ -51,13 +61,20 @@ export class ConfigService {
    */
   async saveConfig(configValue: Config): Promise<void> {
     try {
-      // Auto-enable AI bridge if current provider has API key
-      configValue.aiBridgeEnabled = !!this.getCurrentProviderApiKey(configValue);
+      // Auto-enable AI bridge if current provider has API key (or is Ollama which doesn't need one)
+      const requiresApiKey = configValue.aiProvider !== 'ollama';
+      configValue.aiBridgeEnabled = !requiresApiKey || !!this.getCurrentProviderApiKey(configValue);
 
-      // Ensure providerApiKeys is properly initialized
+      // Ensure providerApiKeys and providerModels are properly initialized
       if (!configValue.providerApiKeys) {
         configValue.providerApiKeys = {};
       }
+      if (!configValue.providerModels) {
+        configValue.providerModels = {};
+      }
+
+      // Save the current model to providerModels for the current provider
+      configValue.providerModels[configValue.aiProvider] = configValue.aiModel;
 
       // Create a plain object with all the properties we need to save
       const configToSave = {
@@ -67,6 +84,7 @@ export class ConfigService {
         aiModel: configValue.aiModel,
         udpPort: configValue.udpPort,
         providerApiKeys: { ...configValue.providerApiKeys },
+        providerModels: { ...configValue.providerModels },
       };
 
       await ipc.saveConfig(configToSave);
@@ -109,6 +127,33 @@ export class ConfigService {
       providerApiKeys: {
         ...configValue.providerApiKeys,
         [configValue.aiProvider]: apiKey
+      }
+    };
+  }
+
+  /**
+   * Get the saved model for a specific provider
+   */
+  getProviderModel(configValue: Config, provider: string): string | undefined {
+    if (!configValue.providerModels) {
+      return undefined;
+    }
+    return configValue.providerModels[provider as keyof typeof configValue.providerModels];
+  }
+
+  /**
+   * Set the model for a specific provider
+   */
+  setProviderModel(configValue: Config, provider: string, model: string): Config {
+    if (!configValue.providerModels) {
+      configValue.providerModels = {};
+    }
+    
+    return {
+      ...configValue,
+      providerModels: {
+        ...configValue.providerModels,
+        [provider]: model
       }
     };
   }

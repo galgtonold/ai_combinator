@@ -66,10 +66,14 @@
   }
 
   async function handleProviderChange(provider: string): Promise<void> {
-    const newConfig = { ...$config, aiProvider: provider as AIProvider };
+    let newConfig = { ...$config, aiProvider: provider as AIProvider };
     
-    // Check if model is available for new provider
-    if (!isModelAvailableForProvider(newConfig.aiProvider, newConfig.aiModel)) {
+    // Get the saved model for this provider, or use the default
+    const savedModel = configService.getProviderModel(newConfig, provider);
+    if (savedModel) {
+      newConfig.aiModel = savedModel;
+    } else {
+      // No saved model - use default for this provider
       const defaultModel = getDefaultModelForProvider(newConfig.aiProvider);
       newConfig.aiModel = defaultModel;
     }
@@ -83,6 +87,8 @@
     const newConfig = { ...$config, aiModel: model };
     config.set(newConfig);
     await configService.saveConfig(newConfig);
+    // Restart the bridge to use the new model
+    await aiBridgeService.restartAIBridge();
   }
 
   async function handleFactorioPathChange(): Promise<void> {
@@ -133,11 +139,13 @@
             onApiKeyChange={handleApiKeyChange}
           />
 
-          <LaunchSection
-            factorioPath={$config.factorioPath}
-            isLaunching={$status.isLaunching}
-            factorioStatus={$status.factorioStatus}
-          />
+          <div style="margin-top: 60px;">
+            <LaunchSection
+              factorioPath={$config.factorioPath}
+              isLaunching={$status.isLaunching}
+              factorioStatus={$status.factorioStatus}
+            />
+          </div>
         </div>
       </div>
     </div>

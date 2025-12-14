@@ -23,6 +23,7 @@ export const aiProviderOptions: AIProviderOption[] = [
   { value: "google", label: "Google", apiKeyURL: "https://aistudio.google.com/apikey" },
   { value: "xai", label: "xAI", apiKeyURL: "https://console.x.ai/" },
   { value: "deepseek", label: "DeepSeek", apiKeyURL: "https://deepseek.com/api-keys" },
+  { value: "ollama", label: "Ollama (Local)", apiKeyURL: "https://ollama.com/library" },
 ];
 
 // Model options for each provider
@@ -51,6 +52,7 @@ export const modelsByProvider: ModelsByProvider = {
     { value: "deepseek-chat", label: "DeepSeek Chat" },
     { value: "deepseek-reasoner", label: "DeepSeek Reasoner" },
   ],
+  ollama: [], // Ollama uses free-form model input
 };
 
 // Helper function to get model options for a provider
@@ -58,14 +60,26 @@ export function getModelOptionsForProvider(provider: string): AIModel[] {
   return modelsByProvider[provider] || modelsByProvider['openai'] || [];
 }
 
+// Helper function to check if provider uses free-form model input
+export function isProviderWithFreeformModel(provider: string): boolean {
+  return provider === 'ollama';
+}
+
 // Helper function to check if a model exists for a provider
 export function isModelAvailableForProvider(provider: string, model: string): boolean {
+  // Ollama accepts any model name
+  if (isProviderWithFreeformModel(provider)) {
+    return true;
+  }
   const options = getModelOptionsForProvider(provider);
   return options.some(option => option.value === model);
 }
 
 // Helper function to get the default model for a provider
 export function getDefaultModelForProvider(provider: string): string {
+  if (isProviderWithFreeformModel(provider)) {
+    return "";
+  }
   const options = getModelOptionsForProvider(provider);
   return options[0]?.value || "";
 }

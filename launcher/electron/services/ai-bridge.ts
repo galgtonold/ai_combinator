@@ -1,4 +1,5 @@
 import * as dgram from 'dgram';
+import * as http from 'http';
 import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
@@ -188,6 +189,9 @@ export class AIBridge {
         return createXai({ apiKey: this.apiKey });
       case 'deepseek':
         return createDeepSeek({ apiKey: this.apiKey });
+      case 'ollama':
+        // Ollama is handled separately in callAI()
+        throw new Error('Ollama should not use getAIProvider()');
       default:
         throw new Error(`Unsupported AI provider: ${this.provider}`);
     }
@@ -197,29 +201,109 @@ export class AIBridge {
     try {
       // Build the prompt
       const prompt = `${PROMPT} ${userMessage}`;
-      
+
       log.info(`Calling ${this.provider} API with model ${this.model}...`);
       const startTime = Date.now();
-      
-      // Get the appropriate provider
-      const provider = this.getAIProvider();
-      
-      // Make API call using the generateText function
-      const { text } = await generateText({
-        model: provider(this.model),
-        prompt: prompt,
-        temperature: 0
-      });
-      
+
+      let text: string;
+
+      // Ollama uses native API, others use AI SDK
+      if (this.provider === 'ollama') {
+        text = await this.callOllamaAPI(prompt);
+      } else {
+        // Get the appropriate provider
+        const provider = this.getAIProvider();
+
+        // Make API call using the generateText function
+        const response = await generateText({
+          model: provider(this.model),
+          prompt: prompt,
+          temperature: 0
+        });
+        text = response.text;
+      }
+
       const endTime = Date.now();
       log.info(`AI Response (took ${(endTime - startTime) / 1000}s)`);
       log.debug(text);
+
+      // Clean up the response - remove markdown code blocks if present
+      let cleanedText = text.trim();
       
-      return text;
+      // Remove markdown code blocks (```lua ... ``` or ``` ... ```)
+      if (cleanedText.startsWith('```')) {
+        cleanedText = cleanedText.replace(/^```(?:lua|javascript|js)?\n?/i, '').replace(/\n?```$/, '').trim();
+      }
+
+      return cleanedText;
     } catch (error) {
       log.error('AI API Error:', getErrorMessage(error));
       return `ERROR: ${getErrorMessage(error)}`;
     }
+  }
+
+  private async callOllamaAPI(prompt: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      log.info('Sending request to Ollama...');
+      
+      const requestBody = JSON.stringify({
+        model: this.model,
+        prompt: prompt,
+        stream: false,
+        options: {
+          temperature: 0,
+        },
+      });
+
+      const options = {
+        hostname: '127.0.0.1',
+        port: 11434,
+        path: '/api/generate',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(requestBody),
+        },
+        timeout: 600000, // 10 minute timeout
+      };
+
+      const req = http.request(options, (res) => {
+        let data = '';
+
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          try {
+            if (res.statusCode !== 200) {
+              reject(new Error(`Ollama API error: ${res.statusCode} ${res.statusMessage} - ${data}`));
+              return;
+            }
+
+            log.info('Parsing Ollama response...');
+            const json = JSON.parse(data);
+            log.info('Ollama response received successfully');
+            resolve(json.response || '');
+          } catch (error) {
+            reject(error);
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        log.error('Ollama request error:', error);
+        reject(error);
+      });
+
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error('Ollama request timed out after 10 minutes. Consider using a smaller/faster model.'));
+      });
+
+      req.write(requestBody);
+      req.end();
+    });
   }
 
   private async callAIForTestGeneration(prompt: string): Promise<string> {
@@ -368,7 +452,9 @@ export class AIBridge {
       return;
     }
     
-    if (!this.apiKey) {
+    // Ollama doesn't require an API key (it's a local service)
+    const requiresApiKey = this.provider !== 'ollama';
+    if (requiresApiKey && !this.apiKey) {
       log.error('ERROR: API key not provided!');
       return;
     }

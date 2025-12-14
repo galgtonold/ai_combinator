@@ -9,12 +9,20 @@ import { AI_BRIDGE_RESTART_DELAY, getErrorMessage } from "@shared";
  */
 export class AIBridgeService {
   /**
+   * Check if the current provider requires an API key
+   */
+  private requiresApiKey(provider: string): boolean {
+    return provider !== 'ollama';
+  }
+
+  /**
    * Manage AI Bridge based on configuration
    */
   async manageAIBridge(): Promise<void> {
     const currentConfig = get(config);
     const currentApiKey = configService.getCurrentProviderApiKey(currentConfig);
-    const shouldBeRunning = currentApiKey && currentConfig.aiBridgeEnabled;
+    const needsApiKey = this.requiresApiKey(currentConfig.aiProvider);
+    const shouldBeRunning = currentConfig.aiBridgeEnabled && (!needsApiKey || currentApiKey);
     const isCurrentlyRunning = await ipc.isAIBridgeRunning();
 
     if (shouldBeRunning && !isCurrentlyRunning) {
@@ -30,7 +38,8 @@ export class AIBridgeService {
   async startAIBridge(): Promise<void> {
     const currentConfig = get(config);
     const currentApiKey = configService.getCurrentProviderApiKey(currentConfig);
-    if (!currentApiKey) {
+    const needsApiKey = this.requiresApiKey(currentConfig.aiProvider);
+    if (needsApiKey && !currentApiKey) {
       statusService.setStatus("API key is required", "error");
       return;
     }
