@@ -4,6 +4,18 @@ All notable changes to the AI Combinator project will be documented in this file
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.0] - 2024-12-14
+
+### Added
+- **Ollama support**: Added support for Ollama as an AI provider, enabling local AI model usage
+- Free-form model input for Ollama provider allowing any compatible model
+- Ollama provider logo and UI integration
+
+### Changed
+- Enhanced AI provider configuration to support multiple provider types
+- Updated model selection to persist separately for each provider
+- Improved provider switching UX in launcher
+
 ## [1.0.0] - 2024-12-13
 
 ### 🎉 First Stable Release!

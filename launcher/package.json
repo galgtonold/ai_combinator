@@ -1,6 +1,6 @@
 {
   "name": "ai-combinator-launcher",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Launcher for Factorio AI Combinator mod",
   "main": "dist/electron/app.js",
   "scripts": {
