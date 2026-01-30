@@ -4,6 +4,19 @@ All notable changes to the AI Combinator project will be documented in this file
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.0] - 2026-01-30
+
+### Added
+- **Player2 support**: Added Player2 as a free AI provider option, enabling local AI usage without API keys
+- Player2 connection status indicator with real-time health check polling
+- Status overlay showing Player2 connection state in the launcher
+- Dropdown "open upward" feature for better UI when dropdowns are near bottom of window
+
+### Changed
+- Default AI provider changed to Player2 for easier onboarding
+- Updated MOD_PORTAL.md to highlight Player2 as free option
+- Improved launcher window height for better layout
+
 ## [1.1.0] - 2024-12-14
 
 ### Added
