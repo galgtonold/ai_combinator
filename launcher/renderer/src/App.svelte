@@ -120,7 +120,8 @@
         <!-- Status Preview Display Section -->
         <StatusPreviewDisplay 
           aiProvider={$config.aiProvider} 
-          status={$status.factorioStatusClass} 
+          status={$status.factorioStatusClass}
+          player2Status={$status.player2Status}
         />
 
         <div style="margin-left: 5px; margin-right: 5px;">
@@ -139,7 +140,7 @@
             onApiKeyChange={handleApiKeyChange}
           />
 
-          <div style="margin-top: 60px;">
+          <div style="margin-top: 30px;">
             <LaunchSection
               factorioPath={$config.factorioPath}
               isLaunching={$status.isLaunching}

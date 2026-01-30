@@ -24,6 +24,13 @@ export class IPCHandlers {
     this.aiBridgeManager = aiBridgeManager;
     this.mainWindow = mainWindow;
     
+    // Set up Player2 status callback to send updates to renderer
+    this.aiBridgeManager.setPlayer2StatusCallback((status) => {
+      if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+        this.mainWindow.webContents.send('player2-status-update', { status });
+      }
+    });
+    
     this.registerHandlers();
   }
 
@@ -88,7 +95,9 @@ export class IPCHandlers {
       const config = this.configManager.getConfig();
       const apiKey = this.configManager.getCurrentProviderApiKey();
       
-      if (!apiKey) {
+      // Ollama and Player2 don't require an API key (they are local services)
+      const requiresApiKey = config.aiProvider !== 'ollama' && config.aiProvider !== 'player2';
+      if (requiresApiKey && !apiKey) {
         return { success: false, message: "API key not configured" };
       }
 
@@ -110,8 +119,8 @@ export class IPCHandlers {
       const config = this.configManager.getConfig();
       const apiKey = this.configManager.getCurrentProviderApiKey();
       
-      // Ollama doesn't require an API key (it's a local service)
-      const requiresApiKey = config.aiProvider !== 'ollama';
+      // Ollama and Player2 don't require an API key (they are local services)
+      const requiresApiKey = config.aiProvider !== 'ollama' && config.aiProvider !== 'player2';
       if (requiresApiKey && !apiKey) {
         return { success: false, message: "API key not configured" };
       }
@@ -136,6 +145,11 @@ export class IPCHandlers {
       this.configManager.updateAiModel(model);
       this.aiBridgeManager.updateModel(model);
       return true;
+    });
+
+    // Player2 status handler
+    ipcMain.handle("get-player2-status", () => {
+      return this.aiBridgeManager.getPlayer2Status();
     });
 
     // System info handlers

@@ -1,7 +1,7 @@
 import type { ContextBridge } from "@shared";
 
 // Re-export shared types for use in the renderer
-export type { AIProvider, Config, FactorioStatus, ContextBridge } from "@shared";
+export type { AIProvider, Config, FactorioStatus, Player2Status, Player2StatusUpdate, ContextBridge } from "@shared";
 
 declare global {
   interface Window {

@@ -54,6 +54,12 @@
   box-sizing: border-box;
 }
 
+.factorio-dropdown-list.upward {
+  top: auto;
+  bottom: 100%;
+  flex-direction: column-reverse;
+}
+
 .factorio-dropdown-item {
   width: 100%;
   background: none;

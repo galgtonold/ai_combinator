@@ -18,6 +18,7 @@ export interface ModelsByProvider {
 
 // AI Provider options
 export const aiProviderOptions: AIProviderOption[] = [
+  { value: "player2", label: "Player2 (Free)", apiKeyURL: "https://player2.game/" },
   { value: "openai", label: "OpenAI", apiKeyURL: "https://platform.openai.com/api-keys" },
   { value: "anthropic", label: "Anthropic", apiKeyURL: "https://console.anthropic.com/settings/keys" },
   { value: "google", label: "Google", apiKeyURL: "https://aistudio.google.com/apikey" },
@@ -53,6 +54,7 @@ export const modelsByProvider: ModelsByProvider = {
     { value: "deepseek-reasoner", label: "DeepSeek Reasoner" },
   ],
   ollama: [], // Ollama uses free-form model input
+  player2: [], // Player2 uses the model configured in the Player2 app
 };
 
 // Helper function to get model options for a provider
@@ -65,10 +67,20 @@ export function isProviderWithFreeformModel(provider: string): boolean {
   return provider === 'ollama';
 }
 
+// Helper function to check if provider uses no model selection (handled externally)
+export function isProviderWithNoModelSelection(provider: string): boolean {
+  return provider === 'player2';
+}
+
+// Helper function to check if provider requires an API key
+export function isProviderRequiringApiKey(provider: string): boolean {
+  return provider !== 'ollama' && provider !== 'player2';
+}
+
 // Helper function to check if a model exists for a provider
 export function isModelAvailableForProvider(provider: string, model: string): boolean {
-  // Ollama accepts any model name
-  if (isProviderWithFreeformModel(provider)) {
+  // Ollama accepts any model name, Player2 handles model selection in the app
+  if (isProviderWithFreeformModel(provider) || isProviderWithNoModelSelection(provider)) {
     return true;
   }
   const options = getModelOptionsForProvider(provider);
@@ -77,7 +89,7 @@ export function isModelAvailableForProvider(provider: string, model: string): bo
 
 // Helper function to get the default model for a provider
 export function getDefaultModelForProvider(provider: string): string {
-  if (isProviderWithFreeformModel(provider)) {
+  if (isProviderWithFreeformModel(provider) || isProviderWithNoModelSelection(provider)) {
     return "";
   }
   const options = getModelOptionsForProvider(provider);

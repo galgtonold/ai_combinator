@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import type { FactorioStatus } from "../utils/ipc";
+import type { FactorioStatus, Player2Status } from "../utils/ipc";
 import { STATUS_MESSAGE_TIMEOUT } from "@shared";
 
 export type StatusType = "error" | "warning" | "success";
@@ -11,6 +11,7 @@ export interface StatusState {
   statusMessage: string;
   isLaunching: boolean;
   wasRunning: boolean;
+  player2Status: Player2Status;
 }
 
 // Create reactive status store
@@ -21,6 +22,7 @@ const initialStatus: StatusState = {
   statusMessage: "",
   isLaunching: false,
   wasRunning: false,
+  player2Status: "disconnected",
 };
 
 export const status = writable<StatusState>(initialStatus);
@@ -113,6 +115,13 @@ export class StatusService {
       this.updateFactorioStatusDisplay(newStatus);
       return newStatus;
     });
+  }
+
+  /**
+   * Update Player2 connection status
+   */
+  setPlayer2Status(player2Status: Player2Status): void {
+    status.update(current => ({ ...current, player2Status }));
   }
 }
 

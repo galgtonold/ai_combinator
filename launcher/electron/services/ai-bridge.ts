@@ -19,6 +19,9 @@ import {
 
 const log = createLogger('AIBridge');
 
+// Player2 Game Client ID for API authentication
+const PLAYER2_GAME_CLIENT_ID = '019c0ffd-286b-7af8-bb7b-76c67a5a87bc';
+
 // The same prompt used in the Python bridge
 const PROMPT = `
 You are an expert Factorio Moon Logic combinator AI. Generate executable Lua code satisfying these strict rules:
@@ -137,6 +140,16 @@ SOURCE CODE TO TEST:
 Generate comprehensive test cases for this implementation:
 `;
 
+/** Player2 connection status */
+export type Player2Status = 'connected' | 'disconnected' | 'checking';
+
+/** Callback for Player2 status changes */
+export type Player2StatusCallback = (status: Player2Status) => void;
+
+// Player2 health check intervals
+const PLAYER2_HEALTH_CHECK_INTERVAL_CONNECTED = 60000; // 60 seconds when connected
+const PLAYER2_HEALTH_CHECK_INTERVAL_DISCONNECTED = 5000; // 5 seconds when disconnected
+
 export class AIBridge {
   private listenPort: number;
   private responsePort: number;
@@ -147,6 +160,11 @@ export class AIBridge {
   private listenSocket: dgram.Socket;
   private responseSocket: dgram.Socket;
   private isRunning: boolean = false;
+  
+  // Player2 health check state
+  private player2HealthCheckTimer: NodeJS.Timeout | null = null;
+  private player2Status: Player2Status = 'disconnected';
+  private player2StatusCallback: Player2StatusCallback | null = null;
 
   constructor(
     apiKey: string,
@@ -192,6 +210,9 @@ export class AIBridge {
       case 'ollama':
         // Ollama is handled separately in callAI()
         throw new Error('Ollama should not use getAIProvider()');
+      case 'player2':
+        // Player2 is handled separately in callAI()
+        throw new Error('Player2 should not use getAIProvider()');
       default:
         throw new Error(`Unsupported AI provider: ${this.provider}`);
     }
@@ -207,9 +228,11 @@ export class AIBridge {
 
       let text: string;
 
-      // Ollama uses native API, others use AI SDK
+      // Ollama and Player2 use native API, others use AI SDK
       if (this.provider === 'ollama') {
         text = await this.callOllamaAPI(prompt);
+      } else if (this.provider === 'player2') {
+        text = await this.callPlayer2API(prompt);
       } else {
         // Get the appropriate provider
         const provider = this.getAIProvider();
@@ -306,20 +329,203 @@ export class AIBridge {
     });
   }
 
+  private async callPlayer2API(prompt: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      log.info('Sending request to Player2...');
+      
+      const requestBody = JSON.stringify({
+        messages: [
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0,
+      });
+
+      const options = {
+        hostname: '127.0.0.1',
+        port: 4315,
+        path: '/v1/chat/completions',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(requestBody),
+          'player2-game-key': PLAYER2_GAME_CLIENT_ID,
+        },
+        timeout: 600000, // 10 minute timeout
+      };
+
+      const req = http.request(options, (res) => {
+        let data = '';
+
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          try {
+            if (res.statusCode !== 200) {
+              reject(new Error(`Player2 API error: ${res.statusCode} ${res.statusMessage} - ${data}`));
+              return;
+            }
+
+            log.info('Parsing Player2 response...');
+            const json = JSON.parse(data);
+            log.info('Player2 response received successfully');
+            
+            // Player2 uses OpenAI-compatible format
+            const content = json.choices?.[0]?.message?.content || '';
+            resolve(content);
+          } catch (error) {
+            reject(error);
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        log.error('Player2 request error:', error);
+        reject(new Error(`Player2 connection failed. Make sure the Player2 app is running. Error: ${error.message}`));
+      });
+
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error('Player2 request timed out after 10 minutes.'));
+      });
+
+      req.write(requestBody);
+      req.end();
+    });
+  }
+
+  /**
+   * Check Player2 health endpoint
+   * @returns Promise<boolean> - true if Player2 is reachable
+   */
+  private async checkPlayer2Health(): Promise<boolean> {
+    return new Promise((resolve) => {
+      const options = {
+        hostname: '127.0.0.1',
+        port: 4315,
+        path: '/v1/health',
+        method: 'GET',
+        headers: {
+          'player2-game-key': PLAYER2_GAME_CLIENT_ID,
+        },
+        timeout: 5000, // 5 second timeout for health check
+      };
+
+      const req = http.request(options, (res) => {
+        // Any response means Player2 is running
+        resolve(res.statusCode === 200);
+      });
+
+      req.on('error', () => {
+        resolve(false);
+      });
+
+      req.on('timeout', () => {
+        req.destroy();
+        resolve(false);
+      });
+
+      req.end();
+    });
+  }
+
+  /**
+   * Update Player2 status and notify callback
+   */
+  private updatePlayer2Status(newStatus: Player2Status): void {
+    if (this.player2Status !== newStatus) {
+      this.player2Status = newStatus;
+      log.info(`Player2 status changed to: ${newStatus}`);
+      if (this.player2StatusCallback) {
+        this.player2StatusCallback(newStatus);
+      }
+    }
+  }
+
+  /**
+   * Perform a Player2 health check and schedule the next one
+   */
+  private async performPlayer2HealthCheck(): Promise<void> {
+    if (this.provider !== 'player2' || !this.isRunning) {
+      this.stopPlayer2HealthCheck();
+      return;
+    }
+
+    const isHealthy = await this.checkPlayer2Health();
+    this.updatePlayer2Status(isHealthy ? 'connected' : 'disconnected');
+
+    // Schedule next check based on current status
+    const interval = isHealthy 
+      ? PLAYER2_HEALTH_CHECK_INTERVAL_CONNECTED 
+      : PLAYER2_HEALTH_CHECK_INTERVAL_DISCONNECTED;
+    
+    this.player2HealthCheckTimer = setTimeout(() => {
+      this.performPlayer2HealthCheck();
+    }, interval);
+  }
+
+  /**
+   * Start Player2 health check polling
+   */
+  private startPlayer2HealthCheck(): void {
+    if (this.provider !== 'player2') return;
+    
+    this.stopPlayer2HealthCheck();
+    this.updatePlayer2Status('checking');
+    
+    // Perform initial check immediately
+    this.performPlayer2HealthCheck();
+  }
+
+  /**
+   * Stop Player2 health check polling
+   */
+  private stopPlayer2HealthCheck(): void {
+    if (this.player2HealthCheckTimer) {
+      clearTimeout(this.player2HealthCheckTimer);
+      this.player2HealthCheckTimer = null;
+    }
+  }
+
+  /**
+   * Set callback for Player2 status changes
+   */
+  public setPlayer2StatusCallback(callback: Player2StatusCallback | null): void {
+    this.player2StatusCallback = callback;
+  }
+
+  /**
+   * Get current Player2 status
+   */
+  public getPlayer2Status(): Player2Status {
+    return this.player2Status;
+  }
+
   private async callAIForTestGeneration(prompt: string): Promise<string> {
     try {
       log.info(`Calling ${this.provider} API for test generation with model ${this.model}...`);
       const startTime = Date.now();
       
-      // Get the appropriate provider
-      const provider = this.getAIProvider();
+      let text: string;
       
-      // Make API call using the generateText function
-      const { text } = await generateText({
-        model: provider(this.model),
-        prompt: prompt,
-        temperature: 0.3 // Slightly higher temperature for more diverse test cases
-      });
+      // Ollama and Player2 use native API, others use AI SDK
+      if (this.provider === 'ollama') {
+        text = await this.callOllamaAPI(prompt);
+      } else if (this.provider === 'player2') {
+        text = await this.callPlayer2API(prompt);
+      } else {
+        // Get the appropriate provider
+        const provider = this.getAIProvider();
+        
+        // Make API call using the generateText function
+        const response = await generateText({
+          model: provider(this.model),
+          prompt: prompt,
+          temperature: 0.3 // Slightly higher temperature for more diverse test cases
+        });
+        text = response.text;
+      }
       
       const endTime = Date.now();
       log.info(`AI Test Generation Response (took ${(endTime - startTime) / 1000}s)`);
@@ -452,8 +658,8 @@ export class AIBridge {
       return;
     }
     
-    // Ollama doesn't require an API key (it's a local service)
-    const requiresApiKey = this.provider !== 'ollama';
+    // Ollama and Player2 don't require an API key (they are local services)
+    const requiresApiKey = this.provider !== 'ollama' && this.provider !== 'player2';
     if (requiresApiKey && !this.apiKey) {
       log.error('ERROR: API key not provided!');
       return;
@@ -466,6 +672,11 @@ export class AIBridge {
         log.info(`Responses will be sent to ${this.responseHost}:${this.responsePort}`);
         log.info(`Using model: ${this.model}`);
         this.isRunning = true;
+        
+        // Start Player2 health check if using Player2 provider
+        if (this.provider === 'player2') {
+          this.startPlayer2HealthCheck();
+        }
       });
     } catch (error) {
       log.error('Failed to start AI Bridge:', getErrorMessage(error));
@@ -477,6 +688,10 @@ export class AIBridge {
       log.debug('AI Bridge is not running');
       return;
     }
+    
+    // Stop Player2 health check
+    this.stopPlayer2HealthCheck();
+    this.updatePlayer2Status('disconnected');
     
     try {
       this.listenSocket.close(() => {

@@ -10,9 +10,13 @@
   import deepseekLogo from '/graphics/providers/deepseek.svg';
   import xaiLogo from '/graphics/providers/xai.svg';
   import ollamaLogo from '/graphics/providers/ollama.svg';
+  import player2Logo from '/graphics/providers/player2.png';
+  
+  import type { Player2Status } from "../../utils/ipc";
 
   export let aiProvider: string = "openai";
   export let status: "success" | "warning" | "error" = "warning";
+  export let player2Status: Player2Status = "disconnected";
   
   // Map provider names to imported logos
   const providerLogos: Record<string, string> = {
@@ -22,9 +26,15 @@
     deepseek: deepseekLogo,
     xai: xaiLogo,
     ollama: ollamaLogo,
+    player2: player2Logo,
   };
   
   $: currentProviderLogo = providerLogos[aiProvider] || openaiLogo;
+  
+  // For Player2, derive the effective status from its connection state
+  $: effectiveStatus = aiProvider === 'player2' 
+    ? (player2Status === 'connected' ? status : (player2Status === 'checking' ? 'warning' : 'error'))
+    : status;
 </script>
 
 <div 
@@ -32,11 +42,20 @@
   style="--outer-frame-image: url({outerFrameLight}); --assembling-machine-image: url({assemblingMachine}); --inner-glow-image: url({innerGlow});"
 >
   <div class="checkerboard-pattern">
-    <div class="assembling-machine" class:working={status === 'success'}>
+    <div class="assembling-machine" class:working={effectiveStatus === 'success'}>
       <div class="provider-logo-overlay" style="background-image: url({currentProviderLogo});"></div>
     </div>
     <div class="inner-glow-overlay"></div>
   </div>
+  {#if aiProvider === 'player2' && player2Status !== 'connected'}
+    <div class="player2-status-overlay">
+      {#if player2Status === 'checking'}
+        Connecting to Player2...
+      {:else}
+        Player2 app not detected
+      {/if}
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -52,6 +71,22 @@
     border-image-width: 5px;
     border-image-repeat: stretch;
     border-image-outset: 0;
+    position: relative;
+  }
+  
+  .player2-status-overlay {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #ffcc00;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 10;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
   }
 
   .checkerboard-pattern {

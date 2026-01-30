@@ -12,7 +12,7 @@ export class AIBridgeService {
    * Check if the current provider requires an API key
    */
   private requiresApiKey(provider: string): boolean {
-    return provider !== 'ollama';
+    return provider !== 'ollama' && provider !== 'player2';
   }
 
   /**

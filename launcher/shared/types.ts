@@ -19,7 +19,7 @@
  * const provider: AIProvider = 'openai';
  * ```
  */
-export type AIProvider = 'openai' | 'anthropic' | 'google' | 'xai' | 'deepseek' | 'ollama';
+export type AIProvider = 'openai' | 'anthropic' | 'google' | 'xai' | 'deepseek' | 'ollama' | 'player2';
 
 /**
  * Application configuration stored in user data directory
@@ -79,6 +79,27 @@ export interface Config {
  * - `stopped`: Factorio was running but has now stopped
  */
 export type FactorioStatus = 'not_found' | 'found' | 'running' | 'stopped';
+
+/**
+ * Player2 connection status
+ * 
+ * Represents the current state of the Player2 local service:
+ * - `connected`: Player2 app is running and responding
+ * - `disconnected`: Player2 app is not reachable
+ * - `checking`: Currently checking Player2 status
+ */
+export type Player2Status = 'connected' | 'disconnected' | 'checking';
+
+/**
+ * Player2 status update from the main process
+ * 
+ * Sent via IPC when the Player2 connection state changes.
+ * The renderer subscribes to these updates to keep the UI in sync.
+ */
+export interface Player2StatusUpdate {
+  /** Current status of the Player2 connection */
+  status: Player2Status;
+}
 
 /**
  * Result of AI Bridge operations
@@ -222,6 +243,19 @@ export interface ContextBridge {
    * @returns True if successful
    */
   updateAIModel: (model: string) => Promise<boolean>;
+  
+  /**
+   * Subscribe to real-time Player2 status updates
+   * @param callback - Function called when Player2 connection status changes
+   * @returns Unsubscribe function to stop receiving updates
+   */
+  onPlayer2StatusUpdate: (callback: (data: Player2StatusUpdate) => void) => () => void;
+  
+  /**
+   * Get current Player2 connection status
+   * @returns Current Player2 status
+   */
+  getPlayer2Status: () => Promise<Player2Status>;
   
   /**
    * Minimize the application window

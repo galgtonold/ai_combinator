@@ -45,8 +45,8 @@ export class ConfigService {
       }
 
       // Update AI bridge enabled status based on current provider's API key
-      // Ollama doesn't require an API key (it's a local service)
-      const requiresApiKey = newConfig.aiProvider !== 'ollama';
+      // Ollama and Player2 don't require an API key (they are local services)
+      const requiresApiKey = newConfig.aiProvider !== 'ollama' && newConfig.aiProvider !== 'player2';
       newConfig.aiBridgeEnabled = !requiresApiKey || !!this.getCurrentProviderApiKey(newConfig);
 
       config.set(newConfig);
@@ -61,8 +61,8 @@ export class ConfigService {
    */
   async saveConfig(configValue: Config): Promise<void> {
     try {
-      // Auto-enable AI bridge if current provider has API key (or is Ollama which doesn't need one)
-      const requiresApiKey = configValue.aiProvider !== 'ollama';
+      // Auto-enable AI bridge if current provider has API key (or is Ollama/Player2 which don't need one)
+      const requiresApiKey = configValue.aiProvider !== 'ollama' && configValue.aiProvider !== 'player2';
       configValue.aiBridgeEnabled = !requiresApiKey || !!this.getCurrentProviderApiKey(configValue);
 
       // Ensure providerApiKeys and providerModels are properly initialized

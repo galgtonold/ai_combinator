@@ -29,8 +29,9 @@ The AI Combinator reads signals from red/green wires and outputs signals - just 
 
 ### Requirements
 - Factorio 2.0+
-- API key from a supported AI provider (OpenAI, Anthropic, Google, xAI, or DeepSeek)
 - **[AI Combinator Launcher](https://github.com/galgtonold/ai_combinator/)** (required - bridges Factorio to the AI service)
+- [Player2](https://player2.game/) (get started for free) or an API key from a supported AI provider (OpenAI, Anthropic, Google, xAI, or DeepSeek)
+- Multiplayer is currently not supported
 
 ### Installation
 
@@ -174,4 +175,4 @@ Useful for selecting which resource needs attention most.
 
 ## License
 
-Based on Moon Logic 2, distributed under the MIT open-source license.
+Based on Moon Logic 2, distributed under the same open-source license.

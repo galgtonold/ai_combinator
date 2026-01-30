@@ -4,6 +4,8 @@
     aiProviderOptions,
     getModelOptionsForProvider,
     isProviderWithFreeformModel,
+    isProviderWithNoModelSelection,
+    isProviderRequiringApiKey,
   } from "../../config/ai-config";
   import { Button, Dropdown, InputField, KeyToggleInput, Label, Row, Section } from "../index.js";
 
@@ -44,8 +46,11 @@
   // Check if current provider uses free-form model input
   const usesFreeformModel = $derived(isProviderWithFreeformModel(config.aiProvider));
   
+  // Check if current provider has no model selection (model is configured externally)
+  const hasNoModelSelection = $derived(isProviderWithNoModelSelection(config.aiProvider));
+  
   // Check if current provider requires an API key
-  const requiresApiKey = $derived(config.aiProvider !== 'ollama');
+  const requiresApiKey = $derived(isProviderRequiringApiKey(config.aiProvider));
 </script>
 
 <Section title="AI Configuration">
@@ -56,30 +61,48 @@
       options={aiProviderOptions}
       width="350px"
       onChange={onProviderChange}
+      openUpward={true}
     />
   </Row>
-  <Row justify="space-between">
-    <Label size="small">Model</Label>
-    {#if usesFreeformModel}
+  {#if !hasNoModelSelection}
+    <Row justify="space-between">
+      <Label size="small">Model</Label>
+      {#if usesFreeformModel}
+        <div style="width: 350px;">
+          <InputField
+            bind:value={modelInput}
+            placeholder="Enter model name (e.g., llama3.2, mistral, codellama)"
+            onChange={handleModelInputChange}
+            fullWidth={true}
+          />
+        </div>
+      {:else}
+        {#key config.aiProvider}
+          <Dropdown
+            value={config.aiModel}
+            options={currentModelOptions}
+            width="350px"
+            onChange={onModelChange}
+            openUpward={true}
+          />
+        {/key}
+      {/if}
+    </Row>
+  {:else}
+    <!-- Download button row for Player2 (in Model row position) -->
+    <Row justify="space-between">
+      <Label size="small"></Label>
       <div style="width: 350px;">
-        <InputField
-          bind:value={modelInput}
-          placeholder="Enter model name (e.g., llama3.2, mistral, codellama)"
-          onChange={handleModelInputChange}
+        <Button 
+          onClick={openApiKeyUrl}
+          primary={true}
           fullWidth={true}
-        />
+        >
+          Download Player2 App
+        </Button>
       </div>
-    {:else}
-      {#key config.aiProvider}
-        <Dropdown
-          value={config.aiModel}
-          options={currentModelOptions}
-          width="350px"
-          onChange={onModelChange}
-        />
-      {/key}
-    {/if}
-  </Row>
+    </Row>
+  {/if}
   {#if requiresApiKey}
     <Row justify="space-between" marginBottom="30px">
       <Label size="small">API Key</Label>
@@ -97,6 +120,12 @@
           Get Key
         </Button>
       </div>
+    </Row>
+  {:else if hasNoModelSelection}
+    <!-- Empty row to maintain consistent spacing after Player2 download button -->
+    <Row justify="space-between" marginBottom="30px">
+      <Label size="small"></Label>
+      <div style="width: 350px; height: 40px;"></div>
     </Row>
   {:else}
     <Row justify="space-between" marginBottom="30px">

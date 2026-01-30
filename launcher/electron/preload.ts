@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { ContextBridge, FactorioStatusUpdate, LaunchResult, AIBridgeResult } from "../shared";
+import type { ContextBridge, FactorioStatusUpdate, Player2StatusUpdate, LaunchResult, AIBridgeResult, Player2Status } from "../shared";
 
 /**
  * Context bridge implementation exposing IPC methods to the renderer process
@@ -59,6 +59,17 @@ const bridge: ContextBridge = {
   
   updateAIModel: async (model) => {
     return await ipcRenderer.invoke("update-ai-model", model);
+  },
+  
+  onPlayer2StatusUpdate: (callback: (data: Player2StatusUpdate) => void) => {
+    ipcRenderer.on('player2-status-update', (_, data) => callback(data));
+    return () => {
+      ipcRenderer.removeAllListeners('player2-status-update');
+    };
+  },
+  
+  getPlayer2Status: async (): Promise<Player2Status> => {
+    return await ipcRenderer.invoke("get-player2-status");
   },
   
   minimizeWindow: () => {

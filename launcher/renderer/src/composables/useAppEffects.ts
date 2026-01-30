@@ -1,5 +1,5 @@
 import ipc from "../utils/ipc";
-import type { FactorioStatusUpdate } from "@shared";
+import type { FactorioStatusUpdate, Player2StatusUpdate } from "@shared";
 import { config, configService, status, statusService, aiBridgeService, factorioService } from "../stores";
 import { get } from 'svelte/store';
 
@@ -7,7 +7,8 @@ import { get } from 'svelte/store';
  * Composable for handling application initialization and reactive effects
  */
 export function useAppEffects() {
-  let unsubscribeStatusUpdate: (() => void) | null = null;
+  let unsubscribeFactorioStatusUpdate: (() => void) | null = null;
+  let unsubscribePlayer2StatusUpdate: (() => void) | null = null;
   
   // Track previous values for change detection
   let previousProvider: string | null = null;
@@ -20,20 +21,27 @@ export function useAppEffects() {
   async function initialize(): Promise<void> {
     await configService.loadConfig();
     await factorioService.checkFactorioStatus();
-    setupStatusListener();
+    setupStatusListeners();
     
     // Initialize tracking variables
     const currentConfig = get(config);
     previousApiKey = configService.getCurrentProviderApiKey(currentConfig);
     previousProvider = currentConfig.aiProvider;
     previousModel = currentConfig.aiModel;
+    
+    // Get initial Player2 status if using Player2
+    if (currentConfig.aiProvider === 'player2') {
+      const player2Status = await ipc.getPlayer2Status();
+      statusService.setPlayer2Status(player2Status);
+    }
   }
 
   /**
-   * Setup status listener for Factorio updates
+   * Setup status listeners for Factorio and Player2 updates
    */
-  function setupStatusListener(): void {
-    unsubscribeStatusUpdate = ipc.onFactorioStatusUpdate((data: FactorioStatusUpdate) => {
+  function setupStatusListeners(): void {
+    // Factorio status listener
+    unsubscribeFactorioStatusUpdate = ipc.onFactorioStatusUpdate((data: FactorioStatusUpdate) => {
       if (data.status === "running") {
         statusService.setFactorioStatus("running");
       } else if (data.status === "stopped") {
@@ -49,6 +57,11 @@ export function useAppEffects() {
         }
         statusService.setWasRunning(false); // Reset the running state
       }
+    });
+    
+    // Player2 status listener
+    unsubscribePlayer2StatusUpdate = ipc.onPlayer2StatusUpdate((data: Player2StatusUpdate) => {
+      statusService.setPlayer2Status(data.status);
     });
   }
 
@@ -105,8 +118,11 @@ export function useAppEffects() {
    * Cleanup function
    */
   function cleanup(): void {
-    if (unsubscribeStatusUpdate) {
-      unsubscribeStatusUpdate();
+    if (unsubscribeFactorioStatusUpdate) {
+      unsubscribeFactorioStatusUpdate();
+    }
+    if (unsubscribePlayer2StatusUpdate) {
+      unsubscribePlayer2StatusUpdate();
     }
   }
 

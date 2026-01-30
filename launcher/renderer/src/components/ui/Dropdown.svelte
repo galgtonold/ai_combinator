@@ -14,13 +14,15 @@
     options: Option[];
     onChange?: (value: string) => void;
     width?: string;
+    openUpward?: boolean;
   }
 
   let { 
     value, 
     options, 
     onChange = () => {}, 
-    width = '200px' 
+    width = '200px',
+    openUpward = false
   }: Props = $props();
 
   let open = $state(false);
@@ -68,7 +70,7 @@
     </NormalButton>
   </div>
   {#if open}
-    <div class="factorio-dropdown-list" style="width: {width};">
+    <div class="factorio-dropdown-list{openUpward ? ' upward' : ''}" style="width: {width};">
       {#each options as option}
         <div class="factorio-dropdown-item" style="padding:0;">
           <ListboxItemButton 

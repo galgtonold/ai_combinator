@@ -76,9 +76,9 @@ async function main(): Promise<void> {
   }
   
   // Start AI Bridge if enabled
-  // Ollama doesn't require an API key (it's a local service)
+  // Ollama and Player2 don't require an API key (they are local services)
   const apiKey = configManager.getCurrentProviderApiKey();
-  const requiresApiKey = config.aiProvider !== 'ollama';
+  const requiresApiKey = config.aiProvider !== 'ollama' && config.aiProvider !== 'player2';
   if (config.aiBridgeEnabled && (!requiresApiKey || apiKey)) {
     aiBridgeManager.startBridge(
       apiKey,
@@ -97,7 +97,7 @@ async function main(): Promise<void> {
 
   mainWindow = new BrowserWindow({
     width: 600,
-    height: 740,
+    height: 700,
     resizable: false,
     show: false,
     frame: false, // Remove the default frame

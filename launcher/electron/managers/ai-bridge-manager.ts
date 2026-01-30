@@ -1,5 +1,5 @@
 // AI Bridge management module
-import { AIBridge } from "../services/ai-bridge";
+import { AIBridge, type Player2Status, type Player2StatusCallback } from "../services/ai-bridge";
 import { 
   type AIProvider, 
   type AIBridgeResult,
@@ -11,6 +11,7 @@ const log = createLogger('AIBridgeManager');
 
 export class AIBridgeManager {
   private aiBridge: AIBridge | null = null;
+  private player2StatusCallback: Player2StatusCallback | null = null;
 
   public startBridge(apiKey: string, provider: AIProvider, model: string): AIBridgeResult {
     try {
@@ -18,14 +19,20 @@ export class AIBridgeManager {
         this.stopBridge();
       }
       
-      // Ollama doesn't require an API key (it's a local service)
-      const requiresApiKey = provider !== 'ollama';
+      // Ollama and Player2 don't require an API key (they are local services)
+      const requiresApiKey = provider !== 'ollama' && provider !== 'player2';
       if (requiresApiKey && !apiKey) {
         log.warn("Cannot start AI Bridge: API key not set");
         return { success: false, message: "API key not set" };
       }
       
       this.aiBridge = new AIBridge(apiKey, provider, model);
+      
+      // Set up Player2 status callback if one is registered
+      if (this.player2StatusCallback) {
+        this.aiBridge.setPlayer2StatusCallback(this.player2StatusCallback);
+      }
+      
       this.aiBridge.start();
       
       return { success: true, message: "AI Bridge started successfully" };
@@ -75,5 +82,25 @@ export class AIBridgeManager {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Set callback for Player2 status changes
+   */
+  public setPlayer2StatusCallback(callback: Player2StatusCallback | null): void {
+    this.player2StatusCallback = callback;
+    if (this.aiBridge) {
+      this.aiBridge.setPlayer2StatusCallback(callback);
+    }
+  }
+
+  /**
+   * Get current Player2 status
+   */
+  public getPlayer2Status(): Player2Status {
+    if (this.aiBridge) {
+      return this.aiBridge.getPlayer2Status();
+    }
+    return 'disconnected';
   }
 }

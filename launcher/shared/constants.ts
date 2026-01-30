@@ -113,16 +113,16 @@ export const VITE_RETRY_INTERVAL = 1000;
 /**
  * Default AI provider selected on first launch
  * 
- * @default 'openai'
+ * @default 'player2'
  */
-export const DEFAULT_AI_PROVIDER = 'openai';
+export const DEFAULT_AI_PROVIDER = 'player2';
 
 /**
  * Default AI model for the default provider
  * 
- * @default 'gpt-5.1'
+ * @default '' (Player2 handles model selection in the app)
  */
-export const DEFAULT_AI_MODEL = 'gpt-5.1';
+export const DEFAULT_AI_MODEL = '';
 
 /**
  * Default UDP port for bidirectional Factorio communication
